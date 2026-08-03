@@ -359,6 +359,7 @@ const DB = (() => {
         d.settings = Object.assign(b.settings, d.settings || {});
         migrateSubjects(d);
         migrateHistIncome(d);
+        migrateLessonTeacher(d);
         return d;
       }
     } catch (e) { console.warn('数据读取失败', e); }
@@ -467,6 +468,15 @@ const DB = (() => {
     return d;
   }
 
+  // 数据迁移：课节缺 teacherId 时，按所属学员当前老师补上（历史排课 / Excel 导入的课可能没带老师）
+  function migrateLessonTeacher(d) {
+    if (!d || !Array.isArray(d.lessons) || !Array.isArray(d.students)) return d;
+    const map = {};
+    d.students.forEach(s => { map[s.id] = s.teacherId || ''; });
+    d.lessons.forEach(l => { if (!l.teacherId && l.studentId && map[l.studentId]) l.teacherId = map[l.studentId]; });
+    return d;
+  }
+
   function lessonsIn(a, b, opt = {}) {
     return data.lessons.filter(l => l.date >= a && l.date <= b && (opt.withCancelled || l.status !== 'cancelled'));
   }
@@ -550,6 +560,8 @@ const DB = (() => {
     d.settings = Object.assign(blank().settings, d.settings || {});
     delete d.__locked;
     migrateSubjects(d);
+    migrateHistIncome(d);
+    migrateLessonTeacher(d);
     return d;
   }
 

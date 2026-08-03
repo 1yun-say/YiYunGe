@@ -15,7 +15,10 @@ const Teachers = (() => {
       <tbody>
       ${d.teachers.map(t => {
         const stu = d.students.filter(s => s.teacherId === t.id && s.status !== 'ended').length;
-        const les = d.lessons.filter(l => l.teacherId === t.id && l.status === 'done').length;
+        const les = d.lessons.filter(l => {
+          const lt = l.teacherId || (DB.student(l.studentId) || {}).teacherId || '';
+          return lt === t.id && l.status === 'done';
+        }).length;
         return `<tr data-tid="${t.id}">
           <td data-label="姓名"><b>${U.esc(t.name)}</b>${t.note ? `<div class="muted" style="font-size:11px">${U.esc(t.note)}</div>` : ''}</td>
           <td class="muted" data-label="联系方式">${U.esc(t.phone || '-')}</td>

@@ -369,6 +369,11 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.7.2</div><div class="log-date">2026-08-03</div>
+      <ul class="log-list">
+        <li>老师名册 · 修复「累计课时」显示为 0 的问题：课节缺失老师时，加载/导入时自动按所属学员当前老师补上 teacherId（历史排课、Excel 导入的课也可能没带老师），老师名册与财务「按老师课时排行」现在都能正确统计已完成课时。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.7.1</div><div class="log-date">2026-08-03</div>
       <ul class="log-list">
         <li>可视化课表 · 课程卡片标题简化为只显示<b>孩子姓名</b>，不再显示年级 + 学科前缀，解决名字被截断、显示不全的问题。</li>
