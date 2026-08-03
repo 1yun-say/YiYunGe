@@ -309,7 +309,8 @@ const DB = (() => {
       { key: 'grade', name: '年级贡献', visible: true },
       { key: 'teacher', name: '老师课时排行', visible: true },
       { key: 'student', name: '学员抽成贡献', visible: true },
-      { key: 'detail', name: '明细统计', visible: true }
+      { key: 'detail', name: '明细统计', visible: true },
+      { key: 'daily', name: '日账单', visible: true }
     ];
   }
 

@@ -6,8 +6,13 @@ const Schedule = (() => {
   // 电脑端默认月视图（最常用），手机端默认周视图（一眼看一周）
   let mode = U.isMobile() ? 'week' : 'month';
   let anchor = U.today();
+  let showImported = DB.data.settings.scheduleShowImported !== false; // 默认显示导入抽成
 
   const endMin = l => U.t2m(l.start) + (+l.duration || 60);
+
+  function includeLesson(l) {
+    return l.status !== 'cancelled' && (!l.importedCommission || showImported);
+  }
 
   /* 优先读取学员档案里当前最新的学科信息（课程卡片上的学科/颜色随档案同步），再用课程本身数据兜底 */
   function currentSub(l) {
@@ -45,7 +50,7 @@ const Schedule = (() => {
   function conflictCount(days) {
     let n = 0;
     days.forEach(d => {
-      const ls = DB.data.lessons.filter(l => l.date === d && l.status !== 'cancelled' && !l.importedCommission);
+      const ls = DB.data.lessons.filter(l => l.date === d && includeLesson(l));
       const lay = layout(ls);
       const set = new Set();
       Object.entries(lay).forEach(([id, v]) => { if (v.conflict) set.add(id); });
@@ -72,8 +77,11 @@ const Schedule = (() => {
           <button class="btn btn-ghost btn-sm" data-act="next">&#8250;</button>
           <button class="btn btn-ghost btn-sm" data-act="today">回到今天</button>
         </div>
-        <div style="display:flex;gap:9px;align-items:center">
+        <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">
           <span class="muted" style="font-size:12px">${summaryText()}</span>
+          <label class="switch-row" style="margin:0;cursor:pointer;font-size:12px;color:var(--ink-2)">
+            <input type="checkbox" id="schShowImp" ${showImported ? 'checked' : ''}> 显示导入抽成
+          </label>
           <button class="btn btn-primary" data-act="book"><svg class="ico"><use href="#i-plus"/></svg>排课</button>
         </div>
       </div>
@@ -89,6 +97,8 @@ const Schedule = (() => {
       DB.data.settings.scheduleMode = mode; DB.save();
       render();
     });
+    const si = U.$('#schShowImp', root);
+    if (si) si.onchange = e => { showImported = e.target.checked; DB.data.settings.scheduleShowImported = showImported; DB.save(); render(); };
     U.rebind(root, 'sch', e => {
       const a = e.target.closest('[data-act]'); if (!a) return;
       const step = { week: 7, month: 0, year: 0 };
@@ -114,10 +124,12 @@ const Schedule = (() => {
     if (mode === 'week') { const d = U.weekDays(anchor); a = d[0]; b = d[6]; }
     else if (mode === 'month') { a = U.monthFirst(anchor); b = U.monthLast(anchor); }
     else { a = U.yearFirst(anchor); b = U.yearLast(anchor); }
-    const all = DB.lessonsIn(a, b);
-    const s = DB.statIn(a, b, { includeScheduled: true });
+    const all = DB.lessonsIn(a, b).filter(l => includeLesson(l));
+    const s = all.filter(l => l.status === 'done');
+    const gross = s.reduce((x, l) => x + (+l.tuition || 0), 0);
+    const profit = s.reduce((x, l) => x + (+l.commission || 0), 0);
     const pub = App.isPublic();
-    return `${all.length} 节课 · 流水 ${U.money(s.gross)}` + (pub ? '' : ` · 抽成 ${U.money(s.profit)}`);
+    return `${all.length} 节课 · 流水 ${U.money(gross)}` + (pub ? '' : ` · 抽成 ${U.money(profit)}`);
   }
 
   /* ---------- 周视图 ---------- */
@@ -148,17 +160,26 @@ const Schedule = (() => {
   }
 
   function dayLessonsHTML(date) {
-    const ls = DB.data.lessons.filter(l => l.date === date && !l.importedCommission);
-    const lay = layout(ls.filter(l => l.status !== 'cancelled'));
+    const ls = DB.data.lessons.filter(l => l.date === date && includeLesson(l));
+    const lay = layout(ls);
+    const pub = App.isPublic();
     return ls.map(l => {
       const s = DB.student(l.studentId) || { parentName: '已删除' };
-      const sub = currentSub(l);
+      const isImp = !!l.importedCommission;
       const info = lay[l.id] || { cols: 1, idx: 0 };
       const top = U.t2m(l.start) - DAY_START;
       const h = Math.max(24, +l.duration || 60);
       const w = 100 / info.cols;
+      if (isImp) {
+        return `<div class="lesson imported" draggable="false" data-lid="${l.id}"
+          style="top:${top}px;height:${h}px;left:calc(${info.idx * w}% + 2px);width:calc(${w}% - 4px);
+          border-left-color:#b0b0b0;background:#f5f5f5;color:#666">
+          <b>${U.esc(s.parentName)}</b>
+          <div class="lm">抽成 ${U.money(l.commission)}</div>
+        </div>`;
+      }
+      const sub = currentSub(l);
       const c = U.subColor(sub.subject);
-      const pub = App.isPublic();
       return `<div class="lesson ${l.status}" draggable="true" data-lid="${l.id}"
         style="top:${top}px;height:${h}px;left:calc(${info.idx * w}% + 2px);width:calc(${w}% - 4px);
         border-left-color:${c};background:${c}14">
@@ -214,7 +235,7 @@ const Schedule = (() => {
     box.innerHTML = `<div class="month-grid">
       ${U.WD.slice(1).concat(U.WD[0]).map(w => `<div class="mg-head">${w}</div>`).join('')}
       ${cells.map(day => {
-      const ls = DB.data.lessons.filter(l => l.date === day && l.status !== 'cancelled' && !l.importedCommission)
+      const ls = DB.data.lessons.filter(l => l.date === day && includeLesson(l))
         .sort((a, b) => U.t2m(a.start) - U.t2m(b.start));
       const profit = ls.reduce((s, l) => s + (+l.commission || 0), 0);
       const gross = ls.reduce((s, l) => s + (+l.tuition || 0), 0);
@@ -222,10 +243,11 @@ const Schedule = (() => {
           <div class="mg-date">${+day.slice(8)}</div>
           ${ls.slice(0, 3).map(l => {
         const s = DB.student(l.studentId) || { parentName: '?' };
+        const isImp = !!l.importedCommission;
         const sub = currentSub(l);
-        const c = U.subColor(sub.subject);
-        return `<div class="mg-item" data-lid="${l.id}" style="border-left-color:${c};background:${c}14">
-              ${l.start} ${U.esc(s.parentName)}</div>`;
+        const c = isImp ? '#b0b0b0' : U.subColor(sub.subject);
+        return `<div class="mg-item ${isImp ? 'imported' : ''}" data-lid="${l.id}" style="border-left-color:${c};background:${isImp ? '#f5f5f5' : c + '14'}">
+              ${isImp ? '· ' : l.start + ' '}${U.esc(s.parentName)}</div>`;
       }).join('')}
           ${ls.length > 3 ? `<div class="mg-item" style="border-left-color:#ccc;background:#f6f2f4">+${ls.length - 3} 节</div>` : ''}
           ${ls.length ? `<div class="mg-sum ${pub ? '' : 'secret'}">${pub ? U.money(gross) : U.money(profit)}</div>` : ''}
@@ -251,9 +273,11 @@ const Schedule = (() => {
     const months = Array.from({ length: 12 }, (_, i) => `${y}-${U.pad(i + 1)}-01`);
     const data = months.map(m => {
       const a = m, b = U.monthLast(m);
-      const ls = DB.lessonsIn(a, b);
-      const st = DB.statIn(a, b, { includeScheduled: true });
-      return { m, label: +m.slice(5, 7) + '月', count: ls.length, gross: st.gross, profit: st.profit, a, b };
+      const ls = DB.lessonsIn(a, b).filter(l => includeLesson(l));
+      const s = ls.filter(l => l.status === 'done');
+      const gross = s.reduce((x, l) => x + (+l.tuition || 0), 0);
+      const profit = s.reduce((x, l) => x + (+l.commission || 0), 0);
+      return { m, label: +m.slice(5, 7) + '月', count: ls.length, gross, profit, a, b };
     });
     const maxC = Math.max(...data.map(d => d.count), 1);
     const pub = App.isPublic();
@@ -273,7 +297,7 @@ const Schedule = (() => {
       ${data.map(d => {
       const days = [];
       let cur = d.a;
-      while (cur <= d.b) { days.push(DB.data.lessons.filter(l => l.date === cur && l.status !== 'cancelled' && !l.importedCommission).length); cur = U.addDays(cur, 1); }
+      while (cur <= d.b) { days.push(DB.data.lessons.filter(l => l.date === cur && includeLesson(l)).length); cur = U.addDays(cur, 1); }
       const maxD = Math.max(...days, 1);
       return `<div class="ym-card" data-m="${d.m}">
           <h4>${d.label}<span class="muted" style="font-size:11px">${d.count} 节</span></h4>
@@ -488,6 +512,7 @@ const Schedule = (() => {
     render() {
       const saved = DB.data.settings.scheduleMode;
       if (saved && (saved === 'year' || saved === 'month' || saved === 'week')) mode = saved;
+      showImported = DB.data.settings.scheduleShowImported !== false;
       anchor = U.today(); render();
     }
   };

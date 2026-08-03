@@ -8,6 +8,25 @@ const Finance = (() => {
   let dim = 'student';           // student | grade | subject | teacher
   let editMode = false;
 
+  // 日账单独立周期：周 / 月 / 年 / 自定义
+  let billRange = 'month';
+  let billFrom = U.monthFirst(U.today()), billTo = U.monthLast(U.today());
+  function applyBillRange(r) {
+    billRange = r; const t = U.today();
+    if (r === 'week') { const d = U.weekDays(t); billFrom = d[0]; billTo = d[6]; }
+    if (r === 'month') { billFrom = U.monthFirst(t); billTo = U.monthLast(t); }
+    if (r === 'year') { billFrom = U.yearFirst(t); billTo = U.yearLast(t); }
+  }
+
+  // 抽成率只按「真实课时」且从 2026-08-01 起算；导入的抽成表数据不参与抽成率。
+  const RATE_CUTOFF = '2026-08-01';
+  function effectiveRate(lessons) {
+    const ls = (lessons || []).filter(l => !l.importedCommission && l.date >= RATE_CUTOFF && l.status === 'done');
+    const gross = ls.reduce((s, l) => s + (+l.tuition || 0), 0);
+    const profit = ls.reduce((s, l) => s + (+l.commission || 0), 0);
+    return { gross, profit, rate: gross ? Math.round(profit / gross * 100) : 0 };
+  }
+
   const PALETTE = ['#f9709d', '#ffb6ce', '#8fb8f0', '#7fc8a9', '#f2b544', '#b48ce0', '#65c7c0', '#e2a06a', '#ef8ea4', '#79b36b'];
 
   /* 历史收入（开始用本工作台「之前」按月填写的总额）：存为全局 data.histIncome = { 'YYYY-MM': 金额 }。
@@ -67,9 +86,9 @@ const Finance = (() => {
       else if (by === 'grade') { key = sub.grade || '未知'; label = key; }
       else if (by === 'subject') { key = sub.subject || '未知'; label = key; }
       else { key = l.teacherId || 'none'; label = DB.teacherName(l.teacherId); }
-      if (!map.has(key)) map.set(key, { key, label, count: 0, minutes: 0, gross: 0, profit: 0, hist: 0 });
+      if (!map.has(key)) map.set(key, { key, label, count: 0, minutes: 0, gross: 0, profit: 0, hist: 0, lessons: [] });
       const g = map.get(key);
-      g.count++; g.minutes += +l.duration || 0; g.gross += +l.tuition || 0; g.profit += +l.commission || 0;
+      g.count++; g.minutes += +l.duration || 0; g.gross += +l.tuition || 0; g.profit += +l.commission || 0; g.lessons.push(l);
     });
     Array.from(map.values()).forEach(g => { g.hist = 0; });
     return Array.from(map.values()).sort((a, b) => b.profit - a.profit);
@@ -141,7 +160,7 @@ const Finance = (() => {
             <td class="num money" data-label="家长流水">${U.money(g.gross)}</td>
             <td class="num money out" data-label="老师课酬">${U.money(g.gross - g.profit)}</td>
             <td class="num money in" data-label="我的抽成">${U.money(g.profit)}</td>
-            <td class="num" data-label="抽成率">${g.gross ? Math.round(g.profit / g.gross * 100) : 0}%</td>
+            <td class="num" data-label="有效抽成率" title="不含导入抽成表数据，自 8 月 1 日起的真实课时抽成率">${(() => { const r = effectiveRate(g.lessons); return `${r.rate}%`; })()}</td>
             <td data-label="占比"><div class="bt" style="height:8px;background:var(--pink-75);border-radius:6px;overflow:hidden">
               <i style="display:block;height:100%;width:${st.profit ? g.profit / st.profit * 100 : 0}%;background:linear-gradient(90deg,#ffb6ce,#f9709d)"></i></div></td>
           </tr>`).join('') || `<tr><td colspan="8" class="muted" style="text-align:center;padding:26px">该区间还没有课程记录</td></tr>`}
@@ -150,7 +169,7 @@ const Finance = (() => {
           <td>合计</td>          <td class="num">${st.count}</td><td class="num">${(st.minutes / 60).toFixed(1)} h</td>
           <td class="num money">${U.money(st.gross)}</td><td class="num money out">${U.money(st.cost)}</td>
           <td class="num money in">${U.money(st.profit)}</td>
-          <td class="num">${st.gross ? Math.round(st.profit / st.gross * 100) : 0}%</td><td></td></tr></tfoot>` : ''}
+          <td class="num" title="不含导入抽成表数据，自 8 月 1 日起">${(() => { const r = effectiveRate(st.lessons || ls); return `${r.rate}%`; })()}%</td><td></td></tr></tfoot>` : ''}
       </table>
       <p class="muted" style="font-size:11.5px;margin-top:10px">
         统计口径：${includeScheduled ? '已完成 + 待上课程' : '仅已完成课程'}；区间 ${from} 至 ${to}（共 ${ctx.days} 天）。
@@ -189,7 +208,60 @@ const Finance = (() => {
     return (RENDERERS[sec.key] || cardDetail)(ctx, sec.name);
   }
 
-  const RENDERERS = { trend: cardTrend, grade: cardGrade, teacher: cardTeacher, student: cardStudent, detail: cardDetail };
+  function cardDailyBill(ctx, title) {
+    const ls = DB.statIn(billFrom, billTo, { includeScheduled }).lessons
+      .filter(l => l.status === 'done' && (+l.commission || 0) > 0)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start));
+    const groups = {};
+    ls.forEach(l => { (groups[l.date] ||= []).push(l); });
+    const dates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+    const rows = dates.map(date => {
+      const items = groups[date];
+      const dayTotal = items.reduce((s, l) => s + (+l.commission || 0), 0);
+      return `<tbody class="bill-day">
+        <tr class="bill-day-head"><td colspan="3">
+          <div class="bill-day-title"><b>${U.cnDate(date)} ${U.wdName(date)}</b><span class="money in">+${U.money(dayTotal)}</span></div>
+        </td></tr>
+        ${items.map(l => {
+        const s = DB.student(l.studentId);
+        const sub = (l.grade || '') + (l.subject || '');
+        const isImp = !!l.importedCommission;
+        const label = isImp ? '家教 - 抽成（导入）' : `家教 - ${sub || '抽成'}`;
+        const sublabel = s ? s.parentName : '已删除学员';
+        const icon = isImp ? '抽' : (sub ? sub.slice(0, 1) : '家');
+        return `<tr class="bill-item">
+          <td class="bill-icon"><span>${U.esc(icon)}</span></td>
+          <td>
+            <div class="bill-main">${U.esc(label)}</div>
+            <div class="bill-sub">${U.esc(sublabel)}${l.note ? ' · ' + U.esc(String(l.note).slice(0, 24)) : ''}</div>
+          </td>
+          <td class="bill-amt money in">${U.money(l.commission)}</td>
+        </tr>`;
+      }).join('')}
+      </tbody>`;
+    }).join('');
+
+    return `<div class="card">
+      <div class="card-h">
+        <h3>${U.esc(title)}</h3>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div class="tabs">
+            ${[['week', '周账单'], ['month', '月账单'], ['year', '年账单'], ['custom', '自定义']]
+              .map(([k, n]) => `<button class="tab ${billRange === k ? 'active' : ''}" data-br="${k}">${n}</button>`).join('')}
+          </div>
+          ${billRange === 'custom' ? `<input type="date" class="input" id="bf_from" value="${billFrom}" style="width:132px;padding:5px 8px"><span class="muted">至</span><input type="date" class="input" id="bf_to" value="${billTo}" style="width:132px;padding:5px 8px">` : ''}
+        </div>
+      </div>
+      <table class="tbl bill-table">
+        <thead><tr><th style="width:44px"></th><th>来源</th><th class="num">收入</th></tr></thead>
+        ${rows || '<tbody><tr><td colspan="3" class="muted" style="text-align:center;padding:26px">该周期还没有收入记录</td></tr></tbody>'}
+      </table>
+      <p class="muted" style="font-size:11.5px;margin-top:10px">按日期倒序，仅显示有抽成收入的记录。导入的抽成表记录会标注「导入」。</p>
+    </div>`;
+  }
+
+  const RENDERERS = { trend: cardTrend, grade: cardGrade, teacher: cardTeacher, student: cardStudent, detail: cardDetail, daily: cardDailyBill };
 
   /* ---------- 编辑模式外壳（复用 dash-module 样式） ---------- */
   function wrapSection(sec, inner) {
@@ -258,10 +330,10 @@ const Finance = (() => {
     try {
       const cur = group(DB.statIn(from, to, { includeScheduled }).lessons, dim);
       const head = { student: '学员', grade: '年级', subject: '学科', teacher: '老师' }[dim];
-      const header = [head, '课时', '总时长(h)', '家长流水', '老师课酬', '我的抽成', '抽成率'];
-      const rows = cur.map(g => [g.label, g.count, (g.minutes / 60).toFixed(1), g.gross, g.gross - g.profit, g.profit, g.gross ? Math.round(g.profit / g.gross * 100) : 0]);
+      const header = [head, '课时', '总时长(h)', '家长流水', '老师课酬', '我的抽成', '有效抽成率(8.1起)'];
+      const rows = cur.map(g => [g.label, g.count, (g.minutes / 60).toFixed(1), g.gross, g.gross - g.profit, g.profit, effectiveRate(g.lessons).rate]);
       const st = DB.statIn(from, to, { includeScheduled });
-      rows.push(['合计', st.count, (st.minutes / 60).toFixed(1), st.gross, st.cost, st.profit, st.gross ? Math.round(st.profit / st.gross * 100) : 0]);
+      rows.push(['合计', st.count, (st.minutes / 60).toFixed(1), st.gross, st.cost, st.profit, effectiveRate(st.lessons).rate]);
       const csv = [header, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n');
       const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
       const a = document.createElement('a');
@@ -356,6 +428,15 @@ const Finance = (() => {
     U.$('#f_from', root).onchange = e => { from = e.target.value; range = 'custom'; render(); };
     U.$('#f_to', root).onchange = e => { to = e.target.value; range = 'custom'; render(); };
     U.$('#f_inc', root).onchange = e => { includeScheduled = e.target.checked; render(); };
+
+    /* 日账单周期切换 */
+    root.querySelectorAll('[data-br]').forEach(o => o.onclick = () => {
+      if (o.dataset.br === 'custom') { billRange = 'custom'; render(); return; }
+      applyBillRange(o.dataset.br); render();
+    });
+    const bfFrom = U.$('#bf_from', root), bfTo = U.$('#bf_to', root);
+    if (bfFrom) bfFrom.onchange = e => { billFrom = e.target.value; billRange = 'custom'; render(); };
+    if (bfTo) bfTo.onchange = e => { billTo = e.target.value; billRange = 'custom'; render(); };
 
     /* 编辑模式：桌面端启用拖动排序（包一层 try，避免拖动初始化异常影响下面的事件绑定） */
     if (editMode && !U.isMobile()) {
@@ -556,7 +637,7 @@ const Finance = (() => {
   Views.finance = {
     title: '财务统计',
     sub: '中间人视角：家长流水 / 老师课酬 / 我的抽成三本账分开算',
-    render() { editMode = false; applyRange('month'); render(); }
+    render() { editMode = false; applyRange('month'); applyBillRange('month'); render(); }
   };
 
   return { render, group, PALETTE, getSections };

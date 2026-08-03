@@ -164,6 +164,20 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .tbl tr:hover td{background:var(--pink-50)}
 .tbl td.num,.tbl th.num{text-align:right;font-variant-numeric:tabular-nums}
 
+/* 日账单 */
+.bill-table{border-collapse:separate;border-spacing:0}
+.bill-day{display:table-row-group}
+.bill-day-head td{padding:0;border-bottom:none}
+.bill-day-title{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 10px 8px;background:var(--pink-50);border-bottom:1px solid var(--pink-100);font-size:13px}
+.bill-day-title b{color:var(--ink-1)}
+.bill-item td{border-bottom:1px solid var(--pink-75);vertical-align:middle}
+.bill-item:last-child td{border-bottom:2px solid var(--pink-100)}
+.bill-icon{width:44px;text-align:center;padding:10px 6px}
+.bill-icon span{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--pink-100);color:var(--pink-600);font-size:13px;font-weight:700}
+.bill-main{font-size:13px;font-weight:600;color:var(--ink-1)}
+.bill-sub{font-size:11.5px;color:var(--ink-3);margin-top:2px}
+.bill-amt{font-size:14px;font-weight:700;white-space:nowrap}
+
 /* ---------- 待办 ---------- */
 .todo-list{display:flex;flex-direction:column;gap:8px}
 .todo-item{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;border:1px solid var(--line);border-radius:var(--r-s);background:#fff;transition:.18s;position:relative;overflow:hidden}
@@ -246,6 +260,8 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .lesson.done{opacity:.66}
 .lesson.cancelled{opacity:.45;text-decoration:line-through}
 .lesson.conflict{outline:1.5px solid var(--alert);outline-offset:-1.5px}
+.lesson.imported{cursor:default;font-style:italic}
+.lesson.imported b{font-size:10.5px;color:#666}
 .conf-dot{position:absolute;right:3px;top:3px;width:6px;height:6px;border-radius:50%;background:var(--alert)}
 
 .month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-m);overflow:hidden}
@@ -255,6 +271,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .mg-cell.today{background:var(--pink-100)}
 .mg-date{font-size:12px;color:var(--ink-2);font-weight:600;margin-bottom:4px}
 .mg-item{font-size:10.5px;padding:2px 5px;border-radius:5px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;border-left:3px solid}
+.mg-item.imported{font-style:italic;color:#666}
 .mg-sum{position:absolute;right:6px;bottom:5px;font-size:10px;color:var(--pink-600);font-weight:700}
 
 .year-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
@@ -708,6 +725,18 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   .dash-mobile-quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px}
   .dash-mobile-qb{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;background:#fff;border:1px solid var(--line);border-radius:12px;font-size:11px;color:var(--ink-2);cursor:pointer;-webkit-tap-highlight-color:transparent}
   .dash-mobile-qb svg{width:18px;height:18px;color:var(--pink-600)}
+
+  /* 日账单手机端 */
+  .bill-table tr{border:none;border-radius:0;margin-bottom:0;padding:0;background:transparent;box-shadow:none}
+  .bill-day{display:block;margin-bottom:10px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-s)}
+  .bill-day-head td{display:block;padding:0}
+  .bill-day-title{padding:10px 12px;font-size:13px}
+  .bill-item td{display:flex;align-items:center;gap:10px;padding:8px 12px;text-align:left;border-bottom:1px solid var(--pink-75)}
+  .bill-item:last-child td{border-bottom:none}
+  .bill-icon{padding:0;width:auto}
+  .bill-amt{margin-left:auto;text-align:right}
+  .bill-main{font-size:12.5px}
+  .bill-sub{font-size:11px}
 }
 
 /* ===================================================================
