@@ -256,16 +256,16 @@ const DB = (() => {
     };
     const students = [
       mk(normDateFlexible('240815') || U.addDays(t, -30), '李明', '', 'tc_wang', '妈妈很关注细节，每节课后一定要文字反馈；孩子基础中等偏上，函数薄弱。', 'active',
-        [{ grade: '高二', subject: '数学', tuition: 300, commission: 50, duration: 90 }], { freq: '1w3' }),
+        [{ grade: '高二', subject: '数学', tuition: 300, commission: 50, duration: 90 }], { freq: '1w3', histIncome: { '2026-05': 3000, '2026-06': 3200, '2026-07': 3500 } }),
       mk(normDateFlexible('250302') || U.addDays(t, -20), '张昊', '', 'tc_chen', '爸爸做生意比较忙，微信回复慢；中考目标 110+。', 'active',
         [{ grade: '初三', subject: '英语', tuition: 240, commission: 60, duration: 120 },
-         { grade: '初三', subject: '数学', tuition: 260, commission: 55, duration: 120 }], { freq: '1w2' }),
+         { grade: '初三', subject: '数学', tuition: 260, commission: 55, duration: 120 }], { freq: '1w2', histIncome: { '2026-05': 2400, '2026-06': 2600, '2026-07': 2800 } }),
       mk(normDateFlexible('250520') || U.addDays(t, -10), '王思', '', 'tc_wang', '冲刺阶段，要求老师准时；一个孩子在这上语数英三科。', 'active',
         [{ grade: '高三', subject: '物理', tuition: 380, commission: 80, duration: 120 },
          { grade: '高三', subject: '数学', tuition: 350, commission: 70, duration: 120 },
-         { grade: '高三', subject: '英语', tuition: 300, commission: 60, duration: 120 }], { freq: '1w4' }),
+         { grade: '高三', subject: '英语', tuition: 300, commission: 60, duration: 120 }], { freq: '1w4', histIncome: { '2026-05': 4200, '2026-06': 4500, '2026-07': 5000 } }),
       mk(normDateFlexible('250610') || U.addDays(t, -5), '刘洋', '', 'tc_me', '孩子注意力短，建议 60 分钟一节；家长在意性价比。', 'trial',
-        [{ grade: '五年级', subject: '数学', tuition: 200, commission: 40, duration: 60 }], { trialDate: U.addDays(t, -1), freq: '1w1' })
+        [{ grade: '五年级', subject: '数学', tuition: 200, commission: 40, duration: 60 }], { trialDate: U.addDays(t, -1), freq: '1w1', histIncome: { '2026-06': 800, '2026-07': 900 } })
     ];
     students.forEach(s => s.code = studentCode(s));
     const lessons = [];

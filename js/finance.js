@@ -10,6 +10,19 @@ const Finance = (() => {
 
   const PALETTE = ['#f9709d', '#ffb6ce', '#8fb8f0', '#7fc8a9', '#f2b544', '#b48ce0', '#65c7c0', '#e2a06a', '#ef8ea4', '#79b36b'];
 
+  /* 历史收入（开始用本工作台之前，按月填写）：histIncome 存为 { 'YYYY-MM': 金额 } 对象；
+     兼容旧版单个数字（v1.6 初版误用的累计数）按 legacy 处理。 */
+  function histVal(s) {
+    if (!s || !s.histIncome) return 0;
+    if (typeof s.histIncome === 'number') return +s.histIncome || 0;
+    if (typeof s.histIncome === 'object') return Object.values(s.histIncome).reduce((a, b) => a + (+b || 0), 0);
+    return 0;
+  }
+  function histMonth(s, mk) {
+    if (!s || !s.histIncome || typeof s.histIncome !== 'object') return 0;
+    return +s.histIncome[mk] || 0;
+  }
+
   function applyRange(r) {
     range = r; const t = U.today();
     if (r === 'month') { from = U.monthFirst(t); to = U.monthLast(t); }
@@ -62,10 +75,17 @@ const Finance = (() => {
       else if (by === 'grade') { key = sub.grade || '未知'; label = key; }
       else if (by === 'subject') { key = sub.subject || '未知'; label = key; }
       else { key = l.teacherId || 'none'; label = DB.teacherName(l.teacherId); }
-      if (!map.has(key)) map.set(key, { key, label, count: 0, minutes: 0, gross: 0, profit: 0, hist: 0 });
+      if (!map.has(key)) map.set(key, { key, label, count: 0, minutes: 0, gross: 0, profit: 0, hist: 0, _sids: new Set() });
       const g = map.get(key);
       g.count++; g.minutes += +l.duration || 0; g.gross += +l.tuition || 0; g.profit += +l.commission || 0;
-      const hs = DB.student(l.studentId); if (hs) g.hist += (+hs.histIncome || 0);
+      g._sids.add(l.studentId);
+    });
+    Array.from(map.values()).forEach(g => {
+      // 历史收入按月填写、与区间无关，按学员汇总（避免被每节课重复累加）
+      g.hist = (by === 'student')
+        ? histVal(DB.student(g.key))
+        : Array.from(g._sids).reduce((a, sid) => a + histVal(DB.student(sid)), 0);
+      delete g._sids;
     });
     return Array.from(map.values()).sort((a, b) => b.profit - a.profit);
   }
@@ -127,7 +147,7 @@ const Finance = (() => {
       <table class="tbl">
         <thead><tr><th>${{ student: '学员', grade: '年级', subject: '学科', teacher: '老师' }[dim]}</th>
           <th class="num">课时</th><th class="num">总时长</th>          <th class="num">家长流水</th>
-          <th class="num">期初</th>
+          <th class="num">历史收入</th>
           <th class="num">老师课酬</th><th class="num">我的抽成</th><th class="num">抽成率</th><th style="width:110px">占比</th></tr></thead>
         <tbody>
           ${cur.map(g => `<tr>
@@ -135,7 +155,7 @@ const Finance = (() => {
             <td class="num" data-label="课时">${g.count}</td>
             <td class="num" data-label="总时长">${(g.minutes / 60).toFixed(1)} h</td>
             <td class="num money" data-label="家长流水">${U.money(g.gross)}</td>
-            <td class="num money in" data-label="期初">${U.money(g.hist)}</td>
+            <td class="num money in" data-label="历史收入">${U.money(g.hist)}</td>
             <td class="num money out" data-label="老师课酬">${U.money(g.gross - g.profit)}</td>
             <td class="num money in" data-label="我的抽成">${U.money(g.profit)}</td>
             <td class="num" data-label="抽成率">${g.gross ? Math.round(g.profit / g.gross * 100) : 0}%</td>
@@ -171,7 +191,7 @@ const Finance = (() => {
           <div class="muted" style="font-size:12px">${n}</div>
           <div class="money ${c}" style="font-size:19px;font-weight:700">${v}</div></div>`).join('')}
       </div>
-      ${ctx.histTotal ? `<p class="muted" style="font-size:11.5px;margin:10px 0 0">含期初收入 <b class="money in">${U.money(ctx.histTotal)}</b>（使用本工作台之前累计的抽成，不参与时间区间筛选）</p>` : ''}
+      ${ctx.histTotal ? `<p class="muted" style="font-size:11.5px;margin:10px 0 0">含历史收入 <b class="money in">${U.money(ctx.histTotal)}</b>（使用本工作台之前、按月填写的每月抽成，已并入各月走势与总抽成）</p>` : ''}
     </div>`;
   }
   function renderSection(sec, ctx) {
@@ -255,8 +275,8 @@ const Finance = (() => {
     try {
       const cur = group(DB.statIn(from, to, { includeScheduled }).lessons, dim);
       const head = { student: '学员', grade: '年级', subject: '学科', teacher: '老师' }[dim];
-      const histTotal = DB.data.students.reduce((a, s) => a + (+s.histIncome || 0), 0);
-      const header = [head, '课时', '总时长(h)', '家长流水', '期初收入', '老师课酬', '我的抽成', '抽成率'];
+      const histTotal = DB.data.students.reduce((a, s) => a + histVal(s), 0);
+      const header = [head, '课时', '总时长(h)', '家长流水', '历史收入', '老师课酬', '我的抽成', '抽成率'];
       const rows = cur.map(g => [g.label, g.count, (g.minutes / 60).toFixed(1), g.gross, g.hist, g.gross - g.profit, g.profit, g.gross ? Math.round(g.profit / g.gross * 100) : 0]);
       const st = DB.statIn(from, to, { includeScheduled });
       rows.push(['合计', st.count, (st.minutes / 60).toFixed(1), st.gross, histTotal, st.cost, st.profit, st.gross ? Math.round(st.profit / st.gross * 100) : 0]);
@@ -287,9 +307,12 @@ const Finance = (() => {
 
     const y = to.slice(0, 4);
     const monthly = Array.from({ length: 12 }, (_, i) => {
-      const m = `${y}-${U.pad(i + 1)}-01`;
+      const mk = `${y}-${U.pad(i + 1)}`;
+      const m = `${mk}-01`;
       const s = DB.statIn(m, U.monthLast(m), { includeScheduled });
-      return { label: (i + 1) + '月', value: s.profit, hl: m.slice(0, 7) === U.today().slice(0, 7) };
+      let hist = 0;
+      DB.data.students.forEach(st => { hist += histMonth(st, mk); });
+      return { label: (i + 1) + '月', value: s.profit + hist, hl: mk === U.today().slice(0, 7) };
     });
 
     const span = U.daysDiff(from, to);
@@ -298,7 +321,7 @@ const Finance = (() => {
     const delta = prev.profit ? Math.round((st.profit - prev.profit) / prev.profit * 100) : null;
 
     const lastEdit = Math.max(DB.data.meta.lastLessonEdit || 0, DB.data.meta.lastStudentEdit || 0);
-    const ctx = { st, byStu, byGrade, byTeacher, cur, monthly, days, from, to, histTotal: DB.data.students.reduce((a, s) => a + (+s.histIncome || 0), 0) };
+    const ctx = { st, byStu, byGrade, byTeacher, cur, monthly, days, from, to, histTotal: DB.data.students.reduce((a, s) => a + histVal(s), 0) };
 
     const sections = getSections();
     const visible = sections.filter(s => s.visible);
@@ -319,7 +342,7 @@ const Finance = (() => {
             <input type="checkbox" id="f_inc" ${includeScheduled ? 'checked' : ''}> 含未上课程
           </label>
           <span style="display:flex;gap:8px;margin-left:auto">
-            <button class="btn btn-ghost btn-sm" data-act="editHist">期初收入</button>
+            <button class="btn btn-ghost btn-sm" data-act="editHist">历史收入</button>
             <button class="btn btn-ghost btn-sm" data-act="exportPng">导出图片</button>
             <button class="btn ${editMode ? 'btn-primary' : 'btn-ghost'} btn-sm" data-act="toggleEdit">
               <svg class="ico"><use href="#${editMode ? 'i-check' : 'i-gear'}"/></svg>
@@ -377,24 +400,56 @@ const Finance = (() => {
 
         case 'editHist': {
           const sts = DB.data.students.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-          U.modal({
-            title: '编辑期初收入（使用本工作台之前的总收入）',
+          // 默认月份：当前月之前的连续 3 个月；并补入数据中已存在的月份，按时间升序
+          let months = [];
+          for (let k = 1; k <= 3; k++) { const d = U.addMonths(U.monthFirst(U.today()), -k); months.unshift(`${d.slice(0, 4)}-${U.pad(+d.slice(5, 7))}`); }
+          const present = new Set();
+          sts.forEach(s => { if (s.histIncome && typeof s.histIncome === 'object') Object.keys(s.histIncome).forEach(m => present.add(m)); });
+          present.forEach(m => { if (!months.includes(m)) months.push(m); });
+          months.sort();
+          const vals = {};
+          sts.forEach(s => { vals[s.id] = {}; if (s.histIncome && typeof s.histIncome === 'object') Object.keys(s.histIncome).forEach(m => { vals[s.id][m] = String(s.histIncome[m]); }); });
+          const monthLabel = mk => (+mk.slice(5, 7)) + '月';
+          const gridHTML = () => `<div id="histGrid" style="overflow:auto;max-height:62vh">
+            <table class="tbl" style="min-width:max-content;font-size:12.5px">
+              <thead><tr><th>学员</th>${months.map(m => `<th style="white-space:nowrap;text-align:center">${monthLabel(m)}
+                <button class="btn btn-icon btn-sm" data-delm="${m}" title="移除该月" style="padding:0 3px;margin-left:3px;vertical-align:middle"><svg class="ico" style="width:12px;height:12px"><use href="#i-close"/></svg></button></th>`).join('')}
+                <th style="white-space:nowrap"><button class="btn btn-sm btn-primary" data-addm>+ 更早月份</button></th></tr></thead>
+              <tbody>${sts.length ? sts.map(s => `<tr><td data-label="学员" style="white-space:nowrap;font-weight:600">${U.esc(s.parentName)}</td>
+                ${months.map(m => `<td><input class="input" data-hid="${s.id}" data-m="${m}" type="number" min="0" step="0.01" style="width:104px" placeholder="0" value="${vals[s.id][m] != null ? vals[s.id][m] : ''}"></td>`).join('')}<td></td></tr>`).join('')
+                : '<tr><td colspan="2" class="muted" style="text-align:center;padding:20px">还没有学员档案</td></tr>'}</tbody>
+            </table></div>`;
+          const ret = U.modal({
+            title: '编辑历史收入（开始用本工作台之前，按月填写）',
             wide: true,
             okText: '保存',
-            body: `<p class="muted" style="font-size:12px;margin:0 0 12px">填写每位学员在「开始用本工作台之前」累计的抽成（元），只填总金额即可。保存后并入该学员总抽成与整体统计，统计处会标注「含期初 X 元」。</p>
-              <div id="histWrap" style="display:flex;flex-direction:column;gap:8px;max-height:55vh;overflow:auto">
-                ${sts.length ? sts.map(s => `<div style="display:flex;align-items:center;gap:10px">
-                  <span style="flex:1;font-size:13px">${U.esc(s.parentName)}</span>
-                  <input class="input" data-hid="${s.id}" type="number" min="0" step="0.01" style="width:160px" placeholder="0" value="${s.histIncome || ''}">
-                </div>`).join('') : '<p class="muted">还没有学员档案</p>'}
-              </div>`,
+            body: `<p class="muted" style="font-size:12px;margin:0 0 12px">按 <b>月份 × 学员</b> 填写使用本工作台之前的每月抽成（元）。每个月单独一列，月度走势图会把它们各自画成一根柱子；填 0 或留空 = 该月无收入。</p>${gridHTML()}`,
             onOk: b2 => {
-              U.$('#histWrap', b2).querySelectorAll('input[data-hid]').forEach(inp => {
-                const st = DB.student(inp.dataset.hid);
-                if (st) st.histIncome = +inp.value || 0;
+              const collected = {};
+              b2.querySelectorAll('input[data-hid]').forEach(inp => {
+                const id = inp.dataset.hid, m = inp.dataset.m, v = +inp.value || 0;
+                if (!collected[id]) collected[id] = {};
+                if (v) collected[id][m] = v;
               });
+              sts.forEach(s => { s.histIncome = collected[s.id] || {}; });
               DB.save(); render();
-              U.toast('已保存期初收入', 'ok');
+              U.toast('已保存历史收入', 'ok');
+            }
+          });
+          const grid = ret.body.querySelector('#histGrid');
+          if (grid) grid.addEventListener('click', e => {
+            const add = e.target.closest('[data-addm]'), del = e.target.closest('[data-delm]');
+            if (!add && !del) return;
+            grid.querySelectorAll('input[data-hid]').forEach(inp => { if (!vals[inp.dataset.hid]) vals[inp.dataset.hid] = {}; vals[inp.dataset.hid][inp.dataset.m] = inp.value; });
+            if (add) {
+              const earliest = months.length ? months[0] : `${U.today().slice(0, 4)}-01`;
+              const d = U.addMonths(earliest + '-01', -1);
+              const nm = `${d.slice(0, 4)}-${U.pad(+d.slice(5, 7))}`;
+              if (!months.includes(nm)) { months.unshift(nm); grid.innerHTML = gridHTML(); }
+            } else if (del) {
+              const m = del.dataset.delm;
+              months = months.filter(x => x !== m);
+              grid.innerHTML = gridHTML();
             }
           });
           break;
