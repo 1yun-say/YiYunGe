@@ -371,6 +371,14 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.7.6</div><div class="log-date">2026-08-03</div>
+      <ul class="log-list">
+        <li>可视化课表 · 每节课新增「实际到手收入（抽成）」与「批注：其余＝老师课酬」，周视图内联显示、月视图悬浮提示，导入抽成卡片也标注实际到手。</li>
+        <li>财务统计 · 日账单每一条同步显示「实际到手收入」与「批注（其余＝老师课酬）」，与课表两端一致。</li>
+        <li>排课 · 默认开始时间改为按该学员上一次上课的开始时间自动带出（无历史则回落 19:00），切换学员即时更新。</li>
+        <li>更新日志 · 修正版本顺序（1.7.3 置于 1.7.2 之上）与最早版本日期标注。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.7.5</div><div class="log-date">2026-08-03</div>
       <ul class="log-list">
         <li>财务统计 · 抽成率改为按「真实课时」且自 8 月 1 日起计算，导入的抽成表数据不再参与抽成率（仍计入收入流水与按学员/年级统计）。</li>
@@ -386,15 +394,15 @@ const Changelog = (() => {
         <li>手机端日历：月视图改为<b>彩色圆点</b>表示有课（参考 iOS 日历，不显示完整文字），周视图改为纵向日程列表，去掉 7 列拥挤排版；整体更紧凑、一屏看完。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.7.2</div><div class="log-date">2026-08-03</div>
-      <ul class="log-list">
-        <li>老师名册 · 修复「累计课时」显示为 0 的问题：课节缺失老师时，加载/导入时自动按所属学员当前老师补上 teacherId（历史排课、Excel 导入的课也可能没带老师），老师名册与财务「按老师课时排行」现在都能正确统计已完成课时。</li>
-      </ul>
-      <div class="divider"></div>
       <div class="log-ver">v1.7.3</div><div class="log-date">2026-08-03</div>
       <ul class="log-list">
         <li>财务统计 · 新增「导入抽成表」：选 .xlsx 后，先弹出<b>预览</b>（日期 / 学员 / 匹配或新建 / 抽成 / 备注），确认后才写入。表头自动取纯名字（忽略前缀数字与时薪、「X/Y」括号后缀），日期去星期，批注原文搬入备注（自动去 iPad: 前缀、过滤 Excel 系统批注）。</li>
         <li>财务统计 · 导入的抽成按「每天每家长」生成课时记录（抽成 = 单元格金额，状态已完成），并自动按姓名归入现有学员、缺失则新建；抽成计入财务月度走势与按学员统计，但为不打扰课表，这些记录不在日历周视图/月历中渲染，也不计入老师「累计课时」。</li>
+      </ul>
+      <div class="divider"></div>
+      <div class="log-ver">v1.7.2</div><div class="log-date">2026-08-03</div>
+      <ul class="log-list">
+        <li>老师名册 · 修复「累计课时」显示为 0 的问题：课节缺失老师时，加载/导入时自动按所属学员当前老师补上 teacherId（历史排课、Excel 导入的课也可能没带老师），老师名册与财务「按老师课时排行」现在都能正确统计已完成课时。</li>
       </ul>
       <div class="divider"></div>
       <div class="log-ver">v1.7.1</div><div class="log-date">2026-08-03</div>
@@ -445,7 +453,7 @@ const Changelog = (() => {
         <li>所有页面统一移除标题下的小字副标题行。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.3</div><div class="log-date">2026-08-02</div>
+      <div class="log-ver">v1.3</div><div class="log-date">2026-08-03</div>
       <ul class="log-list">
         <li>档案编码格式可自定义：在「数据管理 → 档案编码格式」里用 [日期][年级学科][家长][抽成][课时费][课时长] 占位、自定分隔符与顺序，支持实时试解析预览。</li>
         <li>已存档案不受影响——年级/课时费/抽成等结构化字段独立保存，仅新建/编辑时按新格式解析。</li>

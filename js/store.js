@@ -489,6 +489,15 @@ const DB = (() => {
     return { lessons: ls, count: ls.length, gross, profit, cost: gross - profit, minutes: ls.reduce((s, l) => s + (+l.duration || 0), 0) };
   }
 
+  // 单节课收入拆分：抽成=实际到手收入；其余=老师课酬（导入抽成无课时费明细，老师课酬为 0）
+  function lessonBreakdown(l) {
+    const commission = +l.commission || 0;
+    const gross = +l.tuition || 0;
+    const imported = !!l.importedCommission;
+    const teacherPay = imported ? 0 : Math.max(0, gross - commission);
+    return { gross, commission, teacherPay, imported };
+  }
+
   function reset(withDemo) {
     data = blank();
     if (withDemo) Object.assign(data, demoData());
@@ -623,7 +632,7 @@ const DB = (() => {
     touch, setRemoteHandler,
     parseCode, buildCode, GRADES, SUBJECTS, normDate, defaultFinanceSections,
     getCodeTemplate, tokenizeCode, presentFields, resolveField, DEFAULT_CODE_TEMPLATE,
-    student, teacher, teacherName, studentLabel, lessonsIn, statIn, defaultTemplates, defaultPhrases,
+    student, teacher, teacherName, studentLabel, lessonsIn, statIn, lessonBreakdown, defaultTemplates, defaultPhrases,
     DASH_MODULES, studentSubjects, primarySubject, studentCode, normDateFlexible, lessonSub, migrateSubjects,
     resolveTeacher, rememberGradesSubjects
   };

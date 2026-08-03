@@ -219,22 +219,27 @@ const Finance = (() => {
     const rows = dates.map(date => {
       const items = groups[date];
       const dayTotal = items.reduce((s, l) => s + (+l.commission || 0), 0);
+      const dayTeacherPay = items.reduce((s, l) => s + DB.lessonBreakdown(l).teacherPay, 0);
       return `<tbody class="bill-day">
         <tr class="bill-day-head"><td colspan="3">
           <div class="bill-day-title"><b>${U.cnDate(date)} ${U.wdName(date)}</b><span class="money in">+${U.money(dayTotal)}</span></div>
+          <div class="bill-day-sub">实际到手合计 ${U.money(dayTotal)} ｜ 其余 ${U.money(dayTeacherPay)} 老师课酬</div>
         </td></tr>
         ${items.map(l => {
         const s = DB.student(l.studentId);
         const sub = (l.grade || '') + (l.subject || '');
         const isImp = !!l.importedCommission;
+        const bd = DB.lessonBreakdown(l);
         const label = isImp ? '家教 - 抽成（导入）' : `家教 - ${sub || '抽成'}`;
         const sublabel = s ? s.parentName : '已删除学员';
         const icon = isImp ? '抽' : (sub ? sub.slice(0, 1) : '家');
+        const note = bd.imported ? '导入抽成（无课时费明细）' : `其余 ${U.money(bd.teacherPay)} 老师课酬`;
         return `<tr class="bill-item">
           <td class="bill-icon"><span>${U.esc(icon)}</span></td>
           <td>
             <div class="bill-main">${U.esc(label)}</div>
             <div class="bill-sub">${U.esc(sublabel)}${l.note ? ' · ' + U.esc(String(l.note).slice(0, 24)) : ''}</div>
+            <div class="bill-note">实际到手 ${U.money(bd.commission)} ｜ ${U.esc(note)}</div>
           </td>
           <td class="bill-amt money in">${U.money(l.commission)}</td>
         </tr>`;
@@ -257,7 +262,7 @@ const Finance = (() => {
         <thead><tr><th style="width:44px"></th><th>来源</th><th class="num">收入</th></tr></thead>
         ${rows || '<tbody><tr><td colspan="3" class="muted" style="text-align:center;padding:26px">该周期还没有收入记录</td></tr></tbody>'}
       </table>
-      <p class="muted" style="font-size:11.5px;margin-top:10px">按日期倒序，仅显示有抽成收入的记录。导入的抽成表记录会标注「导入」。</p>
+      <p class="muted" style="font-size:11.5px;margin-top:10px">按日期倒序，仅显示有抽成收入的记录。每行「实际到手」即你的抽成，其余为老师课酬；导入的抽成表记录会标注「导入」。</p>
     </div>`;
   }
 

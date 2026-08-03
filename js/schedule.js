@@ -14,6 +14,14 @@ const Schedule = (() => {
     return l.status !== 'cancelled' && (!l.importedCommission || showImported);
   }
 
+  // 该学员上一次上课的开始时间（按日期+时间倒序取最近一节）；无历史返回 ''
+  function lastStartFor(sid) {
+    const ls = DB.data.lessons.filter(l => l.studentId === sid && !l.importedCommission && l.status !== 'cancelled');
+    if (!ls.length) return '';
+    ls.sort((a, b) => (b.date + b.start).localeCompare(a.date + a.start));
+    return ls[0].start || '';
+  }
+
   /* 优先读取学员档案里当前最新的学科信息（课程卡片上的学科/颜色随档案同步），再用课程本身数据兜底 */
   function currentSub(l) {
     const s = DB.student(l.studentId);
@@ -170,12 +178,14 @@ const Schedule = (() => {
       const top = U.t2m(l.start) - DAY_START;
       const h = Math.max(24, +l.duration || 60);
       const w = 100 / info.cols;
+      const bd = DB.lessonBreakdown(l);
+      const take = `<div class="lm take">到手 ${U.money(bd.commission)}${bd.imported ? ' · 导入抽成' : (bd.teacherPay > 0 ? ` · 其余 ${U.money(bd.teacherPay)} 老师课酬` : '')}</div>`;
       if (isImp) {
         return `<div class="lesson imported" draggable="false" data-lid="${l.id}"
           style="top:${top}px;height:${h}px;left:calc(${info.idx * w}% + 2px);width:calc(${w}% - 4px);
           border-left-color:#b0b0b0;background:#f5f5f5;color:#666">
           <b>${U.esc(s.parentName)}</b>
-          <div class="lm">抽成 ${U.money(l.commission)}</div>
+          ${take}
         </div>`;
       }
       const sub = currentSub(l);
@@ -186,6 +196,7 @@ const Schedule = (() => {
         <b>${U.esc(s.parentName)}</b>
         <div class="lm">${l.start}-${U.m2t(endMin(l))} · ${U.money(l.tuition)}${pub ? '' : ` <span style="color:#e85686">抽${l.commission}</span>`}</div>
         ${h > 62 ? `<div class="lm">${U.esc(DB.teacherName(l.teacherId))}${l.status === 'done' ? ' · 已完成' : ''}</div>` : ''}
+        ${take}
       </div>`;
     }).join('');
   }
@@ -246,8 +257,10 @@ const Schedule = (() => {
         const isImp = !!l.importedCommission;
         const sub = currentSub(l);
         const c = isImp ? '#b0b0b0' : U.subColor(sub.subject);
-        return `<div class="mg-item ${isImp ? 'imported' : ''}" data-lid="${l.id}" style="border-left-color:${c};background:${isImp ? '#f5f5f5' : c + '14'}">
-              ${isImp ? '· ' : l.start + ' '}${U.esc(s.parentName)}</div>`;
+        const bd = DB.lessonBreakdown(l);
+        const tip = bd.imported ? `实际到手 ${U.money(bd.commission)} · 导入抽成（无课时费明细）` : `实际到手 ${U.money(bd.commission)} · 其余 ${U.money(bd.teacherPay)} 老师课酬`;
+        return `<div class="mg-item ${isImp ? 'imported' : ''}" data-lid="${l.id}" title="${tip}" style="border-left-color:${c};background:${isImp ? '#f5f5f5' : c + '14'}">
+            ${isImp ? '· ' : l.start + ' '}${U.esc(s.parentName)}</div>`;
       }).join('')}
           ${ls.length > 3 ? `<div class="mg-item" style="border-left-color:#ccc;background:#f6f2f4">+${ls.length - 3} 节</div>` : ''}
           ${ls.length ? `<div class="mg-sum ${pub ? '' : 'secret'}">${pub ? U.money(gross) : U.money(profit)}</div>` : ''}
@@ -342,6 +355,7 @@ const Schedule = (() => {
     const fixed0 = (subs[0] || {}).fixed || [];
     const presetWds = fixed0.map(f => f.wd);
     const initMode = fixed0.length ? 'week' : 'none';
+    const initStart = preset.start || (fixed0.length ? fixed0[0].start : (lastStartFor(sid) || '19:00'));
     U.modal({
       title: '排课', okText: '确认排课',
       body: `
@@ -351,7 +365,7 @@ const Schedule = (() => {
         <select class="input" id="f_sub">${subs.map(sb => `<option value="${sb.id}" ${sb.id === (subs[0] || {}).id ? 'selected' : ''}>${U.esc(sb.grade + sb.subject)} · ${U.money(sb.tuition)}/${sb.duration}分</option>`).join('')}</select></div>
       <div class="row">
         <div class="field"><label>开始日期</label><input type="date" class="input" id="f_d" value="${preset.date || U.today()}"></div>
-        <div class="field"><label>开始时间</label><input type="time" class="input" id="f_t" value="${preset.start || '19:00'}" step="900"></div>
+        <div class="field"><label>开始时间</label><input type="time" class="input" id="f_t" value="${initStart}" step="900"></div>
         <div class="field"><label>时长（分钟）</label><input type="number" class="input" id="f_len" value="${subs[0] ? subs[0].duration : 60}" min="15" step="15"></div>
       </div>
       <div class="field"><label>重复方式</label>
@@ -426,6 +440,8 @@ const Schedule = (() => {
         } else {
           U.$('#f_fixed').checked = false;
           U.$('#f_len').value = sb.duration || 60;
+          const ls0 = lastStartFor(stu.id);
+          if (ls0) U.$('#f_t').value = ls0;
         }
       }
       if (rep) {
