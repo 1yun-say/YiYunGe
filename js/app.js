@@ -136,8 +136,38 @@ const App = (() => {
     bootAndDemo();
   }
 
+  function backupGuard() {
+    const last = DB.data.settings.lastBackupAt || 0;
+    const days = (Date.now() - last) / 86400000;
+    // 每周自动静默备份一次（浏览器可能拦截自动下载，失败不打扰）
+    if (days >= 7) {
+      try {
+        DB.exportJSON();
+        // 若上面成功更新了 lastBackupAt，则无需提醒
+        return;
+      } catch (e) { /* 自动下载被拦截，继续走提醒 */ }
+    }
+    // 超过 7 天未备份：强提醒；超过 14 天：弹窗阻断式提醒
+    if (days >= 14) {
+      setTimeout(() => U.modal({
+        title: '⚠️ 很久没有备份了',
+        okText: '立即备份',
+        cancelText: '稍后再说',
+        body: `<p style="font-size:13.5px;line-height:1.8">你已经有 <b>${Math.floor(days)} 天</b> 没有导出备份了。数据只存在本机浏览器里，一旦清缓存或换设备就会丢失。</p>
+          <p class="muted" style="font-size:12.5px;margin-top:8px">点「立即备份」会把全部数据下载成一个 JSON 文件，请妥善保存。</p>`,
+        onOk: () => {
+          const name = DB.exportJSON();
+          U.toast(name ? `已备份「${name}」` : '备份失败', name ? 'ok' : 'warn');
+        }
+      }), 800);
+    } else if (days >= 7) {
+      setTimeout(() => U.toast(`你已经 ${Math.floor(days)} 天没有备份了，建议到「数据管理」点「立即备份」`, 'warn', 6000), 1000);
+    }
+  }
+
   function bootAndDemo() {
     boot();
+    backupGuard();
     if (DB.data.__demo) {
       setTimeout(() => U.toast('已载入演示数据，可在「设置」中清空'), 600);
       delete DB.data.__demo; DB.save();

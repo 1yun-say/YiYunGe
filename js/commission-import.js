@@ -139,6 +139,14 @@
       };
     },
 
+    // 从文本中提取所有数字并求和（用于把批注中的金额自动计入报销支出）
+    extractNumbers(t) {
+      const s = String(t || '');
+      const m = s.match(/\d+(\.\d+)?/g);
+      if (!m) return 0;
+      return m.reduce((a, v) => a + parseFloat(v), 0);
+    },
+
     commit(res) {
       const data = DB.data;
       const cache = {};
@@ -157,6 +165,11 @@
         }
         const stu = DB.student(sid);
         const sub = (stu.subjects && stu.subjects[0]) || null;
+        // Excel 单元格数值视为「实际到手收入」，批注写入 incomeNote 并在账单中可展开查看；
+        // 批注里的数字自动算作「报销支出」； commission 按「到手 + 报销」反推，保证三本账自洽。
+        const takeHome = rec.commission;
+        const incomeNote = rec.note || '';
+        const reimb = C.extractNumbers(incomeNote);
         data.lessons.push({
           id: U.uid('les'),
           studentId: sid,
@@ -167,16 +180,18 @@
           start: '08:00',
           duration: 60,
           tuition: 0,
-          commission: rec.commission,
-          actualTakeHome: rec.commission,
+          commission: takeHome + reimb,
+          actualTakeHome: takeHome,
+          incomeNote: incomeNote,
           teacherId: stu.teacherId || 'tc_me',
           status: 'done',
-          note: rec.note ? ('[抽成表] ' + rec.note) : '[抽成表导入]',
-          importedCommission: true
+          note: '[抽成表导入]',
+          importedCommission: true,
+          importedTakeHome: true
         });
       });
       DB.save();
-      U.toast(`已导入 ${res.records.length} 条抽成记录（新建 ${created} 个学员）`, 'ok');
+      U.toast(`已导入 ${res.records.length} 条记录（新建 ${created} 个学员）`, 'ok');
       if (window.App && App.go) App.go('finance');
     }
   };

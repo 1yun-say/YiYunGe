@@ -490,13 +490,14 @@ const DB = (() => {
     return matches.reduce((s, m) => s + parseFloat(m), 0);
   }
   // 收入口径：实际到手收入 = 我的抽成 − 报销支出。
-  // 兼容 v1.7.7/1.7.8 手动录入的 actualTakeHome（若显式填写则以它为准）；导入抽成=全额到手。
+  // 兼容 v1.7.7/1.7.8 手动录入的 actualTakeHome（若显式填写则以它为准）；
+  // Excel 导入的「实际到手」数据：actualTakeHome 为显式值，报销支出从 incomeNote 提取。
   function takeHomeOf(l) {
+    const hasExplicit = l.actualTakeHome !== undefined && l.actualTakeHome !== null && l.actualTakeHome !== '';
+    if (hasExplicit) return +l.actualTakeHome || 0;
     const imported = !!l.importedCommission;
     const commission = +l.commission || 0;
     if (imported) return commission;
-    const hasExplicit = l.actualTakeHome !== undefined && l.actualTakeHome !== null && l.actualTakeHome !== '';
-    if (hasExplicit) return +l.actualTakeHome || 0;
     return Math.max(0, commission - reimburseOf(l));
   }
   function takeHomeNote(l) {
@@ -521,7 +522,7 @@ const DB = (() => {
     const gross = +l.tuition || 0;                 // 家长流水
     const commission = +l.commission || 0;         // 我的抽成
     const imported = !!l.importedCommission;
-    const reimb = imported ? 0 : reimburseOf(l);   // 报销支出（批注提取）
+    const reimb = reimburseOf(l);                  // 报销支出（批注提取，导入数据也生效）
     const takeHome = takeHomeOf(l);                // 实际到手
     const teacherPay = imported ? 0 : Math.max(0, gross - commission); // 老师课酬
     return { gross, commission, reimb, takeHome, teacherPay, imported, note: takeHomeNote(l) };

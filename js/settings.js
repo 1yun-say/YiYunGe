@@ -53,12 +53,13 @@ const Settings = (() => {
         <p class="muted" style="font-size:12.5px;margin-bottom:12px">
           每次操作都会自动保存到本机浏览器（关掉再开数据还在）。但浏览器本地存储按「设备+浏览器」隔离，<b>换设备、换浏览器、清缓存或隐私模式都会看不到这份数据</b>。</p>
         <div style="display:flex;flex-wrap:wrap;gap:9px">
-          <button class="btn btn-primary hide-on-mobile" data-act="export">导出备份 JSON</button>
-          <button class="btn btn-ghost hide-on-mobile" data-act="import">导入备份</button>
+          <button class="btn btn-primary" data-act="backupNow">立即备份</button>
+          <button class="btn btn-ghost" data-act="export">导出备份 JSON</button>
+          <button class="btn btn-ghost" data-act="import">导入备份</button>
           <button class="btn btn-ghost" data-act="demo">载入演示数据</button>
           <button class="btn btn-danger" data-act="clear">清空全部数据</button>
         </div>
-        <div class="edit-time hide-on-mobile" style="margin-top:10px">
+        <div class="edit-time ${lastBk && Date.now() - d.settings.lastBackupAt > 7 * 86400000 ? 'warn' : ''}" style="margin-top:10px">
           <svg class="ico"><use href="#i-check"/></svg>
           ${lastBk ? `上次导出备份：${lastBk}` : '还没有导出过备份，建议现在导出一份存到手机或网盘'}</div>
         ${preImp ? `<div class="edit-time hide-on-mobile" style="margin-top:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -66,7 +67,7 @@ const Settings = (() => {
           <button class="btn btn-ghost btn-sm" data-act="undoImport">撤销上次导入</button>
         </div>` : ''}
         ${embHTML}
-        <input type="file" id="fileIn" accept="application/json" class="hide-on-mobile" style="display:none">
+        <input type="file" id="fileIn" accept="application/json" style="display:none">
 
         <div class="divider"></div>
         <div class="card-h" style="margin-bottom:6px"><h3 style="font-size:14px">网页本身的备份</h3></div>
@@ -180,7 +181,13 @@ const Settings = (() => {
       Sync.cfg().gistId = U.$('#syncGistId', root).value.trim();
       const provSel = U.$('#syncProvider', root);
       if (provSel) Sync.cfg().provider = provSel.value;
-      switch (b.dataset.act) {
+        switch (b.dataset.act) {
+        case 'backupNow': {
+          const name = DB.exportJSON();
+          U.toast(name ? `已备份「${name}」` : '备份失败', name ? 'ok' : 'warn');
+          render();
+          break;
+        }
         case 'nightToggle': {
           const on = !DB.data.settings.night;
           DB.data.settings.night = on; DB.save();
@@ -190,14 +197,12 @@ const Settings = (() => {
           break;
         }
         case 'export': {
-          if (U.isMobile()) { U.toast('手机端请用「云同步」传输数据，导出 / 导入请在电脑端操作', 'warn'); break; }
           const name = DB.exportJSON();
-          U.toast(`已导出「${name}」，请到浏览器的「下载」里查看`, 'ok');
+          U.toast(name ? `已导出「${name}」，请到浏览器的「下载」里查看` : '导出失败', name ? 'ok' : 'warn');
           render();
           break;
         }
         case 'import':
-          if (U.isMobile()) { U.toast('手机端请用「云同步」传输数据，导出 / 导入请在电脑端操作', 'warn'); break; }
           U.$('#fileIn', root).click(); break;
         case 'offlineData': makeOffline(true); break;
         case 'offlinePure': makeOffline(false); break;

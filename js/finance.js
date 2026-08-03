@@ -259,8 +259,8 @@ const Finance = (() => {
       <div class="card-h">
         <h3>${U.esc(billTitle)}</h3>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-2);cursor:pointer">
-            <input type="checkbox" id="bill_inc" ${includeImported ? 'checked' : ''}> 含导入数据</label>
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);cursor:pointer;padding:6px 8px;border-radius:8px;background:var(--pink-50)">
+            <input type="checkbox" id="bill_inc" ${includeImported ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--pink-600)"> 含导入数据</label>
           <div class="tabs">
             ${[['week', '周账单'], ['month', '月账单'], ['year', '年账单'], ['custom', '自定义']]
               .map(([k, n]) => `<button class="tab ${billRange === k ? 'active' : ''}" data-br="${k}">${n}</button>`).join('')}
@@ -318,7 +318,7 @@ const Finance = (() => {
     </div>`;
   }
 
-  /* ---------- 导出：图片（PNG）/ CSV ---------- */
+  /* ---------- 导出：图片（PNG）/ CSV / PDF 对账单 ---------- */
   function csvCell(v) {
     v = (v === undefined || v === null) ? '' : String(v);
     return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
@@ -359,6 +359,68 @@ const Finance = (() => {
       U.toast('已导出 CSV', 'ok');
     } catch (e) {
       U.toast('导出 CSV 失败：' + (e && e.message ? e.message : e), 'warn');
+    }
+  }
+
+  function exportPDF() {
+    try {
+      const st = DB.statIn(from, to, { includeScheduled });
+      const title = range === 'year' ? `${from.slice(0, 4)} 年度对账单` : `${from.slice(0, 7)} 月度对账单`;
+      const items = st.lessons
+        .filter(l => l.status === 'done' && DB.lessonBreakdown(l).takeHome > 0)
+        .sort((a, b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start));
+      const rows = items.map(l => {
+        const s = DB.student(l.studentId);
+        const bd = DB.lessonBreakdown(l);
+        const sub = (l.grade || '') + (l.subject || '');
+        return `<tr>
+          <td>${U.esc(l.date)} ${U.wdName(l.date)}</td>
+          <td>${U.esc(sub || '导入')} · ${U.esc(s ? s.parentName : '已删除学员')}</td>
+          <td style="text-align:right">${U.money(bd.commission)}</td>
+          <td style="text-align:right">${U.money(bd.reimb)}</td>
+          <td style="text-align:right;font-weight:700">${U.money(bd.takeHome)}</td>
+          <td>${U.esc(bd.note)}</td>
+        </tr>`;
+      }).join('');
+      const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>逸云阁对账单</title>
+<style>
+  body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;font-size:13px;color:#4a2c3c;padding:24px;max-width:760px;margin:0 auto}
+  h1{font-size:22px;color:#e85686;margin-bottom:6px}
+  .sub{color:#7b5b6b;font-size:12px;margin-bottom:18px}
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+  .sum-item{background:#fff8fb;border:1px solid #ffd2e2;border-radius:12px;padding:12px;text-align:center}
+  .sum-item .lab{font-size:11px;color:#7b5b6b}
+  .sum-item .val{font-size:18px;font-weight:700;color:#e85686;margin-top:4px}
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+  th{background:#fff0f5;border-bottom:2px solid #ffd2e2;padding:8px;text-align:left;font-weight:600}
+  td{padding:8px;border-bottom:1px solid #ffe9f1}
+  td.num{text-align:right}
+  .note{color:#a8899a;font-size:11px}
+  .foot{margin-top:18px;font-size:11px;color:#a8899a;text-align:center}
+  @media print{body{padding:0}.no-print{display:none}}
+</style></head><body>
+  <h1>逸云阁 · ${U.esc(title)}</h1>
+  <div class="sub">统计区间：${from} 至 ${to} · 仅含已完成且实际到手 &gt; 0 的记录</div>
+  <div class="summary">
+    <div class="sum-item"><div class="lab">我的抽成</div><div class="val">${U.money(st.commission)}</div></div>
+    <div class="sum-item"><div class="lab">报销支出</div><div class="val">${U.money(st.reimb)}</div></div>
+    <div class="sum-item"><div class="lab">实际到手</div><div class="val">${U.money(st.profit)}</div></div>
+    <div class="sum-item"><div class="lab">课时数</div><div class="val">${st.count} 节</div></div>
+  </div>
+  <table>
+    <thead><tr><th>日期</th><th>来源</th><th style="text-align:right">我的抽成</th><th style="text-align:right">报销支出</th><th style="text-align:right">实际到手</th><th>批注</th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="6" style="text-align:center;color:#a8899a">该区间没有对账记录</td></tr>'}</tbody>
+  </table>
+  <div class="foot">由 逸云阁工作台 生成 · ${new Date().toLocaleString('zh-CN')}</div>
+  <script>window.onload=function(){setTimeout(function(){window.print()},200)}<\/script>
+</body></html>`;
+      const w = window.open('', '_blank');
+      if (!w) { U.toast('请允许弹窗，才能打开对账单页面', 'warn'); return; }
+      w.document.open(); w.document.write(html); w.document.close();
+      U.toast('已对账单页面，请用「打印 → 另存为 PDF」', 'ok');
+    } catch (e) {
+      U.toast('导出 PDF 失败：' + (e && e.message ? e.message : e), 'warn');
     }
   }
 
@@ -406,14 +468,15 @@ const Finance = (() => {
           <input type="date" class="input" id="f_from" value="${from}" style="width:150px;padding:6px 9px">
           <span class="muted">至</span>
           <input type="date" class="input" id="f_to" value="${to}" style="width:150px;padding:6px 9px">
-          <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-2);cursor:pointer">
-            <input type="checkbox" id="f_inc" ${includeScheduled ? 'checked' : ''}> 含未上课程
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);cursor:pointer;padding:6px 8px;border-radius:8px;background:var(--pink-50)">
+            <input type="checkbox" id="f_inc" ${includeScheduled ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--pink-600)"> 含未上课程
           </label>
           <span style="display:flex;gap:8px;margin-left:auto">
-            <button class="btn btn-ghost btn-sm" data-act="importCommission">导入抽成表</button>
-            <button class="btn btn-ghost btn-sm" data-act="editHist">历史收入</button>
-            <button class="btn btn-ghost btn-sm" data-act="exportPng">导出图片</button>
-            <button class="btn ${editMode ? 'btn-primary' : 'btn-ghost'} btn-sm" data-act="toggleEdit">
+          <button class="btn btn-ghost btn-sm" data-act="importCommission">导入抽成表</button>
+          <button class="btn btn-ghost btn-sm" data-act="editHist">历史收入</button>
+          <button class="btn btn-ghost btn-sm" data-act="exportPng">导出图片</button>
+          <button class="btn btn-ghost btn-sm" data-act="exportPdf">导出PDF</button>
+          <button class="btn ${editMode ? 'btn-primary' : 'btn-ghost'} btn-sm" data-act="toggleEdit">
               <svg class="ico"><use href="#${editMode ? 'i-check' : 'i-gear'}"/></svg>
               ${editMode ? '完成编辑' : '编辑模块'}
             </button>
@@ -489,6 +552,7 @@ const Finance = (() => {
       switch (b.dataset.act) {
         case 'exportPng': exportPNG(); break;
         case 'exportCsv': exportCSV(); break;
+        case 'exportPdf': exportPDF(); break;
         case 'importCommission': if (window.CommissionImport) CommissionImport.pick(); break;
         case 'toggleEdit': editMode = !editMode; render(); break;
 

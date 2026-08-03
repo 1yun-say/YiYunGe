@@ -70,16 +70,18 @@ const Dashboard = (() => {
   }
 
   function moduleKpi(ctx) {
+    const trend = ctx.mom == null ? '<span class="muted">暂无上月数据</span>'
+      : `<span style="color:${ctx.mom >= 0 ? 'var(--pink-700)' : 'var(--green,#2e9e5b)'}">${ctx.mom >= 0 ? '▲' : '▼'} ${Math.abs(ctx.mom)}% 环比</span>`;
     return `
     <div class="grid g4 dash-kpi" style="margin-bottom:16px">
-      <div class="stat"><div class="lab">今日课程</div><div class="val">${ctx.todayLessons.length}</div>
-        <div class="sub">共 ${ctx.todayLessons.reduce((s, l) => s + l.duration, 0)} 分钟</div></div>
-      <div class="stat"><div class="lab">今日待办</div><div class="val">${ctx.undone.length}</div>
-        <div class="sub">已完成 ${ctx.todosAll.length - ctx.undone.length} 件</div></div>
-      <div class="stat hl secret"><div class="lab">本月实际到手（${ctx.inc ? '含未上课' : '已上课'}）</div><div class="val">${U.money(ctx.mStat.profit)}</div>
+      <div class="stat"><div class="lab">本月我的抽成</div><div class="val">${U.money(ctx.mStat.commission)}</div>
+        <div class="sub">${ctx.inc ? '含未上课' : '仅已上课'} · 抽成总额</div></div>
+      <div class="stat"><div class="lab">本月报销支出</div><div class="val money out">${U.money(ctx.mStat.reimb)}</div>
+        <div class="sub">从批注自动提取</div></div>
+      <div class="stat hl secret"><div class="lab">本月实际到手</div><div class="val">${U.money(ctx.mStat.profit)}</div>
         <div class="sub">已落袋 ${U.money(ctx.mDone.profit)}</div></div>
-      <div class="stat ${ctx.pub ? 'hl' : ''}"><div class="lab">本月课时 / 流水</div><div class="val">${ctx.mStat.count}</div>
-        <div class="sub">${U.money(ctx.mStat.gross)}</div></div>
+      <div class="stat"><div class="lab">到手趋势</div><div class="val" style="font-size:20px">${trend}</div>
+        <div class="sub">比上月 ${ctx.prevStat.profit ? U.money(ctx.prevStat.profit) : '—'}</div></div>
     </div>`;
   }
 
@@ -271,10 +273,11 @@ const Dashboard = (() => {
 
   /* ---------- 手机端一屏精简仪表 ---------- */
   function renderMobile(ctx) {
-    const { t, todayLessons, undone, mStat, mDone, inc } = ctx;
+    const { t, todayLessons, undone, mStat, mDone, inc, mom } = ctx;
     const totalMin = todayLessons.reduce((s, l) => s + (+l.duration || 0), 0);
     const profit = inc ? mStat.profit : mDone.profit;
     const profitLabel = inc ? '含预计' : '已落袋';
+    const trend = mom == null ? '' : `<span style="color:${mom >= 0 ? 'var(--pink-700)' : 'var(--green,#2e9e5b)'}">${mom >= 0 ? '▲' : '▼'}${Math.abs(mom)}%</span>`;
     const qk = [
       { go: 'students', ic: 'i-user', name: '学员' },
       { go: 'teachers', ic: 'i-user', name: '老师' },
@@ -332,6 +335,15 @@ const Dashboard = (() => {
         ${undone.length ? undone.slice(0, 3).map(todoRow).join('') : '<div class="muted" style="font-size:12px;padding:6px 0">今日待办已清空</div>'}
         ${undone.length > 3 ? `<div class="muted" style="font-size:11px;text-align:center;padding-top:6px">还有 ${undone.length - 3} 件</div>` : ''}
       </div>
+      <div class="dash-mobile-card">
+        <h4>本月财务 ${trend}</h4>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center">
+          <div><div class="muted" style="font-size:10px">我的抽成</div><div style="font-size:16px;font-weight:700;color:var(--pink-600)">${U.money(mStat.commission).replace('¥', '')}</div></div>
+          <div><div class="muted" style="font-size:10px">报销支出</div><div style="font-size:16px;font-weight:700;color:var(--ink-3)">${U.money(mStat.reimb).replace('¥', '')}</div></div>
+          <div><div class="muted" style="font-size:10px">实际到手</div><div style="font-size:16px;font-weight:700;color:var(--pink-600)">${U.money(profit).replace('¥', '')}</div></div>
+        </div>
+        <div class="muted" style="font-size:10px;margin-top:6px">${profitLabel} · 点下方「财务」看明细</div>
+      </div>
       <div class="dash-mobile-quick">
         ${qk.map(q => `<button class="dash-mobile-qb" data-go="${q.go}">
           <svg class="ico"><use href="#${q.ic}"/></svg>${q.name}</button>`).join('')}
@@ -388,6 +400,9 @@ const Dashboard = (() => {
     const mFrom = U.monthFirst(t), mTo = U.monthLast(t);
     const mStat = DB.statIn(mFrom, mTo, { includeScheduled: inc });
     const mDone = DB.statIn(mFrom, mTo);
+    const prevM = U.addMonths(mFrom, -1);
+    const prevStat = DB.statIn(U.monthFirst(prevM), U.monthLast(prevM), { includeScheduled: inc });
+    const mom = prevStat.profit ? Math.round((mStat.profit - prevStat.profit) / prevStat.profit * 100) : null;
     const week = U.weekDays(t);
     const wStat = DB.statIn(week[0], week[6], { includeScheduled: inc });
     const trials = DB.data.students.filter(s => s.status === 'trial');
@@ -403,7 +418,7 @@ const Dashboard = (() => {
     });
     const byGrade = Finance.group(DB.statIn(mFrom, mTo, { includeScheduled: inc }).lessons, 'grade');
 
-    const ctx = { t, pub, todayLessons, todosAll, undone, overdue, mStat, mDone, wStat, trials, conflictDays, months, byGrade, inc };
+    const ctx = { t, pub, todayLessons, todosAll, undone, overdue, mStat, mDone, wStat, trials, conflictDays, months, byGrade, inc, prevStat, mom };
     if (U.isMobile()) { root.innerHTML = renderMobile(ctx); bindMobile(root, ctx); return; }
 
     const layout = getLayout();
