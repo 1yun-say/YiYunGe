@@ -370,7 +370,7 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
-      <div class="log-ver">v1.7.9</div><div class="log-date">2026-08-04</div>
+      <div class="log-ver">v1.7.10</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li>收入模型重定义：实际到手 = 我的抽成 − 报销支出；报销支出 = 从「批注」里自动提取的数字之和（如批注写「买资料50、交通30」即报销 80）。排课/编辑弹窗不再手填「实际到手」，只保留「批注（报销支出）」。</li>
         <li>Excel 抽成表导入：单元格数值视为「实际到手收入」，Excel 批注同步导入为课节批注（incomeNote），点开账单即可查看；批注中的数字自动提取为「报销支出」；系统按「到手 + 报销」反推出「我的抽成」，保证三本账自洽并同步到财务统计。</li>
@@ -384,6 +384,11 @@ const Changelog = (() => {
         <li>老师课时排行：列改为「课酬（=Σ(课时费−我的抽成)）」与「实际到手」，不再显示含义含糊的「其余支出」。</li>
         <li>账单明细：新增「含导入数据」开关；勾选后导入抽成纳入账单，且明细统计不再显示抽成率。点账单任意一行可展开查看「批注」（钱花哪了）。</li>
         <li>修复 bug：财务账单「编辑」按钮此前因全局变量判定方式（window.Schedule 在浏览器顶层 const 下并不挂到 window）而点击无反应，已修复，现可正常打开编辑弹窗。</li>
+      </ul>
+      <div class="divider"></div>
+      <div class="log-ver">v1.7.9</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li>缓存破坏：给所有 JS / CSS 资源加 <code>?v=1.7.9</code> 版本号，强制 iPad / 手机端主屏幕 PWA 与浏览器放弃旧缓存，避免设备间版本不一致、加载到旧版界面。</li>
       </ul>
       <div class="divider"></div>
       <div class="log-ver">v1.7.8</div><div class="log-date">2026-08-04</div>
