@@ -1,0 +1,298 @@
+/* ===== 待办 ===== */
+window.Views = window.Views || {};
+
+const Todo = (() => {
+  const P = [
+    { v: 0, name: '紧急重要', short: '立刻做', color: '#ef6f6f' },
+    { v: 1, name: '重要不紧急', short: '计划做', color: '#f2b544' },
+    { v: 2, name: '紧急不重要', short: '快速做', color: '#8fb8f0' },
+    { v: 3, name: '不紧急不重要', short: '有空做', color: '#a8899a' }
+  ];
+  const pInfo = v => P[v] || P[3];
+  let curDate = U.today();
+  let filter = -1;
+
+  /* --- 自动任务：试课回访 --- */
+  function checkAuto() {
+    const t = U.today();
+    let added = 0;
+    DB.data.students.forEach(s => {
+      if (s.status !== 'trial' || !s.trialDate) return;
+      const due = U.addDays(s.trialDate, 1);
+      if (t < due) return;                          // 还没到回访日
+      const key = `trial:${s.id}:${s.trialDate}`;
+      if (DB.data.todos.some(x => x.autoKey === key)) return;
+      DB.data.todos.push({
+        id: U.uid('td'), title: `回访${s.parentName}试课体验（${s.grade}${s.subject}）`,
+        note: '确认孩子和老师是否匹配、是否愿意转正式课；不合适则立即换老师。',
+        priority: 0, tag: '试课跟进', date: due > t ? due : t, done: false, doneAt: null,
+        autoKey: key, studentId: s.id, createdAt: Date.now()
+      });
+      added++;
+    });
+    if (added) { DB.save(); U.toast(`自动生成 ${added} 条试课回访任务`); }
+    return added;
+  }
+
+  const ofDate = d => DB.data.todos.filter(t => t.date === d);
+  const pendingCount = () => DB.data.todos.filter(t => !t.done && t.date <= U.today()).length;
+
+  function add(t) {
+    DB.data.todos.push(Object.assign({
+      id: U.uid('td'), title: '', note: '', priority: 1, tag: '', date: curDate,
+      time: '', done: false, doneAt: null, createdAt: Date.now()
+    }, t));
+    DB.save();
+  }
+
+  function importTemplates(ids) {
+    let n = 0;
+    DB.data.templates.forEach(tpl => {
+      if (ids && !ids.includes(tpl.id)) return;
+      if (DB.data.todos.some(t => t.date === curDate && t.tplId === tpl.id)) return; // 当天已导入
+      add({ title: tpl.title, priority: tpl.priority, tag: tpl.tag, tplId: tpl.id, date: curDate });
+      n++;
+    });
+    U.toast(n ? `已导入 ${n} 条模板任务` : '今天已经导入过了', n ? 'ok' : 'warn');
+    render();
+  }
+
+  /* --- 渲染 --- */
+  function render() {
+    const root = U.$('#view');
+    if (!root || App.route !== 'todo') return;
+    const list = ofDate(curDate);
+    const undone = list.filter(t => !t.done).sort((a, b) => (a.time || '99:59').localeCompare(b.time || '99:59') || a.priority - b.priority || a.createdAt - b.createdAt);
+    const done = list.filter(t => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+    const shown = filter < 0 ? undone : undone.filter(t => t.priority === filter);
+    const overdue = DB.data.todos.filter(t => !t.done && t.date < U.today());
+
+    root.innerHTML = `
+    <div class="grid" style="grid-template-columns:minmax(0,1fr) 320px">
+      <div style="display:flex;flex-direction:column;gap:16px">
+
+        ${overdue.length ? `<div class="card" style="border-color:#ffd0d0;background:#fff8f8">
+          <div class="card-h"><h3 style="color:#cf5252">遗留未完成 ${overdue.length} 条</h3>
+            <button class="btn btn-sm btn-ghost" data-act="pullOverdue">全部拉到今天</button></div>
+          <div class="todo-list">${overdue.slice(0, 5).map(t => rowHTML(t, true)).join('')}</div>
+        </div>` : ''}
+
+        <div class="card">
+          <div class="card-h">
+            <h3>${curDate === U.today() ? '今日待办' : U.cnDate(curDate) + ' 待办'}
+              <span class="tag">${undone.length} 待办 / ${done.length} 完成</span></h3>
+            <div style="display:flex;gap:6px;align-items:center">
+              <button class="btn btn-icon" data-act="prevDay" title="前一天">&#8249;</button>
+              <input type="date" class="input" style="width:150px;padding:5px 8px" id="tdDate" value="${curDate}">
+              <button class="btn btn-icon" data-act="nextDay" title="后一天">&#8250;</button>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <input class="input" id="quickTitle" style="flex:1;min-width:140px" placeholder="输入任务后回车，例如：给王妈妈发本周课表">
+            <input type="time" class="input" id="quickTime" style="width:120px" title="可选的具体时间，如 19:00">
+            <select class="input" id="quickP" style="width:132px">
+              ${P.map(p => `<option value="${p.v}" ${p.v === 1 ? 'selected' : ''}>${p.name}</option>`).join('')}
+            </select>
+            <button class="btn btn-primary" data-act="quickAdd">添加</button>
+          </div>
+
+          <div class="seg" style="margin-bottom:12px">
+            <div class="opt ${filter < 0 ? 'on' : ''}" data-f="-1">全部</div>
+            ${P.map(p => `<div class="opt ${filter === p.v ? 'on' : ''}" data-f="${p.v}">
+              <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${p.color};margin-right:5px"></span>${p.name}
+              <b style="margin-left:4px;color:inherit;opacity:.6">${undone.filter(t => t.priority === p.v).length}</b></div>`).join('')}
+          </div>
+
+          <div class="todo-list">
+            ${shown.length ? shown.map(t => rowHTML(t)).join('')
+        : `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-flower"/></svg>
+                 <p>这一天很清爽，从右侧模板一键导入日常任务吧</p></div>`}
+          </div>
+
+          ${done.length ? `<div class="divider"></div>
+            <div class="archive-head" data-act="toggleArch">
+              <span class="caret">&#9656;</span> 已完成归档（${done.length}）
+            </div>
+            <div class="todo-list" id="archBox" style="display:none">${done.map(t => rowHTML(t)).join('')}</div>` : ''}
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card">
+          <div class="card-h"><h3>每日模板库</h3>
+            <button class="btn btn-icon" data-act="addTpl" title="新增模板"><svg class="ico"><use href="#i-plus"/></svg></button>
+          </div>
+          <button class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:11px" data-act="importAll">
+            一键导入全部到${curDate === U.today() ? '今天' : U.cnDate(curDate)}
+          </button>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            ${DB.data.templates.length ? DB.data.templates.map(tpl => `
+              <div class="tpl-chip" data-tpl="${tpl.id}">
+                <span class="pdot" style="background:${pInfo(tpl.priority).color}"></span>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(tpl.title)}</div>
+                  ${tpl.tag ? `<span class="tag gray" style="margin-top:3px">${U.esc(tpl.tag)}</span>` : ''}
+                </div>
+                <button class="btn btn-icon" data-act="useTpl" title="导入这条"><svg class="ico"><use href="#i-plus"/></svg></button>
+                <button class="btn btn-icon" data-act="editTpl" title="编辑"><svg class="ico"><use href="#i-edit"/></svg></button>
+                <button class="btn btn-icon" data-act="delTpl" title="删除"><svg class="ico"><use href="#i-trash"/></svg></button>
+              </div>`).join('') : `<p class="muted" style="font-size:12px">还没有模板，点右上角 + 添加</p>`}
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h3>四象限说明</h3></div>
+          ${P.map(p => `<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px">
+            <span class="pdot" style="width:9px;height:9px;border-radius:50%;background:${p.color};margin-top:6px;flex:none"></span>
+            <div><b style="font-size:12.5px">${p.name}</b>
+              <div class="muted" style="font-size:11px">${p.short}</div></div>
+          </div>`).join('')}
+          <div class="divider"></div>
+        </div>
+      </div>
+    </div>`;
+
+    bind(root);
+  }
+
+  function rowHTML(t, showDate) {
+    const p = pInfo(t.priority);
+    const stu = t.studentId ? DB.student(t.studentId) : null;
+    return `<div class="todo-item ${t.done ? 'done' : ''}" data-p="${t.priority}" data-id="${t.id}">
+      <div class="chk ${t.done ? 'on' : ''}" data-act="toggle"></div>
+      <div class="t-body">
+        <div class="t-title">
+          ${t.time ? `<span class="t-time">${U.esc(t.time)}</span>` : ''}${U.esc(t.title)}
+        </div>
+        ${t.note ? `<div class="muted" style="font-size:11.5px;margin-top:2px">${U.esc(t.note)}</div>` : ''}
+        <div class="t-meta">
+          <span class="tag" style="background:${p.color}1f;color:${p.color}">${p.name}</span>
+          ${t.tag ? `<span class="tag gray">${U.esc(t.tag)}</span>` : ''}
+          ${t.autoKey ? `<span class="tag gold">自动生成</span>` : ''}
+          ${stu ? `<span class="tag sky">${U.esc(DB.studentLabel(stu))}</span>` : ''}
+          ${showDate ? `<span class="tag alert">${U.cnDate(t.date)}</span>` : ''}
+          ${t.done && t.doneAt ? `<span class="muted" style="font-size:11px">完成于 ${new Date(t.doneAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>` : ''}
+        </div>
+      </div>
+      <div class="t-actions">
+        <button class="btn btn-icon" data-act="edit" title="编辑"><svg class="ico"><use href="#i-edit"/></svg></button>
+        <button class="btn btn-icon" data-act="del" title="删除"><svg class="ico"><use href="#i-trash"/></svg></button>
+      </div>
+    </div>`;
+  }
+
+  function bind(root) {
+    U.$('#tdDate', root).onchange = e => { curDate = e.target.value; render(); };
+    root.querySelectorAll('.seg .opt').forEach(o => o.onclick = () => { filter = +o.dataset.f; render(); });
+
+    U.rebind(root, 'todo', e => {
+      const btn = e.target.closest('[data-act]'); if (!btn) return;
+      const act = btn.dataset.act;
+      const item = btn.closest('.todo-item');
+      const tid = item && item.dataset.id;
+      const t = tid && DB.data.todos.find(x => x.id === tid);
+      const tplEl = btn.closest('[data-tpl]');
+      const tpl = tplEl && DB.data.templates.find(x => x.id === tplEl.dataset.tpl);
+
+      switch (act) {
+        case 'prevDay': curDate = U.addDays(curDate, -1); render(); break;
+        case 'nextDay': curDate = U.addDays(curDate, 1); render(); break;
+        case 'quickAdd': doQuickAdd(root); break;
+        case 'toggle':
+          t.done = !t.done; t.doneAt = t.done ? Date.now() : null; DB.save(); render(); App.refreshBadge();
+          if (t.done) U.toast('完成一件，很好');
+          break;
+        case 'edit': editTodo(t); break;
+        case 'del': DB.data.todos = DB.data.todos.filter(x => x.id !== tid); DB.save(); render(); App.refreshBadge(); break;
+        case 'pullOverdue':
+          DB.data.todos.forEach(x => { if (!x.done && x.date < U.today()) x.date = U.today(); });
+          DB.save(); curDate = U.today(); render(); U.toast('已全部拉到今天');
+          break;
+        case 'toggleArch': {
+          const box = U.$('#archBox', root); const open = box.style.display === 'none';
+          box.style.display = open ? 'flex' : 'none'; btn.classList.toggle('open', open); break;
+        }
+        case 'importAll': importTemplates(); break;
+        case 'useTpl': importTemplates([tpl.id]); break;
+        case 'editTpl': editTpl(tpl); break;
+        case 'delTpl':
+          U.confirm(`删除模板「${tpl.title}」？`, () => {
+            DB.data.templates = DB.data.templates.filter(x => x.id !== tpl.id); DB.save(); render();
+          }, '删除');
+          break;
+        case 'addTpl': editTpl(null); break;
+      }
+    });
+
+    U.$('#quickTitle', root).addEventListener('keydown', e => { if (e.key === 'Enter') doQuickAdd(root); });
+  }
+
+  function doQuickAdd(root) {
+    const i = U.$('#quickTitle', root);
+    const v = i.value.trim(); if (!v) return;
+    const tIn = U.$('#quickTime', root);
+    const time = tIn ? (tIn.value || '') : '';
+    add({ title: v, priority: +U.$('#quickP', root).value, date: curDate, time });
+    i.value = ''; if (tIn) tIn.value = ''; render(); App.refreshBadge();
+    setTimeout(() => U.$('#quickTitle').focus(), 30);
+  }
+
+  function editTodo(t, after) {
+    U.modal({
+      title: '编辑任务',
+      body: `<div class="field"><label>任务内容</label><input class="input" id="f_t" value="${U.esc(t.title)}"></div>
+        <div class="field"><label>备注</label><textarea class="input" id="f_n">${U.esc(t.note || '')}</textarea></div>
+        <div class="row">
+          <div class="field"><label>优先级</label><select class="input" id="f_p">
+            ${P.map(p => `<option value="${p.v}" ${p.v === t.priority ? 'selected' : ''}>${p.name}</option>`).join('')}</select></div>
+          <div class="field"><label>时间（可选）</label><input type="time" class="input" id="f_m" value="${t.time || ''}"></div>
+          <div class="field"><label>标签</label><input class="input" id="f_g" value="${U.esc(t.tag || '')}" placeholder="如 家长沟通"></div>
+        </div>
+        <div class="field"><label>日期</label><input type="date" class="input" id="f_d" value="${t.date}"></div>`,
+      onOk: b => {
+        t.title = U.$('#f_t', b).value.trim() || t.title;
+        t.note = U.$('#f_n', b).value.trim();
+        t.priority = +U.$('#f_p', b).value;
+        t.time = U.$('#f_m', b).value || '';
+        t.tag = U.$('#f_g', b).value.trim();
+        t.date = U.$('#f_d', b).value || t.date;
+        DB.save();
+        if (after) after(); else { render(); App.refreshBadge(); }
+      }
+    });
+  }
+
+  function editTpl(tpl, after) {
+    const isNew = !tpl;
+    tpl = tpl || { title: '', priority: 1, tag: '' };
+    U.modal({
+      title: isNew ? '新增每日模板' : '编辑模板',
+      body: `<div class="field"><label>模板内容</label>
+          <input class="input" id="f_t" value="${U.esc(tpl.title)}" placeholder="例如：给今天上课的家长发提醒"></div>
+        <div class="row">
+          <div class="field"><label>默认优先级</label><select class="input" id="f_p">
+            ${P.map(p => `<option value="${p.v}" ${p.v === tpl.priority ? 'selected' : ''}>${p.name}</option>`).join('')}</select></div>
+          <div class="field"><label>标签</label><input class="input" id="f_g" value="${U.esc(tpl.tag)}" placeholder="日常 / 家长沟通 / 财务"></div>
+        </div>
+        <p class="muted" style="font-size:11.5px">模板不会自己产生任务，需要你在待办页点「一键导入」，避免堆积。</p>`,
+      onOk: b => {
+        const title = U.$('#f_t', b).value.trim();
+        if (!title) { U.toast('请填写模板内容', 'warn'); return false; }
+        const o = { title, priority: +U.$('#f_p', b).value, tag: U.$('#f_g', b).value.trim() };
+        if (isNew) DB.data.templates.push(Object.assign({ id: U.uid('tpl') }, o));
+        else Object.assign(tpl, o);
+        DB.save();
+        if (after) after(); else render();
+      }
+    });
+  }
+
+  Views.todo = {
+    title: '待办',
+    sub: '模板化管理每日重复事项，别再手打第二遍',
+    render(root) { curDate = U.today(); filter = -1; render(); }
+  };
+
+  return { checkAuto, pendingCount, P, pInfo, add, ofDate, render, editTodo };
+})();
