@@ -780,9 +780,9 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   .dash-mobile-card .lesson-row:last-child{border-bottom:none}
   .dash-mobile-card .todo-item:last-child{border-bottom:none}
   .dash-mobile-card .chk{min-height:18px}
-  .dash-mobile-quick{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px}
-  .dash-mobile-qb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:18px 4px;background:#fff;border:1px solid var(--line);border-radius:16px;font-size:14px;font-weight:600;color:var(--ink-2);cursor:pointer;-webkit-tap-highlight-color:transparent;min-height:88px}
-  .dash-mobile-qb svg{width:34px;height:34px;color:var(--pink-600)}
+  .dash-mobile-quick{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:4px}
+  .dash-mobile-qb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:22px 6px;background:#fff;border:1px solid var(--line);border-radius:18px;font-size:15px;font-weight:600;color:var(--ink-2);cursor:pointer;-webkit-tap-highlight-color:transparent;min-height:112px;box-shadow:0 3px 10px rgba(255,143,179,.10)}
+  .dash-mobile-qb svg{width:50px;height:50px;color:var(--pink-600);background:rgba(255,143,179,.12);border-radius:16px;padding:9px}
 
   /* 日账单手机端 */
   .bill-table tr{border:none;border-radius:0;margin-bottom:0;padding:0;background:transparent;box-shadow:none}

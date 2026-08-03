@@ -370,6 +370,11 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.7.11</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li>手机端主页：底部「学员 / 老师 / 课表 / 财务」快捷入口由一行 4 个小图标改为 <b>2×2 大图标网格</b>，图标放大至 50px 并加圆角粉色底，新增「快捷入口」标题，主页不再空旷。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.7.10</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li>收入模型重定义：实际到手 = 我的抽成 − 报销支出；报销支出 = 从「批注」里自动提取的数字之和（如批注写「买资料50、交通30」即报销 80）。排课/编辑弹窗不再手填「实际到手」，只保留「批注（报销支出）」。</li>

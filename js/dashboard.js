@@ -344,9 +344,12 @@ const Dashboard = (() => {
         </div>
         <div class="muted" style="font-size:10px;margin-top:6px">${profitLabel} · 点下方「财务」看明细</div>
       </div>
-      <div class="dash-mobile-quick">
-        ${qk.map(q => `<button class="dash-mobile-qb" data-go="${q.go}">
-          <svg class="ico"><use href="#${q.ic}"/></svg>${q.name}</button>`).join('')}
+      <div class="dash-mobile-card">
+        <h4>快捷入口</h4>
+        <div class="dash-mobile-quick">
+          ${qk.map(q => `<button class="dash-mobile-qb" data-go="${q.go}">
+            <svg class="ico"><use href="#${q.ic}"/></svg>${q.name}</button>`).join('')}
+        </div>
       </div>
     </div>`;
   }
