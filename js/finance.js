@@ -62,9 +62,10 @@ const Finance = (() => {
       else if (by === 'grade') { key = sub.grade || '未知'; label = key; }
       else if (by === 'subject') { key = sub.subject || '未知'; label = key; }
       else { key = l.teacherId || 'none'; label = DB.teacherName(l.teacherId); }
-      if (!map.has(key)) map.set(key, { key, label, count: 0, minutes: 0, gross: 0, profit: 0 });
+      if (!map.has(key)) map.set(key, { key, label, count: 0, minutes: 0, gross: 0, profit: 0, hist: 0 });
       const g = map.get(key);
       g.count++; g.minutes += +l.duration || 0; g.gross += +l.tuition || 0; g.profit += +l.commission || 0;
+      const hs = DB.student(l.studentId); if (hs) g.hist += (+hs.histIncome || 0);
     });
     return Array.from(map.values()).sort((a, b) => b.profit - a.profit);
   }
@@ -125,7 +126,8 @@ const Finance = (() => {
       </div>
       <table class="tbl">
         <thead><tr><th>${{ student: '学员', grade: '年级', subject: '学科', teacher: '老师' }[dim]}</th>
-          <th class="num">课时</th><th class="num">总时长</th><th class="num">家长流水</th>
+          <th class="num">课时</th><th class="num">总时长</th>          <th class="num">家长流水</th>
+          <th class="num">期初</th>
           <th class="num">老师课酬</th><th class="num">我的抽成</th><th class="num">抽成率</th><th style="width:110px">占比</th></tr></thead>
         <tbody>
           ${cur.map(g => `<tr>
@@ -133,6 +135,7 @@ const Finance = (() => {
             <td class="num" data-label="课时">${g.count}</td>
             <td class="num" data-label="总时长">${(g.minutes / 60).toFixed(1)} h</td>
             <td class="num money" data-label="家长流水">${U.money(g.gross)}</td>
+            <td class="num money in" data-label="期初">${U.money(g.hist)}</td>
             <td class="num money out" data-label="老师课酬">${U.money(g.gross - g.profit)}</td>
             <td class="num money in" data-label="我的抽成">${U.money(g.profit)}</td>
             <td class="num" data-label="抽成率">${g.gross ? Math.round(g.profit / g.gross * 100) : 0}%</td>
@@ -141,8 +144,8 @@ const Finance = (() => {
           </tr>`).join('') || `<tr><td colspan="8" class="muted" style="text-align:center;padding:26px">该区间还没有课程记录</td></tr>`}
         </tbody>
         ${cur.length ? `<tfoot><tr style="font-weight:700;background:var(--pink-50)">
-          <td>合计</td><td class="num">${st.count}</td><td class="num">${(st.minutes / 60).toFixed(1)} h</td>
-          <td class="num money">${U.money(st.gross)}</td><td class="num money out">${U.money(st.cost)}</td>
+          <td>合计</td>          <td class="num">${st.count}</td><td class="num">${(st.minutes / 60).toFixed(1)} h</td>
+          <td class="num money">${U.money(st.gross)}</td><td class="num money in">${U.money(ctx.histTotal)}</td><td class="num money out">${U.money(st.cost)}</td>
           <td class="num money in">${U.money(st.profit)}</td>
           <td class="num">${st.gross ? Math.round(st.profit / st.gross * 100) : 0}%</td><td></td></tr></tfoot>` : ''}
       </table>
@@ -156,7 +159,7 @@ const Finance = (() => {
   function cardOverview(ctx, title) {
     const st = ctx.st;
     const cards = [
-      ['我的抽成', U.money(st.profit), 'in'],
+      ['我的抽成', U.money(st.profit + ctx.histTotal), 'in'],
       ['家长流水', U.money(st.gross), ''],
       ['老师课酬', U.money(st.cost), 'out'],
       ['课时数', st.count + ' 节', '']
@@ -168,6 +171,7 @@ const Finance = (() => {
           <div class="muted" style="font-size:12px">${n}</div>
           <div class="money ${c}" style="font-size:19px;font-weight:700">${v}</div></div>`).join('')}
       </div>
+      ${ctx.histTotal ? `<p class="muted" style="font-size:11.5px;margin:10px 0 0">含期初收入 <b class="money in">${U.money(ctx.histTotal)}</b>（使用本工作台之前累计的抽成，不参与时间区间筛选）</p>` : ''}
     </div>`;
   }
   function renderSection(sec, ctx) {
@@ -251,10 +255,11 @@ const Finance = (() => {
     try {
       const cur = group(DB.statIn(from, to, { includeScheduled }).lessons, dim);
       const head = { student: '学员', grade: '年级', subject: '学科', teacher: '老师' }[dim];
-      const header = [head, '课时', '总时长(h)', '家长流水', '老师课酬', '我的抽成', '抽成率'];
-      const rows = cur.map(g => [g.label, g.count, (g.minutes / 60).toFixed(1), g.gross, g.gross - g.profit, g.profit, g.gross ? Math.round(g.profit / g.gross * 100) : 0]);
+      const histTotal = DB.data.students.reduce((a, s) => a + (+s.histIncome || 0), 0);
+      const header = [head, '课时', '总时长(h)', '家长流水', '期初收入', '老师课酬', '我的抽成', '抽成率'];
+      const rows = cur.map(g => [g.label, g.count, (g.minutes / 60).toFixed(1), g.gross, g.hist, g.gross - g.profit, g.profit, g.gross ? Math.round(g.profit / g.gross * 100) : 0]);
       const st = DB.statIn(from, to, { includeScheduled });
-      rows.push(['合计', st.count, (st.minutes / 60).toFixed(1), st.gross, st.cost, st.profit, st.gross ? Math.round(st.profit / st.gross * 100) : 0]);
+      rows.push(['合计', st.count, (st.minutes / 60).toFixed(1), st.gross, histTotal, st.cost, st.profit, st.gross ? Math.round(st.profit / st.gross * 100) : 0]);
       const csv = [header, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n');
       const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
       const a = document.createElement('a');
@@ -293,7 +298,7 @@ const Finance = (() => {
     const delta = prev.profit ? Math.round((st.profit - prev.profit) / prev.profit * 100) : null;
 
     const lastEdit = Math.max(DB.data.meta.lastLessonEdit || 0, DB.data.meta.lastStudentEdit || 0);
-    const ctx = { st, byStu, byGrade, byTeacher, cur, monthly, days, from, to };
+    const ctx = { st, byStu, byGrade, byTeacher, cur, monthly, days, from, to, histTotal: DB.data.students.reduce((a, s) => a + (+s.histIncome || 0), 0) };
 
     const sections = getSections();
     const visible = sections.filter(s => s.visible);
@@ -314,6 +319,7 @@ const Finance = (() => {
             <input type="checkbox" id="f_inc" ${includeScheduled ? 'checked' : ''}> 含未上课程
           </label>
           <span style="display:flex;gap:8px;margin-left:auto">
+            <button class="btn btn-ghost btn-sm" data-act="editHist">期初收入</button>
             <button class="btn btn-ghost btn-sm" data-act="exportPng">导出图片</button>
             <button class="btn ${editMode ? 'btn-primary' : 'btn-ghost'} btn-sm" data-act="toggleEdit">
               <svg class="ico"><use href="#${editMode ? 'i-check' : 'i-gear'}"/></svg>
@@ -368,6 +374,31 @@ const Finance = (() => {
         case 'exportPng': exportPNG(); break;
         case 'exportCsv': exportCSV(); break;
         case 'toggleEdit': editMode = !editMode; render(); break;
+
+        case 'editHist': {
+          const sts = DB.data.students.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+          U.modal({
+            title: '编辑期初收入（使用本工作台之前的总收入）',
+            wide: true,
+            okText: '保存',
+            body: `<p class="muted" style="font-size:12px;margin:0 0 12px">填写每位学员在「开始用本工作台之前」累计的抽成（元），只填总金额即可。保存后并入该学员总抽成与整体统计，统计处会标注「含期初 X 元」。</p>
+              <div id="histWrap" style="display:flex;flex-direction:column;gap:8px;max-height:55vh;overflow:auto">
+                ${sts.length ? sts.map(s => `<div style="display:flex;align-items:center;gap:10px">
+                  <span style="flex:1;font-size:13px">${U.esc(s.parentName)}</span>
+                  <input class="input" data-hid="${s.id}" type="number" min="0" step="0.01" style="width:160px" placeholder="0" value="${s.histIncome || ''}">
+                </div>`).join('') : '<p class="muted">还没有学员档案</p>'}
+              </div>`,
+            onOk: b2 => {
+              U.$('#histWrap', b2).querySelectorAll('input[data-hid]').forEach(inp => {
+                const st = DB.student(inp.dataset.hid);
+                if (st) st.histIncome = +inp.value || 0;
+              });
+              DB.save(); render();
+              U.toast('已保存期初收入', 'ok');
+            }
+          });
+          break;
+        }
 
         case 'addCustom': {
           const types = [['overview', '区间总览（抽成/流水/课酬/课时）'], ['teacher', '按老师课时排行'], ['grade', '按年级抽成'], ['student', '按学员抽成'], ['month', '按月抽成走势']];

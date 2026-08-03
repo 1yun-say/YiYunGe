@@ -25,13 +25,39 @@ const Students = (() => {
   const freqRank = v => FREQ_RANK[v] || 0;
   let kw = '', tab = 'all';
 
+  function ensureOrder() {
+    const sts = DB.data.students;
+    if (sts.length && sts.every(s => typeof s.order === 'number')) return;
+    const sorted = sts.slice().sort((a, b) => freqRank(b.freq) - freqRank(a.freq) || (b.signDate || '').localeCompare(a.signDate || ''));
+    sorted.forEach((s, i) => { s.order = i; });
+    DB.save();
+  }
+  function reorder(s, dir) {
+    const sts = DB.data.students.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    const idx = sts.findIndex(x => x.id === s.id);
+    const j = idx + dir;
+    if (j < 0 || j >= sts.length) return;
+    [sts[idx], sts[j]] = [sts[j], sts[idx]];
+    sts.forEach((x, i) => { x.order = i; });
+    DB.save(); DB.touch('student'); render();
+  }
+  function sortByFreq() {
+    const sts = DB.data.students.slice().sort((a, b) => freqRank(b.freq) - freqRank(a.freq) || (b.signDate || '').localeCompare(a.signDate || ''));
+    sts.forEach((x, i) => { x.order = i; });
+    DB.save(); DB.touch('student'); render();
+    U.toast('已按上课频率重排', 'ok');
+  }
+
   function render() {
     const root = U.$('#view');
     if (!root || App.route !== 'students') return;
     const pub = App.isPublic();
+    ensureOrder();
     let list = DB.data.students.slice().sort((a, b) => {
-      const r = freqRank(b.freq) - freqRank(a.freq);
+      const r = (a.order || 0) - (b.order || 0);
       if (r !== 0) return r;
+      const f = freqRank(b.freq) - freqRank(a.freq);
+      if (f !== 0) return f;
       return (b.signDate || '').localeCompare(a.signDate || '');
     });
     if (tab !== 'all') list = list.filter(s => s.status === tab);
@@ -55,13 +81,15 @@ const Students = (() => {
         <button class="tab ${tab === 'paused' ? 'active' : ''}" data-tab="paused">暂停 ${cnt('paused')}</button>
         <button class="tab ${tab === 'ended' ? 'active' : ''}" data-tab="ended">结课 ${cnt('ended')}</button>
       </div>
-      <div style="display:flex;gap:9px;align-items:center">
-        <input class="input" id="stuKw" style="width:220px" placeholder="搜索家长 / 年级 / 学科 / 老师" value="${U.esc(kw)}">
+      <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">
+        <input class="input" id="stuKw" style="width:220px" placeholder="搜索学员 / 年级 / 学科 / 老师" value="${U.esc(kw)}">
+        <button class="btn btn-ghost btn-sm" data-act="importExcel">从Excel导入课时</button>
+        <button class="btn btn-ghost btn-sm" data-act="sortFreq" title="按上课频率自动重排">按频率重排</button>
         <button class="btn btn-primary" data-act="new"><svg class="ico"><use href="#i-plus"/></svg>新建档案</button>
       </div>
     </div>
 
-    ${list.length ? `<div class="stu-grid">${list.map(cardHTML).join('')}</div>`
+    ${list.length ? `<div class="stu-grid" id="stuGrid">${list.map(cardHTML).join('')}</div>`
         : `<div class="card"><div class="empty">
              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-user"/></svg>
              <p>没有匹配的学员档案</p>
@@ -79,6 +107,17 @@ const Students = (() => {
     });
     root.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; render(); });
     U.rebind(root, 'students', onClick);
+
+    /* 桌面端：未筛选时可拖拽卡片排序（包 try，避免异常影响其他绑定） */
+    if (!U.isMobile() && tab === 'all' && !kw) {
+      try {
+        U.draggableSortable(root.querySelector('#stuGrid'), '.stu-card', newOrder => {
+          const byId = {}; DB.data.students.forEach(s => byId[s.id] = s);
+          newOrder.forEach((id, i) => { if (byId[id]) byId[id].order = i; });
+          DB.save(); DB.touch('student');
+        });
+      } catch (e) { console.warn('学员拖拽排序初始化失败', e); }
+    }
   }
 
   function cardHTML(s) {
@@ -87,7 +126,7 @@ const Students = (() => {
     const subs = DB.studentSubjects(s);
     const c = U.subColor((subs[0] || {}).subject || '其它');
     const stat = statOf(s);
-    return `<div class="stu-card ${s.status}" data-id="${s.id}">
+    return `<div class="stu-card ${s.status}" data-id="${s.id}" data-key="${s.id}">
       <div class="stu-top">
         <div class="stu-name">
           <span style="width:9px;height:9px;border-radius:50%;background:${c};flex:none"></span>
@@ -112,6 +151,8 @@ const Students = (() => {
         <button class="btn btn-sm" data-act="book">排课</button>
         <button class="btn btn-sm btn-ghost" data-act="detail">档案详情</button>
         <button class="btn btn-sm btn-ghost" data-act="edit">编辑</button>
+        <button class="btn btn-sm btn-ghost" data-act="moveUp" title="上移一位">↑</button>
+        <button class="btn btn-sm btn-ghost" data-act="moveDown" title="下移一位">↓</button>
         ${s.status === 'trial' ? `<button class="btn btn-sm btn-ghost" data-act="toActive">转正式</button>` : ''}
         <button class="btn btn-icon" data-act="del" style="margin-left:auto"><svg class="ico"><use href="#i-trash"/></svg></button>
       </div>
@@ -137,6 +178,10 @@ const Students = (() => {
       case 'book': Schedule.bookFor(s.id, () => render()); break;
       case 'detail': detail(s); break;
       case 'toActive': s.status = 'active'; DB.save(); DB.touch('student'); render(); U.toast(`${s.parentName} 已转为正式学员`); break;
+      case 'moveUp': reorder(s, -1); break;
+      case 'moveDown': reorder(s, +1); break;
+      case 'sortFreq': sortByFreq(); break;
+      case 'importExcel': importExcelFlow(); break;
       case 'del':
         U.confirm(`删除「${s.parentName}」的档案？其名下 ${DB.data.lessons.filter(l => l.studentId === s.id).length} 节课记录也会一并删除。`, () => {
           DB.data.students = DB.data.students.filter(x => x.id !== s.id);
@@ -178,10 +223,7 @@ const Students = (() => {
         <input class="input mono" id="f_date" value="${U.esc(init.signDate || '')}" placeholder="如 260820 或 2026.8.20">
         <span class="fmt-hint" id="dateHint"></span>
       </div>
-      <div class="row">
-        <div class="field"><label>家长称呼 <span class="hint">必填</span></label><input class="input" id="f_parent" value="${U.esc(init.parentName || '')}" placeholder="如 李妈妈"></div>
-        <div class="field"><label>学生姓名 <span class="hint">选填</span></label><input class="input" id="f_sname" value="${U.esc(init.studentName || '')}" placeholder="如 李明"></div>
-      </div>
+      <div class="field"><label>学生姓名 <span class="hint">必填，作为档案主名称</span></label><input class="input" id="f_sname" value="${U.esc(init.parentName || init.studentName || '')}" placeholder="如 李明"></div>
       <div class="row">
         <div class="field"><label>授课老师 <span class="hint">直接手填；新老师会自动进名册，同名不重复建</span></label>
           <input class="input" id="f_tname" list="dl-teachers" value="${U.esc(teacherName0)}" placeholder="如 王老师 / 李老师">
@@ -221,8 +263,8 @@ const Students = (() => {
         const dateStr = U.$('#f_date', b).value.trim();
         const signDate = DB.normDateFlexible(dateStr);
         if (!signDate) { U.toast('签约日期无法识别，请按 260820 或 2026.8.20 格式', 'warn'); return false; }
-        const parentName = U.$('#f_parent', b).value.trim();
-        if (!parentName) { U.toast('请填写家长称呼', 'warn'); return false; }
+        const parentName = U.$('#f_sname', b).value.trim();
+        if (!parentName) { U.toast('请填写学生姓名', 'warn'); return false; }
         const rows = Array.from(U.$('#subjWrap', b).querySelectorAll('.subj-row'));
         const subjects = [];
         for (const r of rows) {
@@ -247,7 +289,7 @@ const Students = (() => {
         })).filter(c => c.label || c.value);
         const teacherId = DB.resolveTeacher(U.$('#f_tname', b).value);
         const o = {
-          signDate, parentName, studentName: U.$('#f_sname', b).value.trim(),
+          signDate, parentName, studentName: '',
           teacherId, status: U.$('#f_st', b).value, freq: U.$('#f_freq', b).value || '',
           trialDate: U.$('#f_trial', b).value, note: U.$('#f_note', b).value.trim(),
           custom: customF,
@@ -256,7 +298,13 @@ const Students = (() => {
           subjects
         };
         o.code = DB.studentCode(Object.assign({ signDate, parentName }, { subjects }));
-        if (isNew) DB.data.students.push(Object.assign({ id: U.uid('stu'), createdAt: Date.now() }, o));
+        if (isNew) {
+          const dup = DB.data.students.find(x => (x.parentName || '').trim().toLowerCase() === parentName.toLowerCase());
+          if (dup && !window.confirm(`已存在同名学员「${dup.parentName}」，确定要再新建一个吗？\n若其实是同一人，建议直接编辑原档案即可。`)) {
+            return false;
+          }
+          DB.data.students.push(Object.assign({ id: U.uid('stu'), createdAt: Date.now() }, o));
+        }
         else Object.assign(s, o);
         DB.save(); DB.touch('student'); Todo.checkAuto(); App.refreshBadge(); render();
         U.toast(isNew ? '档案已创建' : '已保存');
@@ -321,7 +369,7 @@ const Students = (() => {
         ${cell('签约日期', p.signDate, !p.signDate)}
         ${cell('年级', p.grade, !p.grade)}
         ${cell('学科', p.subject, !p.subject)}
-        ${cell('家长称呼', p.parentName, !p.parentName)}
+        ${cell('学员名', p.parentName, !p.parentName)}
         ${cell('我的抽成', p.commission ? U.money(p.commission) : '', !p.commission)}
         ${cell('课时费', p.tuition ? U.money(p.tuition) : '', !p.tuition)}
         ${cell('课时长', p.duration ? p.duration + ' 分钟' : '', !p.duration)}
@@ -367,9 +415,167 @@ const Students = (() => {
     });
   }
 
+  /* ---------- Excel / CSV 导入课时（含重复校验） ---------- */
+  const numOr0 = v => { const n = parseFloat(String(v == null ? '' : v).replace(/[^\d.]/g, '')); return isFinite(n) ? n : 0; };
+
+  function findStudentByName(name) {
+    const n = (name || '').trim().toLowerCase();
+    return DB.data.students.find(s => (s.parentName || '').trim().toLowerCase() === n);
+  }
+  function createStudentFromRow(r) {
+    const grade = r.grade || '未分级', subject = r.subject || '其它';
+    const sub = { id: U.uid('sbj'), grade, subject, tuition: r.tuition || r.commission || 0, commission: r.commission || 0, duration: r.duration || 60, fixed: [] };
+    const st = {
+      id: U.uid('stu'), code: '', signDate: r.date, parentName: r.name, studentName: '',
+      teacherId: '', status: 'active', note: '', trialDate: '', createdAt: Date.now(),
+      grade: sub.grade, subject: sub.subject, tuition: sub.tuition, commission: sub.commission, duration: sub.duration,
+      subjects: [sub], freq: '', custom: [], order: DB.data.students.length
+    };
+    st.code = DB.studentCode(st);
+    DB.data.students.push(st);
+    return st;
+  }
+  function getSubject(stu, r) {
+    const grade = r.grade || '未分级', subject = r.subject || '其它';
+    let sub = (stu.subjects || []).find(s => s.grade === grade && s.subject === subject);
+    if (!sub) { sub = { id: U.uid('sbj'), grade, subject, tuition: r.tuition || r.commission || 0, commission: r.commission || 0, duration: r.duration || 60, fixed: [] }; stu.subjects.push(sub); }
+    else { if (r.tuition) sub.tuition = r.tuition; if (r.commission) sub.commission = r.commission; if (r.duration) sub.duration = r.duration; }
+    return sub;
+  }
+  function lessonExists(stuId, date, commission, start) {
+    return DB.data.lessons.some(l => l.studentId === stuId && l.date === date && (+l.commission || 0) === (+commission || 0) && (l.start || '') === (start || ''));
+  }
+
+  // 解析 CSV/TSV：识别 上课时间/孩子姓名/每次抽成（+ 可选 课时费/年级/学科/时长）
+  function parseSheet(text) {
+    text = (text || '').replace(/\r\n/g, '\n').trim();
+    if (!text) return { rows: [], mapping: {} };
+    const lines = text.split('\n').filter(l => l.trim() !== '');
+    if (!lines.length) return { rows: [], mapping: {} };
+    const sample = lines[0];
+    let delim = ',';
+    if (sample.includes('\t')) delim = '\t';
+    else if (sample.includes(';') && !sample.includes(',')) delim = ';';
+    const splitCsv = line => {
+      const out = []; let cur = '', q = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (q) { if (ch === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
+        else { if (ch === '"') q = true; else if (ch === delim) { out.push(cur); cur = ''; } else cur += ch; }
+      }
+      out.push(cur); return out;
+    };
+    const cells = lines.map(splitCsv);
+    const header = cells[0].map(h => (h || '').trim());
+    const colMatch = kw => { const k = kw.toLowerCase(); const i = header.findIndex(h => (h || '').toLowerCase().includes(k)); return i; };
+    let m = {
+      date: pick(colMatch, ['上课时间', '日期', 'date', '时间']),
+      name: pick(colMatch, ['孩子姓名', '姓名', '学生', '学员', 'name']),
+      commission: pick(colMatch, ['每次抽成', '抽成', '提成', '金额', '收入', 'commission']),
+      tuition: pick(colMatch, ['课时费', '学费', '课酬', 'tuition']),
+      grade: colMatch('年级'),
+      subject: pick(colMatch, ['学科', '科目', 'subject']),
+      duration: pick(colMatch, ['时长', '分钟', 'duration'])
+    };
+    // 表头无法识别时，按位置假设前三列 = 上课时间 / 孩子姓名 / 每次抽成
+    if (m.date < 0 && m.name < 0 && m.commission < 0) m = { date: 0, name: 1, commission: 2, tuition: -1, grade: -1, subject: -1, duration: -1 };
+    function pick(fn, keys) { for (const k of keys) { const i = fn(k); if (i >= 0) return i; } return -1; }
+
+    const rows = [];
+    for (let i = 1; i < cells.length; i++) {
+      const c = cells[i];
+      let dateRaw = (m.date >= 0 ? (c[m.date] || '') : '').trim();
+      let timeRaw = '';
+      const sp = dateRaw.indexOf(' ');
+      if (sp >= 0) { timeRaw = dateRaw.slice(sp + 1).trim(); dateRaw = dateRaw.slice(0, sp).trim(); }
+      const date = DB.normDateFlexible(dateRaw);
+      const name = (m.name >= 0 ? (c[m.name] || '') : '').trim();
+      const commission = numOr0(m.commission >= 0 ? c[m.commission] : '');
+      const tuition = m.tuition >= 0 ? numOr0(c[m.tuition]) : 0;
+      const grade = m.grade >= 0 ? (c[m.grade] || '').trim() : '';
+      const subject = m.subject >= 0 ? (c[m.subject] || '').trim() : '';
+      const duration = m.duration >= 0 ? numOr0(c[m.duration]) : 0;
+      const row = { date, name, commission, tuition, grade, subject, duration, time: timeRaw, ok: false, reason: '' };
+      if (!date) row.reason = '日期无法识别';
+      else if (!name) row.reason = '缺少孩子姓名';
+      else if (!commission) row.reason = '缺少抽成金额';
+      else row.ok = true;
+      rows.push(row);
+    }
+    return { rows, mapping: m };
+  }
+
+  function renderImportPreview(text) {
+    const box = U.$('#excelPreview'); if (!box) return;
+    const parsed = parseSheet(text);
+    if (!text.trim()) { box.innerHTML = ''; return; }
+    if (!parsed.rows.length) { box.innerHTML = '<p class="muted">无数据</p>'; return; }
+    box.innerHTML = `<table class="tbl"><thead><tr><th>上课时间</th><th>孩子姓名</th><th>每次抽成</th><th>归入学员</th><th>状态</th></tr></thead><tbody>
+      ${parsed.rows.map(r => {
+        let st = '', cls = '';
+        if (!r.ok) { st = r.reason; cls = 'alert'; }
+        else { const ex = findStudentByName(r.name); st = ex ? '归入：' + ex.parentName : '新建：' + r.name; cls = ex ? 'leaf' : 'sky'; }
+        return `<tr><td data-label="上课时间">${r.date || '—'}</td><td data-label="孩子姓名">${U.esc(r.name)}</td>
+          <td class="num money in" data-label="每次抽成">${U.money(r.commission)}</td><td data-label="归入学员">${U.esc(st)}</td>
+          <td data-label="状态"><span class="tag ${cls}">${r.ok ? '待导入' : '跳过'}</span></td></tr>`;
+      }).join('')}
+    </tbody></table>`;
+  }
+
+  function applyImport(rows) {
+    let created = 0, added = 0;
+    rows.filter(r => r.ok).forEach(r => {
+      let stu = findStudentByName(r.name);
+      if (!stu) { stu = createStudentFromRow(r); created++; }
+      const sub = getSubject(stu, r);
+      const start = (r.time && /^\d{1,2}:\d{2}$/.test(r.time)) ? r.time : '';
+      if (lessonExists(stu.id, r.date, r.commission, start)) return; // 跳过完全重复的课程
+      DB.data.lessons.push({
+        id: U.uid('les'), studentId: stu.id, subjectId: sub.id,
+        grade: sub.grade, subject: sub.subject, date: r.date, start,
+        duration: sub.duration, tuition: sub.tuition, commission: sub.commission,
+        teacherId: stu.teacherId, status: 'done', note: 'Excel导入'
+      });
+      added++;
+    });
+    DB.save(); DB.touch('lesson'); DB.touch('student');
+    return { created, added };
+  }
+
+  function importExcelFlow() {
+    U.modal({
+      title: '从 Excel / CSV 导入课时',
+      wide: true,
+      okText: '确认导入',
+      body: `
+      <p class="muted" style="font-size:12px;margin:0 0 8px">把 Excel 另存为 <b>CSV（逗号分隔）</b> 后选择文件，或直接把表格内容粘贴到下方。需要包含列：<b>上课时间</b>、<b>孩子姓名</b>、<b>每次抽成</b>（课时费 / 年级 / 学科 / 时长 可选）。系统按姓名归入已有学员，没有的自动新建，并跳过完全重复的课程。</p>
+      <input type="file" id="excelFile" accept=".csv,text/csv" style="margin:8px 0 4px;display:block">
+      <textarea class="input" id="excelText" rows="6" placeholder="在此粘贴 CSV 内容（第一行写表头，例如：上课时间,孩子姓名,每次抽成）"></textarea>
+      <div id="excelPreview" style="margin-top:10px"></div>`,
+      onOk: b => {
+        const txt = (U.$('#excelText', b).value || '').trim();
+        const parsed = parseSheet(txt);
+        if (!parsed.rows.length) { U.toast('没有可导入的数据，请检查内容', 'warn'); return false; }
+        const okRows = parsed.rows.filter(r => r.ok);
+        if (!okRows.length) { U.toast('没有有效的行（需含 上课时间 + 孩子姓名 + 每次抽成）', 'warn'); return false; }
+        const res = applyImport(parsed.rows);
+        ensureOrder(); render();
+        U.toast(`已导入 ${res.added} 条课时${res.created ? '，新建 ' + res.created + ' 位学员' : ''}`, 'ok');
+      }
+    });
+    const fi = U.$('#excelFile'), ta = U.$('#excelText');
+    if (fi) fi.onchange = e => {
+      const f = e.target.files && e.target.files[0]; if (!f) return;
+      const r = new FileReader();
+      r.onload = () => { if (ta) { ta.value = r.result; renderImportPreview(ta.value); } };
+      r.readAsText(f, 'UTF-8');
+    };
+    if (ta) ta.oninput = () => renderImportPreview(ta.value);
+  }
+
   Views.students = {
     title: '学员档案',
-    sub: '标准编码自动拆解为结构化字段，家长视角与内部视角分离',
+    sub: '标准编码自动拆解为结构化字段，按学员姓名管理档案',
     render() { render(); }
   };
 

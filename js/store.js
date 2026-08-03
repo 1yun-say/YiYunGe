@@ -255,16 +255,16 @@ const DB = (() => {
       }, extra);
     };
     const students = [
-      mk(normDateFlexible('240815') || U.addDays(t, -30), '李妈妈', '李明', 'tc_wang', '妈妈很关注细节，每节课后一定要文字反馈；孩子基础中等偏上，函数薄弱。', 'active',
+      mk(normDateFlexible('240815') || U.addDays(t, -30), '李明', '', 'tc_wang', '妈妈很关注细节，每节课后一定要文字反馈；孩子基础中等偏上，函数薄弱。', 'active',
         [{ grade: '高二', subject: '数学', tuition: 300, commission: 50, duration: 90 }], { freq: '1w3' }),
-      mk(normDateFlexible('250302') || U.addDays(t, -20), '张爸爸', '张昊', 'tc_chen', '爸爸做生意比较忙，微信回复慢；中考目标 110+。', 'active',
+      mk(normDateFlexible('250302') || U.addDays(t, -20), '张昊', '', 'tc_chen', '爸爸做生意比较忙，微信回复慢；中考目标 110+。', 'active',
         [{ grade: '初三', subject: '英语', tuition: 240, commission: 60, duration: 120 },
          { grade: '初三', subject: '数学', tuition: 260, commission: 55, duration: 120 }], { freq: '1w2' }),
-      mk(normDateFlexible('250520') || U.addDays(t, -10), '王妈妈', '王思', 'tc_wang', '冲刺阶段，要求老师准时；一个孩子在这上语数英三科。', 'active',
+      mk(normDateFlexible('250520') || U.addDays(t, -10), '王思', '', 'tc_wang', '冲刺阶段，要求老师准时；一个孩子在这上语数英三科。', 'active',
         [{ grade: '高三', subject: '物理', tuition: 380, commission: 80, duration: 120 },
          { grade: '高三', subject: '数学', tuition: 350, commission: 70, duration: 120 },
          { grade: '高三', subject: '英语', tuition: 300, commission: 60, duration: 120 }], { freq: '1w4' }),
-      mk(normDateFlexible('250610') || U.addDays(t, -5), '刘妈妈', '刘洋', 'tc_me', '孩子注意力短，建议 60 分钟一节；家长在意性价比。', 'trial',
+      mk(normDateFlexible('250610') || U.addDays(t, -5), '刘洋', '', 'tc_me', '孩子注意力短，建议 60 分钟一节；家长在意性价比。', 'trial',
         [{ grade: '五年级', subject: '数学', tuition: 200, commission: 40, duration: 60 }], { trialDate: U.addDays(t, -1), freq: '1w1' })
     ];
     students.forEach(s => s.code = studentCode(s));
