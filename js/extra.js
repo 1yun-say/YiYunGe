@@ -105,34 +105,36 @@ const More = (() => {
     const root = U.$('#view');
     if (!root || App.route !== 'more') return;
     root.innerHTML = `
-    ${syncCardHTML()}
-    <div class="card only-mobile" style="margin-bottom:16px">
-      <div class="card-h"><h3>导入数据</h3></div>
-      <p class="muted" style="font-size:12.5px;margin-bottom:10px">选电脑端导出的 JSON 备份即可导入，会整体覆盖当前数据（导入前自动保留快照，可在电脑端「数据管理」撤销）。</p>
-      <button class="btn btn-primary btn-sm" data-act="m-import">选择备份文件导入</button>
-      <input type="file" id="mFileIn" accept="application/json" style="display:none">
-    </div>
-    <div class="card" style="margin-bottom:16px;background:linear-gradient(120deg,#fff,#fff4f8);border-color:var(--pink-200)">
-      <div style="display:flex;align-items:center;gap:12px">
-        <div class="brand-mark" style="width:42px;height:42px;color:var(--pink-400)">
-          <svg viewBox="0 0 40 40"><g fill="currentColor">
-            <ellipse cx="20" cy="9" rx="5" ry="7.5"/><ellipse cx="30.4" cy="16.6" rx="5" ry="7.5" transform="rotate(72 30.4 16.6)"/>
-            <ellipse cx="26.5" cy="28.8" rx="5" ry="7.5" transform="rotate(144 26.5 28.8)"/><ellipse cx="13.5" cy="28.8" rx="5" ry="7.5" transform="rotate(216 13.5 28.8)"/>
-            <ellipse cx="9.6" cy="16.6" rx="5" ry="7.5" transform="rotate(288 9.6 16.6)"/><circle cx="20" cy="20" r="3.4" fill="#fff7fa"/></g></svg>
-        </div>
-        <div>
-          <h2 style="font-size:18px">我的 · 逸云阁</h2>
-          <p class="muted" style="font-size:12px">所有模块与工具，在这里都能找到</p>
+    <div class="more-view">
+      <div class="card brand-card" style="margin-bottom:12px;background:linear-gradient(120deg,#fff,#fff4f8);border-color:var(--pink-200)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="brand-mark" style="width:36px;height:36px;color:var(--pink-400)">
+            <svg viewBox="0 0 40 40"><g fill="currentColor">
+              <ellipse cx="20" cy="9" rx="5" ry="7.5"/><ellipse cx="30.4" cy="16.6" rx="5" ry="7.5" transform="rotate(72 30.4 16.6)"/>
+              <ellipse cx="26.5" cy="28.8" rx="5" ry="7.5" transform="rotate(144 26.5 28.8)"/><ellipse cx="13.5" cy="28.8" rx="5" ry="7.5" transform="rotate(216 13.5 28.8)"/>
+              <ellipse cx="9.6" cy="16.6" rx="5" ry="7.5" transform="rotate(288 9.6 16.6)"/><circle cx="20" cy="20" r="3.4" fill="#fff7fa"/></g></svg>
+          </div>
+          <div>
+            <h2 style="font-size:17px">我的 · 逸云阁</h2>
+            <p class="muted" style="font-size:12px">所有模块与工具，在这里都能找到</p>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="mt-grid">
-      ${moduleTiles.map(t => `<div class="mtile only-mobile" data-go="${t.go}">
-        <div class="ic"><svg class="ico"><use href="#${t.ic}"/></svg></div>
-        <b>${t.name}</b><small>${t.desc}</small></div>`).join('')}
-      ${toolTiles.map(t => `<div class="mtile" ${t.go ? `data-go="${t.go}"` : `data-act="${t.act}"`}>
-        <div class="ic"><svg class="ico"><use href="#${t.ic}"/></svg></div>
-        <b>${t.name}</b><small>${t.desc}</small></div>`).join('')}
+      <div class="mt-grid">
+        ${moduleTiles.map(t => `<div class="mtile only-mobile" data-go="${t.go}">
+          <div class="ic"><svg class="ico"><use href="#${t.ic}"/></svg></div>
+          <b>${t.name}</b><small>${t.desc}</small></div>`).join('')}
+        ${toolTiles.map(t => `<div class="mtile" ${t.go ? `data-go="${t.go}"` : `data-act="${t.act}"`}>
+          <div class="ic"><svg class="ico"><use href="#${t.ic}"/></svg></div>
+          <b>${t.name}</b><small>${t.desc}</small></div>`).join('')}
+      </div>
+      <div class="card only-mobile" style="margin:16px 0">
+        <div class="card-h"><h3>导入数据</h3></div>
+        <p class="muted" style="font-size:12.5px;margin-bottom:10px">选电脑端导出的 JSON 备份即可导入，会整体覆盖当前数据（导入前自动保留快照，可在电脑端「数据管理」撤销）。</p>
+        <button class="btn btn-primary btn-sm" data-act="m-import">选择备份文件导入</button>
+        <input type="file" id="mFileIn" accept="application/json" style="display:none">
+      </div>
+      ${syncCardHTML()}
     </div>`;
     U.rebind(root, 'more', e => {
       const tile = e.target.closest('[data-go],[data-act]'); if (!tile) return;
@@ -369,6 +371,14 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.7.4</div><div class="log-date">2026-08-03</div>
+      <ul class="log-list">
+        <li>手机端专项美化（不影响电脑/平板）：主页改为<b>一屏精简仪表</b>，只保留今日问候、3 个关键数字、今日课程/待办各前 3 条和 4 个快捷入口，删减走势/年级/话术/模板等纯展示模块。</li>
+        <li>手机端待办页：移除「全部/紧急重要/重要不紧急…」筛选芯片和右侧的「四象限说明」/「每日模板库」，标题与日期计数保持单行，列表更紧凑。</li>
+        <li>手机端我的页：云同步卡片移到页面最底部；模块入口改为 4 列紧凑网格，隐藏描述文字，8 个入口一屏可见。</li>
+        <li>手机端日历：月视图改为<b>彩色圆点</b>表示有课（参考 iOS 日历，不显示完整文字），周视图改为纵向日程列表，去掉 7 列拥挤排版；整体更紧凑、一屏看完。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.7.2</div><div class="log-date">2026-08-03</div>
       <ul class="log-list">
         <li>老师名册 · 修复「累计课时」显示为 0 的问题：课节缺失老师时，加载/导入时自动按所属学员当前老师补上 teacherId（历史排课、Excel 导入的课也可能没带老师），老师名册与财务「按老师课时排行」现在都能正确统计已完成课时。</li>

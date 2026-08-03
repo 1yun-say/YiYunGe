@@ -130,9 +130,10 @@ const Calendar = (() => {
       </div>`;
   }
 
-  /* ---------- 周视图：7 列，每列下方列事项 ---------- */
+  /* ---------- 周视图：桌面 7 列；手机改为纵向日程列表 ---------- */
   function renderWeek(body, today) {
     const days = U.weekDays(anchor);
+    if (U.isMobile()) return renderWeekMobile(body, today, days);
     body.innerHTML = `
       <div class="cal-week-view">
         <div class="cal-week-head">
@@ -157,6 +158,23 @@ const Calendar = (() => {
       anchor = c.dataset.day; setView('day', true);
     }));
   }
+  function renderWeekMobile(body, today, days) {
+    body.innerHTML = `<div class="cal-week-list">${days.map(d => {
+      const ls = todosOf(d);
+      const isToday = d === today, isSel = d === anchor;
+      return `<div class="cal-week-row">
+        <div class="cal-week-dayhead ${isToday?'today':''} ${isSel?'sel':''}" data-day="${d}">
+          <span class="wd">${U.wdName(d)}</span><span class="dn">${+d.slice(8)}</span>
+          <span class="cnt">${ls.length ? ls.length + ' 项' : '无'}</span>
+        </div>
+        ${ls.length ? ls.map(todoHTML).join('') : '<div class="cal-empty-mini">这一天还没有待办</div>'}
+      </div>`;
+    }).join('')}</div>`;
+    body.querySelectorAll('.cal-week-dayhead').forEach(h => h.addEventListener('click', e => {
+      if (e.target.closest('.cal-event') || e.target.closest('[data-act]')) return;
+      anchor = h.dataset.day; setView('day', true);
+    }));
+  }
 
   /* ---------- 月视图：iOS 风格网格，事项嵌入日期格 ---------- */
   function renderMonth(body, today) {
@@ -170,6 +188,19 @@ const Calendar = (() => {
       if (cells.length > 42) break;
     }
     const mm = first.slice(0, 7);
+    const isM = U.isMobile();
+    const cellEvents = ls => {
+      if (isM) {
+        return `<div class="cal-month-dots">${ls.slice(0, 4).map(x => `<i style="background:${Todo.pInfo(x.priority).color}"></i>`).join('')}${ls.length > 4 ? `<span>+${ls.length - 4}</span>` : ''}</div>`;
+      }
+      return `${ls.slice(0, 3).map(x => {
+        const p = Todo.pInfo(x.priority);
+        return `<div class="cal-month-ev ${x.done?'done':''}" data-tid="${x.id}" title="${U.esc(x.title)}">
+          <i style="background:${p.color}"></i>
+          <span>${x.time ? `<b class="cal-month-ev-time">${U.esc(x.time)}</b>` : ''}${U.esc(x.title)}</span>
+        </div>`;
+      }).join('')}${ls.length > 3 ? `<div class="cal-month-more">+${ls.length - 3} 更多</div>` : ''}`;
+    };
     body.innerHTML = `
       <div class="cal-month">
         <div class="cal-month-head">
@@ -181,16 +212,7 @@ const Calendar = (() => {
             const out = dt.slice(0, 7) !== mm;
             return `<div class="cal-month-cell ${out?'out':''} ${dt===today?'today':''} ${dt===anchor?'sel':''}" data-day="${dt}">
               <div class="cal-month-dn">${+dt.slice(8)}</div>
-              <div class="cal-month-events">
-                ${ls.slice(0, 3).map(x => {
-                  const p = Todo.pInfo(x.priority);
-                  return `<div class="cal-month-ev ${x.done?'done':''}" data-tid="${x.id}" title="${U.esc(x.title)}">
-                    <i style="background:${p.color}"></i>
-                    <span>${x.time ? `<b class="cal-month-ev-time">${U.esc(x.time)}</b>` : ''}${U.esc(x.title)}</span>
-                  </div>`;
-                }).join('')}
-                ${ls.length > 3 ? `<div class="cal-month-more">+${ls.length - 3} 更多</div>` : ''}
-              </div>
+              <div class="cal-month-events">${cellEvents(ls)}</div>
               <button class="cal-month-add" data-act="add" data-day="${dt}" aria-label="添加">+</button>
             </div>`;
           }).join('')}

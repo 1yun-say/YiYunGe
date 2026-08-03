@@ -66,59 +66,14 @@ const Todo = (() => {
     const done = list.filter(t => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
     const shown = filter < 0 ? undone : undone.filter(t => t.priority === filter);
     const overdue = DB.data.todos.filter(t => !t.done && t.date < U.today());
-
-    root.innerHTML = `
-    <div class="grid" style="grid-template-columns:minmax(0,1fr) 320px">
-      <div style="display:flex;flex-direction:column;gap:16px">
-
-        ${overdue.length ? `<div class="card" style="border-color:#ffd0d0;background:#fff8f8">
-          <div class="card-h"><h3 style="color:#cf5252">遗留未完成 ${overdue.length} 条</h3>
-            <button class="btn btn-sm btn-ghost" data-act="pullOverdue">全部拉到今天</button></div>
-          <div class="todo-list">${overdue.slice(0, 5).map(t => rowHTML(t, true)).join('')}</div>
-        </div>` : ''}
-
-        <div class="card">
-          <div class="card-h">
-            <h3>${curDate === U.today() ? '今日待办' : U.cnDate(curDate) + ' 待办'}
-              <span class="tag">${undone.length} 待办 / ${done.length} 完成</span></h3>
-            <div style="display:flex;gap:6px;align-items:center">
-              <button class="btn btn-icon" data-act="prevDay" title="前一天">&#8249;</button>
-              <input type="date" class="input" style="width:150px;padding:5px 8px" id="tdDate" value="${curDate}">
-              <button class="btn btn-icon" data-act="nextDay" title="后一天">&#8250;</button>
-            </div>
-          </div>
-
-          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-            <input class="input" id="quickTitle" style="flex:1;min-width:140px" placeholder="输入任务后回车，例如：给王妈妈发本周课表">
-            <input type="time" class="input" id="quickTime" style="width:120px" title="可选的具体时间，如 19:00">
-            <select class="input" id="quickP" style="width:132px">
-              ${P.map(p => `<option value="${p.v}" ${p.v === 1 ? 'selected' : ''}>${p.name}</option>`).join('')}
-            </select>
-            <button class="btn btn-primary" data-act="quickAdd">添加</button>
-          </div>
-
-          <div class="seg" style="margin-bottom:12px">
+    const isM = U.isMobile();
+    const segHTML = isM ? '' : `<div class="seg" style="margin-bottom:12px">
             <div class="opt ${filter < 0 ? 'on' : ''}" data-f="-1">全部</div>
             ${P.map(p => `<div class="opt ${filter === p.v ? 'on' : ''}" data-f="${p.v}">
               <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${p.color};margin-right:5px"></span>${p.name}
               <b style="margin-left:4px;color:inherit;opacity:.6">${undone.filter(t => t.priority === p.v).length}</b></div>`).join('')}
-          </div>
-
-          <div class="todo-list">
-            ${shown.length ? shown.map(t => rowHTML(t)).join('')
-        : `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-flower"/></svg>
-                 <p>这一天很清爽，从右侧模板一键导入日常任务吧</p></div>`}
-          </div>
-
-          ${done.length ? `<div class="divider"></div>
-            <div class="archive-head" data-act="toggleArch">
-              <span class="caret">&#9656;</span> 已完成归档（${done.length}）
-            </div>
-            <div class="todo-list" id="archBox" style="display:none">${done.map(t => rowHTML(t)).join('')}</div>` : ''}
-        </div>
-      </div>
-
-      <div style="display:flex;flex-direction:column;gap:16px">
+          </div>`;
+    const rightColHTML = isM ? '' : `<div style="display:flex;flex-direction:column;gap:16px">
         <div class="card">
           <div class="card-h"><h3>每日模板库</h3>
             <button class="btn btn-icon" data-act="addTpl" title="新增模板"><svg class="ico"><use href="#i-plus"/></svg></button>
@@ -150,7 +105,55 @@ const Todo = (() => {
           </div>`).join('')}
           <div class="divider"></div>
         </div>
+      </div>`;
+
+    root.innerHTML = `
+    <div class="grid todo-view" style="grid-template-columns:minmax(0,1fr) 320px">
+      <div style="display:flex;flex-direction:column;gap:16px">
+
+        ${overdue.length ? `<div class="card" style="border-color:#ffd0d0;background:#fff8f8">
+          <div class="card-h"><h3 style="color:#cf5252">遗留未完成 ${overdue.length} 条</h3>
+            <button class="btn btn-sm btn-ghost" data-act="pullOverdue">全部拉到今天</button></div>
+          <div class="todo-list">${overdue.slice(0, 5).map(t => rowHTML(t, true)).join('')}</div>
+        </div>` : ''}
+
+        <div class="card">
+          <div class="card-h">
+            <h3>${curDate === U.today() ? '今日待办' : U.cnDate(curDate) + ' 待办'}
+              <span class="tag">${undone.length} 待办 / ${done.length} 完成</span></h3>
+            <div style="display:flex;gap:6px;align-items:center">
+              <button class="btn btn-icon" data-act="prevDay" title="前一天">&#8249;</button>
+              <input type="date" class="input" style="width:150px;padding:5px 8px" id="tdDate" value="${curDate}">
+              <button class="btn btn-icon" data-act="nextDay" title="后一天">&#8250;</button>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <input class="input" id="quickTitle" style="flex:1;min-width:140px" placeholder="输入任务后回车，例如：给王妈妈发本周课表">
+            <input type="time" class="input" id="quickTime" style="width:120px" title="可选的具体时间，如 19:00">
+            <select class="input" id="quickP" style="width:132px">
+              ${P.map(p => `<option value="${p.v}" ${p.v === 1 ? 'selected' : ''}>${p.name}</option>`).join('')}
+            </select>
+            <button class="btn btn-primary" data-act="quickAdd">添加</button>
+          </div>
+
+          ${segHTML}
+
+          <div class="todo-list">
+            ${shown.length ? shown.map(t => rowHTML(t)).join('')
+        : `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-flower"/></svg>
+                 <p>${isM ? '这一天很清爽，点右下角 + 新建一件吧' : '这一天很清爽，从右侧模板一键导入日常任务吧'}</p></div>`}
+          </div>
+
+          ${done.length ? `<div class="divider"></div>
+            <div class="archive-head" data-act="toggleArch">
+              <span class="caret">&#9656;</span> 已完成归档（${done.length}）
+            </div>
+            <div class="todo-list" id="archBox" style="display:none">${done.map(t => rowHTML(t)).join('')}</div>` : ''}
+        </div>
       </div>
+
+      ${rightColHTML}
     </div>`;
 
     bind(root);

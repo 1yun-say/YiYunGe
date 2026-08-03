@@ -262,6 +262,105 @@ const Dashboard = (() => {
     </div>`;
   }
 
+  /* ---------- 手机端一屏精简仪表 ---------- */
+  function renderMobile(ctx) {
+    const { t, todayLessons, undone, mStat, mDone, inc } = ctx;
+    const totalMin = todayLessons.reduce((s, l) => s + (+l.duration || 0), 0);
+    const profit = inc ? mStat.profit : mDone.profit;
+    const profitLabel = inc ? '含预计' : '已落袋';
+    const qk = [
+      { go: 'students', ic: 'i-user', name: '学员' },
+      { go: 'teachers', ic: 'i-user', name: '老师' },
+      { go: 'schedule', ic: 'i-cal', name: '课表' },
+      { go: 'finance', ic: 'i-coin', name: '财务' }
+    ];
+    const lessonRow = l => {
+      const s = DB.student(l.studentId) || { parentName: '?' };
+      const sub = DB.lessonSub(l);
+      const c = U.subColor(sub.subject);
+      return `<div class="lesson-row" data-lid="${l.id}" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:5px 0;border-bottom:1px solid var(--line-2)">
+        <div style="width:3px;align-self:stretch;border-radius:3px;background:${c};flex:none"></div>
+        <div style="width:42px;text-align:center;flex:none">
+          <b style="font-size:12px">${l.start}</b>
+          <div class="muted" style="font-size:9px">${l.duration}分</div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><b>${U.esc(sub.grade)}${U.esc(sub.subject)}</b> · ${U.esc(s.parentName)}</div>
+          <div class="muted" style="font-size:10px">${U.esc(DB.teacherName(l.teacherId))} · ${U.money(l.tuition)}</div>
+        </div>
+        ${l.status !== 'done' ? `<button class="btn btn-sm btn-ghost" data-act="finish" style="min-height:30px;padding:0 8px;font-size:11px">完成</button>` : ''}
+      </div>`;
+    };
+    const todoRow = x => {
+      const p = Todo.pInfo(x.priority);
+      return `<div class="todo-item" data-tid="${x.id}" style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line-2);min-height:34px">
+        <div class="chk" data-act="toggleTodo" style="width:18px;height:18px;border:2px solid ${p.color};border-radius:5px;flex:none;cursor:pointer;display:grid;place-items:center"></div>
+        <div style="flex:1;min-width:0;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(x.title)}</div>
+        <span class="tag" style="font-size:9px;padding:1px 5px;background:${p.color}1f;color:${p.color};flex:none">${p.short}</span>
+      </div>`;
+    };
+    return `
+    <div class="dash-mobile">
+      <div class="dash-mobile-toolbar">
+        <div style="min-width:0">
+          <h2 style="font-size:15px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${greet()}，今天有 ${todayLessons.length} 节课、${undone.length} 件待办</h2>
+          <div class="muted" style="font-size:11px">${U.parse(t).getFullYear()} 年 ${+t.slice(5, 7)} 月 ${+t.slice(8)} 日 ${U.wdName(t)}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex:none">
+          <button class="btn btn-ghost btn-sm" data-act="backup" style="min-height:34px;padding:0 10px;font-size:12px">备份</button>
+        </div>
+      </div>
+      <div class="dash-mobile-stats">
+        <div class="dash-mobile-stat"><div class="lab">今日课程</div><div class="val">${todayLessons.length}</div><div class="sub">${totalMin} 分钟</div></div>
+        <div class="dash-mobile-stat"><div class="lab">今日待办</div><div class="val">${undone.length}</div><div class="sub">待完成</div></div>
+        <div class="dash-mobile-stat"><div class="lab">本月抽成</div><div class="val">${U.money(profit).replace('¥', '')}</div><div class="sub">${profitLabel}</div></div>
+      </div>
+      <div class="dash-mobile-card">
+        <h4>今日课程</h4>
+        ${todayLessons.length ? todayLessons.slice(0, 3).map(lessonRow).join('') : '<div class="muted" style="font-size:12px;padding:6px 0">今天没有排课</div>'}
+        ${todayLessons.length > 3 ? `<div class="muted" style="font-size:11px;text-align:center;padding-top:6px">还有 ${todayLessons.length - 3} 节</div>` : ''}
+      </div>
+      <div class="dash-mobile-card">
+        <h4>今日待办</h4>
+        ${undone.length ? undone.slice(0, 3).map(todoRow).join('') : '<div class="muted" style="font-size:12px;padding:6px 0">今日待办已清空</div>'}
+        ${undone.length > 3 ? `<div class="muted" style="font-size:11px;text-align:center;padding-top:6px">还有 ${undone.length - 3} 件</div>` : ''}
+      </div>
+      <div class="dash-mobile-quick">
+        ${qk.map(q => `<button class="dash-mobile-qb" data-go="${q.go}">
+          <svg class="ico"><use href="#${q.ic}"/></svg>${q.name}</button>`).join('')}
+      </div>
+    </div>`;
+  }
+  function bindMobile(root, ctx) {
+    U.rebind(root, 'dashm', e => {
+      const go = e.target.closest('[data-go]');
+      if (go) { App.go(go.dataset.go); return; }
+      const b = e.target.closest('[data-act]');
+      if (!b) {
+        const li = e.target.closest('[data-lid]');
+        if (li) Schedule.editLesson(li.dataset.lid);
+        return;
+      }
+      switch (b.dataset.act) {
+        case 'backup': {
+          const name = DB.exportJSON();
+          U.toast(name ? `已导出「${name}」` : '导出失败', name ? 'ok' : 'warn');
+          break;
+        }
+        case 'finish': {
+          const l = DB.data.lessons.find(x => x.id === b.closest('[data-lid]').dataset.lid);
+          if (l) { l.status = 'done'; DB.save(); render(); U.toast('已标记完成'); }
+          break;
+        }
+        case 'toggleTodo': {
+          const x = DB.data.todos.find(y => y.id === b.closest('[data-tid]').dataset.tid);
+          if (x) { x.done = true; x.doneAt = Date.now(); DB.save(); render(); App.refreshBadge(); U.toast('完成一件'); }
+          break;
+        }
+      }
+    });
+  }
+
   /* ---------- 顶层 render：拆 left/right 列 + 单列 full ---------- */
   function render() {
     const root = U.$('#view');
@@ -293,6 +392,8 @@ const Dashboard = (() => {
     const byGrade = Finance.group(DB.statIn(mFrom, mTo, { includeScheduled: inc }).lessons, 'grade');
 
     const ctx = { t, pub, todayLessons, todosAll, undone, overdue, mStat, mDone, wStat, trials, conflictDays, months, byGrade, inc };
+    if (U.isMobile()) { root.innerHTML = renderMobile(ctx); bindMobile(root, ctx); return; }
+
     const layout = getLayout();
     const visible = layout.order.filter(k => !layout.hidden.includes(k));
 
