@@ -9,6 +9,18 @@ const Schedule = (() => {
 
   const endMin = l => U.t2m(l.start) + (+l.duration || 60);
 
+  /* 优先读取学员档案里当前最新的学科信息（课程卡片上的学科/颜色随档案同步），再用课程本身数据兜底 */
+  function currentSub(l) {
+    const s = DB.student(l.studentId);
+    if (s && l.subjectId) {
+      const sb = (s.subjects || []).find(x => x.id === l.subjectId);
+      if (sb) return { grade: sb.grade || '', subject: sb.subject || '其它', subjectId: l.subjectId };
+    }
+    if (l.grade || l.subject) return { grade: l.grade || '', subject: l.subject || '其它', subjectId: l.subjectId };
+    const ps = s ? DB.primarySubject(s) : { grade: '', subject: '其它' };
+    return { grade: ps.grade, subject: ps.subject, subjectId: l.subjectId };
+  }
+
   /* 冲突分组：返回 map lessonId -> {cols, idx, conflict} */
   function layout(list) {
     const res = {};
@@ -130,7 +142,6 @@ const Schedule = (() => {
     </div>
     <div class="legend">
       ${Object.entries(U.SUBJECT_COLORS).slice(0, 8).map(([k, v]) => `<span><i style="background:${v}"></i>${k}</span>`).join('')}
-      <span><i style="background:#fff;border:1.5px solid #ef6f6f"></i>时间重叠（允许，注意确认）</span>
     </div>`;
 
     bindWeek(box);
@@ -141,18 +152,17 @@ const Schedule = (() => {
     const lay = layout(ls.filter(l => l.status !== 'cancelled'));
     return ls.map(l => {
       const s = DB.student(l.studentId) || { parentName: '已删除' };
-      const sub = DB.lessonSub(l);
-      const info = lay[l.id] || { cols: 1, idx: 0, conflict: false };
+      const sub = currentSub(l);
+      const info = lay[l.id] || { cols: 1, idx: 0 };
       const top = U.t2m(l.start) - DAY_START;
       const h = Math.max(24, +l.duration || 60);
       const w = 100 / info.cols;
       const c = U.subColor(sub.subject);
       const pub = App.isPublic();
-      return `<div class="lesson ${l.status} ${info.conflict ? 'conflict' : ''}" draggable="true" data-lid="${l.id}"
+      return `<div class="lesson ${l.status}" draggable="true" data-lid="${l.id}"
         style="top:${top}px;height:${h}px;left:calc(${info.idx * w}% + 2px);width:calc(${w}% - 4px);
         border-left-color:${c};background:${c}14">
-        ${info.conflict ? '<span class="conf-dot"></span>' : ''}
-        <b>${U.esc(sub.grade)}${U.esc(sub.subject)} ${U.esc(s.parentName)}</b>
+        <b>${U.esc(s.parentName)}</b>
         <div class="lm">${l.start}-${U.m2t(endMin(l))} · ${U.money(l.tuition)}${pub ? '' : ` <span style="color:#e85686">抽${l.commission}</span>`}</div>
         ${h > 62 ? `<div class="lm">${U.esc(DB.teacherName(l.teacherId))}${l.status === 'done' ? ' · 已完成' : ''}</div>` : ''}
       </div>`;
@@ -212,7 +222,7 @@ const Schedule = (() => {
           <div class="mg-date">${+day.slice(8)}</div>
           ${ls.slice(0, 3).map(l => {
         const s = DB.student(l.studentId) || { parentName: '?' };
-        const sub = DB.lessonSub(l);
+        const sub = currentSub(l);
         const c = U.subColor(sub.subject);
         return `<div class="mg-item" data-lid="${l.id}" style="border-left-color:${c};background:${c}14">
               ${l.start} ${U.esc(s.parentName)}</div>`;
@@ -408,7 +418,7 @@ const Schedule = (() => {
   function editLesson(id) {
     const l = DB.data.lessons.find(x => x.id === id); if (!l) return;
     const s = DB.student(l.studentId) || { parentName: '已删除学员', id: '' };
-    const sub = DB.lessonSub(l);
+    const sub = currentSub(l);
     const ov = overlaps(l);
     const future = l.seriesId ? DB.data.lessons.filter(x => x.seriesId === l.seriesId && x.date >= l.date && x.id !== l.id) : [];
     const mm = U.modal({

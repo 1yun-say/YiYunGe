@@ -239,7 +239,7 @@ const Todo = (() => {
   }
 
   function editTodo(t, after) {
-    U.modal({
+    const mm = U.modal({
       title: '编辑任务',
       body: `<div class="field"><label>任务内容</label><input class="input" id="f_t" value="${U.esc(t.title)}"></div>
         <div class="field"><label>备注</label><textarea class="input" id="f_n">${U.esc(t.note || '')}</textarea></div>
@@ -249,7 +249,10 @@ const Todo = (() => {
           <div class="field"><label>时间（可选）</label><input type="time" class="input" id="f_m" value="${t.time || ''}"></div>
           <div class="field"><label>标签</label><input class="input" id="f_g" value="${U.esc(t.tag || '')}" placeholder="如 家长沟通"></div>
         </div>
-        <div class="field"><label>日期</label><input type="date" class="input" id="f_d" value="${t.date}"></div>`,
+        <div class="field"><label>日期</label><input type="date" class="input" id="f_d" value="${t.date}"></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" id="btnToggleDone">${t.done ? '标记为未完成' : '标记为完成'}</button>
+        </div>`,
       onOk: b => {
         t.title = U.$('#f_t', b).value.trim() || t.title;
         t.note = U.$('#f_n', b).value.trim();
@@ -259,6 +262,14 @@ const Todo = (() => {
         t.date = U.$('#f_d', b).value || t.date;
         DB.save();
         if (after) after(); else { render(); App.refreshBadge(); }
+      }
+    });
+    mm.body.addEventListener('click', e => {
+      if (e.target.id === 'btnToggleDone') {
+        t.done = !t.done; t.doneAt = t.done ? Date.now() : null; DB.save();
+        if (after) after(); else { render(); App.refreshBadge(); }
+        U.toast(t.done ? '已标记完成' : '已恢复为未完成');
+        e.target.closest('.mask').remove();
       }
     });
   }
