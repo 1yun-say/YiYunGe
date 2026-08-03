@@ -45,7 +45,7 @@ const Schedule = (() => {
   function conflictCount(days) {
     let n = 0;
     days.forEach(d => {
-      const ls = DB.data.lessons.filter(l => l.date === d && l.status !== 'cancelled');
+      const ls = DB.data.lessons.filter(l => l.date === d && l.status !== 'cancelled' && !l.importedCommission);
       const lay = layout(ls);
       const set = new Set();
       Object.entries(lay).forEach(([id, v]) => { if (v.conflict) set.add(id); });
@@ -148,7 +148,7 @@ const Schedule = (() => {
   }
 
   function dayLessonsHTML(date) {
-    const ls = DB.data.lessons.filter(l => l.date === date);
+    const ls = DB.data.lessons.filter(l => l.date === date && !l.importedCommission);
     const lay = layout(ls.filter(l => l.status !== 'cancelled'));
     return ls.map(l => {
       const s = DB.student(l.studentId) || { parentName: '已删除' };
@@ -214,7 +214,7 @@ const Schedule = (() => {
     box.innerHTML = `<div class="month-grid">
       ${U.WD.slice(1).concat(U.WD[0]).map(w => `<div class="mg-head">${w}</div>`).join('')}
       ${cells.map(day => {
-      const ls = DB.data.lessons.filter(l => l.date === day && l.status !== 'cancelled')
+      const ls = DB.data.lessons.filter(l => l.date === day && l.status !== 'cancelled' && !l.importedCommission)
         .sort((a, b) => U.t2m(a.start) - U.t2m(b.start));
       const profit = ls.reduce((s, l) => s + (+l.commission || 0), 0);
       const gross = ls.reduce((s, l) => s + (+l.tuition || 0), 0);
@@ -273,7 +273,7 @@ const Schedule = (() => {
       ${data.map(d => {
       const days = [];
       let cur = d.a;
-      while (cur <= d.b) { days.push(DB.data.lessons.filter(l => l.date === cur && l.status !== 'cancelled').length); cur = U.addDays(cur, 1); }
+      while (cur <= d.b) { days.push(DB.data.lessons.filter(l => l.date === cur && l.status !== 'cancelled' && !l.importedCommission).length); cur = U.addDays(cur, 1); }
       const maxD = Math.max(...days, 1);
       return `<div class="ym-card" data-m="${d.m}">
           <h4>${d.label}<span class="muted" style="font-size:11px">${d.count} 节</span></h4>

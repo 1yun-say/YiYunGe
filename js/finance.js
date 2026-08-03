@@ -323,6 +323,7 @@ const Finance = (() => {
             <input type="checkbox" id="f_inc" ${includeScheduled ? 'checked' : ''}> 含未上课程
           </label>
           <span style="display:flex;gap:8px;margin-left:auto">
+            <button class="btn btn-ghost btn-sm" data-act="importCommission">导入抽成表</button>
             <button class="btn btn-ghost btn-sm" data-act="editHist">历史收入</button>
             <button class="btn btn-ghost btn-sm" data-act="exportPng">导出图片</button>
             <button class="btn ${editMode ? 'btn-primary' : 'btn-ghost'} btn-sm" data-act="toggleEdit">
@@ -377,6 +378,7 @@ const Finance = (() => {
       switch (b.dataset.act) {
         case 'exportPng': exportPNG(); break;
         case 'exportCsv': exportCSV(); break;
+        case 'importCommission': if (window.CommissionImport) CommissionImport.pick(); break;
         case 'toggleEdit': editMode = !editMode; render(); break;
 
         case 'editHist': {

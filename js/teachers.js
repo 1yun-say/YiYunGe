@@ -17,7 +17,7 @@ const Teachers = (() => {
         const stu = d.students.filter(s => s.teacherId === t.id && s.status !== 'ended').length;
         const les = d.lessons.filter(l => {
           const lt = l.teacherId || (DB.student(l.studentId) || {}).teacherId || '';
-          return lt === t.id && l.status === 'done';
+          return lt === t.id && l.status === 'done' && !l.importedCommission;
         }).length;
         return `<tr data-tid="${t.id}">
           <td data-label="姓名"><b>${U.esc(t.name)}</b>${t.note ? `<div class="muted" style="font-size:11px">${U.esc(t.note)}</div>` : ''}</td>
