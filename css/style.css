@@ -191,12 +191,17 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .todo-item[data-p="3"]::before{background:var(--ink-3)}
 .todo-item:hover{border-color:var(--pink-300);box-shadow:var(--shadow-s)}
 .todo-item.done{opacity:.55}
+.todo-item.blocked{opacity:.72;background:#faf7f8}
+.todo-item.blocked .t-title{color:var(--ink-3)}
 .todo-item.plain::before{display:none}
 .todo-item.done .t-title{text-decoration:line-through}
 .chk{width:19px;height:19px;flex:none;border:2px solid var(--pink-300);border-radius:6px;cursor:pointer;display:grid;place-items:center;margin-top:1px;transition:.18s;background:#fff}
 .chk:hover{border-color:var(--pink-500);background:var(--pink-75)}
 .chk.on{background:var(--pink-500);border-color:var(--pink-500)}
 .chk.on::after{content:"";width:9px;height:5px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translate(1px,-1px)}
+.chk svg{width:12px;height:12px;stroke:#fff;stroke-width:3}
+.chk-done{background:var(--leaf)!important;border-color:var(--leaf)!important}
+.chk-blocked{background:#a8899a!important;border-color:#a8899a!important}
 .t-body{flex:1;min-width:0}
 .t-title{font-size:13.5px}
 .t-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px}
@@ -623,17 +628,55 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   table.tbl td::before{content:attr(data-label);color:var(--ink-3);font-size:11.5px;font-weight:600;text-align:left;flex:none}
   table.tbl tfoot{display:none}
 
-  /* 课表周视图：时间列收窄，7 天等宽自适应，杜绝横向滚动 */
-  .week-head,.week-body{grid-template-columns:38px repeat(7,1fr)!important}
-  .wh-cell{padding:7px 1px;font-size:10.5px}
-  .wh-cell b{font-size:12.5px}
-  .time-slot{font-size:9px}
-  .lesson{font-size:9.5px;padding:3px 4px}
-  .lesson b{font-size:10px}
-  .month-grid{gap:1px}
-  .mg-cell{min-height:78px;padding:4px}
-  .mg-date{font-size:11px}
-  .mg-item{font-size:9px;padding:1px 4px}
+  /* 课表工具栏：不要坨在一起，两行更清爽 */
+  .sch-toolbar{gap:12px}
+  .sch-toolbar .tabs{width:100%;justify-content:center;gap:6px}
+  .sch-toolbar .tabs .tab{flex:1;max-width:90px;font-size:13px}
+  .sch-nav{width:100%;justify-content:space-between;gap:8px}
+  .sch-title{font-size:16px;flex:1;text-align:center;min-width:0}
+  .sch-toolbar > div:last-child{width:100%;justify-content:space-between}
+
+  /* 课表周视图：仿 iOS，日期头变大、今日高亮为圆点、时间格更清晰 */
+  .week-wrap{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-s)}
+  .week-head,.week-body{grid-template-columns:40px repeat(7,1fr)!important}
+  .week-head{background:#fff;border-bottom:1px solid var(--line-2)}
+  .wh-cell{padding:10px 1px;font-size:10px;color:var(--ink-3);display:flex;flex-direction:column;align-items:center;gap:2px}
+  .wh-cell b{font-size:15px;min-width:28px;padding:5px 0;border-radius:14px;text-align:center}
+  .wh-cell.today{color:var(--pink-600)}
+  .wh-cell.today b{background:var(--pink-500);color:#fff;box-shadow:0 2px 8px rgba(249,112,157,.35)}
+  .time-col{border-right:1px solid var(--line-2)}
+  .time-slot{height:30px;font-size:9.5px;color:var(--ink-3);display:flex;align-items:flex-start;justify-content:flex-end;padding-right:5px;padding-top:2px}
+  .time-slot:empty{border-bottom:none}
+  .slot{border-bottom:1px dashed var(--pink-75)}
+  .slot:nth-child(2n){border-bottom-color:var(--line-2)}
+  .day-col{border-left:1px solid var(--line-2)}
+  .day-col.today{background:rgba(255,232,241,.35)}
+  .lesson{font-size:10px;padding:4px 5px;border-radius:9px;min-height:32px;line-height:1.35;left:2px!important;width:calc(100% - 4px)!important}
+  .lesson b{font-size:11px}
+  .lesson .lm{font-size:9px}
+  .lesson .lm.take{font-size:8.5px}
+  .week-body{max-height:none}
+  .legend{display:none}
+
+  /* 课表月视图：格子更圆、信息更克制 */
+  .month-grid{gap:1px;border-radius:14px}
+  .mg-head{padding:9px 4px;font-size:11px}
+  .mg-cell{min-height:70px;padding:5px;border-radius:0}
+  .mg-cell:first-child{border-radius:14px 0 0 0}
+  .mg-cell:nth-child(7){border-radius:0 14px 0 0}
+  .mg-cell:nth-last-child(7){border-radius:0 0 0 14px}
+  .mg-cell:last-child{border-radius:0 0 14px 0}
+  .mg-date{font-size:12px;margin-bottom:4px}
+  .mg-item{font-size:9.5px;padding:2px 5px;border-radius:4px;margin-bottom:2px}
+  .mg-sum{font-size:10px}
+
+  /* 课表年视图：卡片更大、更 iOS */
+  .year-grid{grid-template-columns:repeat(2,1fr)!important;gap:10px}
+  .ym-card{border-radius:14px;padding:12px}
+  .ym-card h4{font-size:13.5px}
+  .ym-bar{height:7px;border-radius:7px}
+  .ym-mini{gap:3px;margin-top:10px}
+  .ym-dot{border-radius:4px}
 
   /* 模态框不超出屏幕 */
   .modal{max-width:100%!important;width:100%;height:auto;max-height:calc(100vh - 24px - env(safe-area-inset-bottom));border-radius:18px}
@@ -726,9 +769,9 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   .dash-mobile-card .lesson-row:last-child{border-bottom:none}
   .dash-mobile-card .todo-item:last-child{border-bottom:none}
   .dash-mobile-card .chk{min-height:18px}
-  .dash-mobile-quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px}
-  .dash-mobile-qb{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;background:#fff;border:1px solid var(--line);border-radius:12px;font-size:11px;color:var(--ink-2);cursor:pointer;-webkit-tap-highlight-color:transparent}
-  .dash-mobile-qb svg{width:18px;height:18px;color:var(--pink-600)}
+  .dash-mobile-quick{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px}
+  .dash-mobile-qb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px 4px;background:#fff;border:1px solid var(--line);border-radius:14px;font-size:12px;font-weight:500;color:var(--ink-2);cursor:pointer;-webkit-tap-highlight-color:transparent;min-height:72px}
+  .dash-mobile-qb svg{width:26px;height:26px;color:var(--pink-600)}
 
   /* 日账单手机端 */
   .bill-table tr{border:none;border-radius:0;margin-bottom:0;padding:0;background:transparent;box-shadow:none}

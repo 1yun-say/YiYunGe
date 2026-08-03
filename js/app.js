@@ -64,7 +64,7 @@ const App = (() => {
               <div class="field"><label>日期</label><input type="date" class="input" id="q_d" value="${U.today()}"></div></div>`,
             onOk: bd => {
               const t = U.$('#q_t', bd).value.trim(); if (!t) { U.toast('请填写内容', 'warn'); return false; }
-              Todo.add({ title: t, priority: +U.$('#q_p', bd).value, date: U.$('#q_d', bd).value });
+              Todo.add({ title: t, priority: +U.$('#q_p', bd).value, date: U.$('#q_d', bd).value, status: 'pending' });
               refreshBadge(); go(route); U.toast('已添加');
             }
           });
@@ -128,7 +128,7 @@ const App = (() => {
     U.$$('.bn-item').forEach(n => n.onclick = () => go(n.dataset.route));
     U.$('#quickAdd').onclick = quickAddMenu;
     const sb = U.$('#searchBtn'); if (sb) sb.onclick = () => Search.open();
-    const fab = U.$('#fab'); if (fab) fab.onclick = quickAddMenu;
+    const fab = U.$('#fab'); if (fab) fab.onclick = () => App.route === 'todo' ? Todo.addNew() : quickAddMenu();
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') { const m = U.$$('.mask').pop(); if (m) m.remove(); }
       if (e.key === 'n' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); quickAddMenu(); }

@@ -9,11 +9,28 @@ const Todo = (() => {
     { v: 3, name: '不紧急不重要', short: '有空做', color: '#a8899a' }
   ];
   const pInfo = v => P[v] || P[3];
+  const STATUS = {
+    pending: { name: '未完成', color: 'var(--pink-500)', next: 'done' },
+    done:    { name: '已完成', color: 'var(--leaf)',      next: 'blocked' },
+    blocked: { name: '今日无法完成', color: '#a8899a',    next: 'pending' }
+  };
+  const sInfo = s => STATUS[s] || STATUS.pending;
+  const cycle = s => STATUS[s]?.next || 'done';
   let curDate = U.today();
   let filter = -1;
 
+  /* --- 数据迁移：旧版 done 布尔值 → 三态 status --- */
+  function migrate() {
+    DB.data.todos.forEach(t => {
+      if (t.status === 'pending' || t.status === 'done' || t.status === 'blocked') return;
+      t.status = t.done ? 'done' : 'pending';
+      if (!t.doneAt && t.status === 'done') t.doneAt = Date.now();
+    });
+  }
+
   /* --- 自动任务：试课回访 --- */
   function checkAuto() {
+    migrate();
     const t = U.today();
     let added = 0;
     DB.data.students.forEach(s => {
@@ -25,7 +42,7 @@ const Todo = (() => {
       DB.data.todos.push({
         id: U.uid('td'), title: `回访${s.parentName}试课体验（${s.grade}${s.subject}）`,
         note: '确认孩子和老师是否匹配、是否愿意转正式课；不合适则立即换老师。',
-        priority: 0, tag: '试课跟进', date: due > t ? due : t, done: false, doneAt: null,
+        priority: 0, tag: '试课跟进', date: due > t ? due : t, status: 'pending', doneAt: null,
         autoKey: key, studentId: s.id, createdAt: Date.now()
       });
       added++;
@@ -35,12 +52,12 @@ const Todo = (() => {
   }
 
   const ofDate = d => DB.data.todos.filter(t => t.date === d);
-  const pendingCount = () => DB.data.todos.filter(t => !t.done && t.date <= U.today()).length;
+  const pendingCount = () => DB.data.todos.filter(t => t.status === 'pending' && t.date <= U.today()).length;
 
   function add(t) {
     DB.data.todos.push(Object.assign({
       id: U.uid('td'), title: '', note: '', priority: 1, tag: '', date: curDate,
-      time: '', done: false, doneAt: null, createdAt: Date.now()
+      time: '', status: 'pending', doneAt: null, createdAt: Date.now()
     }, t));
     DB.save();
   }
@@ -62,10 +79,10 @@ const Todo = (() => {
     const root = U.$('#view');
     if (!root || App.route !== 'todo') return;
     const list = ofDate(curDate);
-    const undone = list.filter(t => !t.done).sort((a, b) => (a.time || '99:59').localeCompare(b.time || '99:59') || a.priority - b.priority || a.createdAt - b.createdAt);
-    const done = list.filter(t => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+    const undone = list.filter(t => t.status !== 'done').sort((a, b) => (a.time || '99:59').localeCompare(b.time || '99:59') || a.priority - b.priority || a.createdAt - b.createdAt);
+    const done = list.filter(t => t.status === 'done').sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
     const shown = filter < 0 ? undone : undone.filter(t => t.priority === filter);
-    const overdue = DB.data.todos.filter(t => !t.done && t.date < U.today());
+    const overdue = DB.data.todos.filter(t => t.status === 'pending' && t.date < U.today());
     const isM = U.isMobile();
     const segHTML = isM ? '' : `<div class="seg" style="margin-bottom:12px">
             <div class="opt ${filter < 0 ? 'on' : ''}" data-f="-1">全部</div>
@@ -128,14 +145,14 @@ const Todo = (() => {
             </div>
           </div>
 
-          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          ${isM ? '' : `<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
             <input class="input" id="quickTitle" style="flex:1;min-width:140px" placeholder="输入任务后回车，例如：给王妈妈发本周课表">
             <input type="time" class="input" id="quickTime" style="width:120px" title="可选的具体时间，如 19:00">
             <select class="input" id="quickP" style="width:132px">
               ${P.map(p => `<option value="${p.v}" ${p.v === 1 ? 'selected' : ''}>${p.name}</option>`).join('')}
             </select>
             <button class="btn btn-primary" data-act="quickAdd">添加</button>
-          </div>
+          </div>`}
 
           ${segHTML}
 
@@ -161,9 +178,15 @@ const Todo = (() => {
 
   function rowHTML(t, showDate) {
     const p = pInfo(t.priority);
+    const st = sInfo(t.status);
     const stu = t.studentId ? DB.student(t.studentId) : null;
-    return `<div class="todo-item ${t.done ? 'done' : ''}" data-p="${t.priority}" data-id="${t.id}">
-      <div class="chk ${t.done ? 'on' : ''}" data-act="toggle"></div>
+    const chkIcon = t.status === 'done'
+      ? '<svg viewBox="0 0 24 24" class="ico"><path d="M5 12.5 10 17 19 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      : t.status === 'blocked'
+        ? '<svg viewBox="0 0 24 24" class="ico"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>'
+        : '';
+    return `<div class="todo-item ${t.status === 'done' ? 'done' : ''} ${t.status === 'blocked' ? 'blocked' : ''}" data-p="${t.priority}" data-id="${t.id}">
+      <div class="chk chk-${t.status}" data-act="toggle" title="${st.name}" style="color:#fff;border-color:${st.color};${t.status !== 'pending' ? 'background:' + st.color : ''}">${chkIcon}</div>
       <div class="t-body">
         <div class="t-title">
           ${t.time ? `<span class="t-time">${U.esc(t.time)}</span>` : ''}${U.esc(t.title)}
@@ -171,11 +194,12 @@ const Todo = (() => {
         ${t.note ? `<div class="muted" style="font-size:11.5px;margin-top:2px">${U.esc(t.note)}</div>` : ''}
         <div class="t-meta">
           <span class="tag" style="background:${p.color}1f;color:${p.color}">${p.name}</span>
+          ${t.status !== 'pending' ? `<span class="tag" style="background:${st.color}1f;color:${st.color}">${st.name}</span>` : ''}
           ${t.tag ? `<span class="tag gray">${U.esc(t.tag)}</span>` : ''}
           ${t.autoKey ? `<span class="tag gold">自动生成</span>` : ''}
           ${stu ? `<span class="tag sky">${U.esc(DB.studentLabel(stu))}</span>` : ''}
           ${showDate ? `<span class="tag alert">${U.cnDate(t.date)}</span>` : ''}
-          ${t.done && t.doneAt ? `<span class="muted" style="font-size:11px">完成于 ${new Date(t.doneAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>` : ''}
+          ${t.status === 'done' && t.doneAt ? `<span class="muted" style="font-size:11px">完成于 ${new Date(t.doneAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>` : ''}
         </div>
       </div>
       <div class="t-actions">
@@ -203,8 +227,10 @@ const Todo = (() => {
         case 'nextDay': curDate = U.addDays(curDate, 1); render(); break;
         case 'quickAdd': doQuickAdd(root); break;
         case 'toggle':
-          t.done = !t.done; t.doneAt = t.done ? Date.now() : null; DB.save(); render(); App.refreshBadge();
-          if (t.done) U.toast('完成一件，很好');
+          t.status = cycle(t.status);
+          t.doneAt = t.status === 'done' ? Date.now() : (t.status === 'pending' ? null : t.doneAt);
+          DB.save(); render(); App.refreshBadge();
+          if (t.status === 'done') U.toast('完成一件，很好');
           break;
         case 'edit': editTodo(t); break;
         case 'del': DB.data.todos = DB.data.todos.filter(x => x.id !== tid); DB.save(); render(); App.refreshBadge(); break;
@@ -233,20 +259,26 @@ const Todo = (() => {
 
   function doQuickAdd(root) {
     const i = U.$('#quickTitle', root);
+    if (!i) return;
     const v = i.value.trim(); if (!v) return;
     const tIn = U.$('#quickTime', root);
     const time = tIn ? (tIn.value || '') : '';
     add({ title: v, priority: +U.$('#quickP', root).value, date: curDate, time });
     i.value = ''; if (tIn) tIn.value = ''; render(); App.refreshBadge();
-    setTimeout(() => U.$('#quickTitle').focus(), 30);
+    setTimeout(() => { const el = U.$('#quickTitle'); if (el) el.focus(); }, 30);
   }
 
   function editTodo(t, after) {
+    const st = sInfo(t.status);
     const mm = U.modal({
       title: '编辑任务',
       body: `<div class="field"><label>任务内容</label><input class="input" id="f_t" value="${U.esc(t.title)}"></div>
         <div class="field"><label>备注</label><textarea class="input" id="f_n">${U.esc(t.note || '')}</textarea></div>
         <div class="row">
+          <div class="field"><label>状态</label><select class="input" id="f_s">
+            <option value="pending" ${t.status === 'pending' ? 'selected' : ''}>未完成</option>
+            <option value="done" ${t.status === 'done' ? 'selected' : ''}>已完成</option>
+            <option value="blocked" ${t.status === 'blocked' ? 'selected' : ''}>今日无法完成</option></select></div>
           <div class="field"><label>优先级</label><select class="input" id="f_p">
             ${P.map(p => `<option value="${p.v}" ${p.v === t.priority ? 'selected' : ''}>${p.name}</option>`).join('')}</select></div>
           <div class="field"><label>时间（可选）</label><input type="time" class="input" id="f_m" value="${t.time || ''}"></div>
@@ -254,11 +286,13 @@ const Todo = (() => {
         </div>
         <div class="field"><label>日期</label><input type="date" class="input" id="f_d" value="${t.date}"></div>
         <div style="display:flex;gap:8px">
-          <button class="btn btn-ghost btn-sm" id="btnToggleDone">${t.done ? '标记为未完成' : '标记为完成'}</button>
+          <button class="btn btn-ghost btn-sm" id="btnToggleDone">${t.status === 'done' ? '标记为未完成' : '标记为完成'}</button>
         </div>`,
       onOk: b => {
         t.title = U.$('#f_t', b).value.trim() || t.title;
         t.note = U.$('#f_n', b).value.trim();
+        t.status = U.$('#f_s', b).value;
+        t.doneAt = t.status === 'done' ? (t.doneAt || Date.now()) : (t.status === 'pending' ? null : t.doneAt);
         t.priority = +U.$('#f_p', b).value;
         t.time = U.$('#f_m', b).value || '';
         t.tag = U.$('#f_g', b).value.trim();
@@ -269,10 +303,25 @@ const Todo = (() => {
     });
     mm.body.addEventListener('click', e => {
       if (e.target.id === 'btnToggleDone') {
-        t.done = !t.done; t.doneAt = t.done ? Date.now() : null; DB.save();
+        t.status = t.status === 'done' ? 'pending' : 'done';
+        t.doneAt = t.status === 'done' ? Date.now() : null; DB.save();
         if (after) after(); else { render(); App.refreshBadge(); }
-        U.toast(t.done ? '已标记完成' : '已恢复为未完成');
+        U.toast(t.status === 'done' ? '已标记完成' : '已恢复为未完成');
         e.target.closest('.mask').remove();
+      }
+    });
+  }
+
+  function addNew() {
+    U.modal({
+      title: '新建待办',
+      body: `<div class="field"><label>任务内容</label><input class="input" id="f_t" placeholder="例如：给王妈妈发本周课表" autofocus></div>
+        <div class="field"><label>时间（可选）</label><input type="time" class="input" id="f_m"></div>`,
+      onOk: b => {
+        const title = U.$('#f_t', b).value.trim();
+        if (!title) { U.toast('请填写内容', 'warn'); return false; }
+        add({ title, time: U.$('#f_m', b).value || '', date: curDate, status: 'pending' });
+        render(); App.refreshBadge();
       }
     });
   }
@@ -308,5 +357,5 @@ const Todo = (() => {
     render(root) { curDate = U.today(); filter = -1; render(); }
   };
 
-  return { checkAuto, pendingCount, P, pInfo, add, ofDate, render, editTodo };
+  return { checkAuto, pendingCount, P, pInfo, STATUS, sInfo, cycle, add, addNew, ofDate, render, editTodo };
 })();

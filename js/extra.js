@@ -16,7 +16,7 @@ const Search = (() => {
        <div><div class="st">${U.esc(s.parentName)}</div><div class="ss">${U.esc(s.grade + s.subject)} · ${U.esc(s.code)}</div></div></div>`).join('');
     if (todo.length) h += `<div class="search-grp">待办 · ${todo.length}</div>` + todo.slice(0, 8).map(t =>
       `<div class="search-row" data-go="todo"><div class="si" style="background:#f2b544">待</div>
-       <div><div class="st">${U.esc(t.title)}</div><div class="ss">${U.cnDate(t.date)} · ${t.done ? '已完成' : '未完成'}</div></div></div>`).join('');
+       <div><div class="st">${U.esc(t.title)}</div><div class="ss">${U.cnDate(t.date)} · ${t.status === 'done' ? '已完成' : t.status === 'blocked' ? '今日无法完成' : '未完成'}</div></div></div>`).join('');
     if (les.length) h += `<div class="search-grp">课表 · ${les.length}</div>` + les.slice(0, 8).map(l => {
       const s = DB.student(l.studentId) || {};
       return `<div class="search-row" data-go="schedule"><div class="si" style="background:${U.subColor(s.subject)}">课</div>
@@ -57,7 +57,6 @@ const More = (() => {
   // 教务模块：手机端从底部导航移除「学员」后，统一在这里入口（移动端才显示）
   const moduleTiles = [
     { go: 'students', ic: 'i-user', name: '学员档案', desc: '学员与编码' },
-    { go: 'teachers', ic: 'i-user', name: '老师名册', desc: '授课老师' },
     { go: 'schedule', ic: 'i-cal', name: '可视化课表', desc: '排课总览' },
     { go: 'finance', ic: 'i-coin', name: '财务统计', desc: '三本账' },
     { go: 'scripts', ic: 'i-chat', name: '常用话术', desc: '标准回复' }
@@ -371,10 +370,20 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.7.8</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li>待办事项升级为三态：「未完成 / 已完成 / 今日无法完成」。旧版「完成/未完成」数据自动迁移；列表点击状态图标可循环切换，编辑弹窗也可直接选择。</li>
+        <li>课节「批注」文案简化：排课/编辑弹窗的标签从「批注（其余钱去哪了）」改为仅「批注」，placeholder 示例保留。</li>
+        <li>手机端可视化课表 iOS 风格重排：工具栏分两行不拥挤，周视图日期头放大、今日为圆点高亮，重叠课程自动纵向堆叠不再挤成一坨；月/年视图格子更圆更克制。</li>
+        <li>手机端待办页简化：隐藏顶部常驻输入区，点右下角 + 弹出极简新建弹窗（事项 + 可选时间），页面更清爽。</li>
+        <li>手机端主页：底部「学员 / 老师 / 课表 / 财务」快捷入口图标放大，解决页面偏空。</li>
+        <li>手机端我的页：移除「老师名册」入口，剩余 8 个入口正好排成两行 4 列。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.7.7</div><div class="log-date">2026-08-03</div>
       <ul class="log-list">
         <li>课节新增「实际到手收入」独立字段：排课/编辑弹窗都可填写，未填写时自动回退到「我的抽成」（兼容旧数据）。后续所有收入统计、财务、课表、学员档案、主页全部以「实际到手」为口径。</li>
-        <li>课节新增「批注（其余钱去哪了）」：可填写老师课酬、资料费等说明；可视化课表周视图内联显示、月视图悬浮提示；财务日账单每一条同步显示。</li>
+        <li>课节新增「批注」：可填写老师课酬、资料费等说明；可视化课表周视图内联显示、月视图悬浮提示；财务日账单每一条同步显示。</li>
         <li>财务统计 · 日账单标题随「周/月/年/自定义」动态切换，不再固定显示「日账单」；每笔记录右侧新增「编辑」按钮，可直接修改该课节的实际到手与批注。</li>
         <li>统一口径复盘：store.statIn / finance.effectiveRate / finance.group / schedule 各视图 / dashboard / students.js 全部改为从 DB.lessonBreakdown 读取 takeHome，避免 67/70 这类不一致。</li>
       </ul>

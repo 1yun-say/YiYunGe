@@ -41,13 +41,19 @@ const Calendar = (() => {
   /* ---------- 工具：按日期聚合待办 ---------- */
   function todosOf(dt) {
     return DB.data.todos.filter(x => x.date === dt)
-      .sort((a, b) => (a.done - b.done) || (a.time || '99:59').localeCompare(b.time || '99:59') || a.priority - b.priority || a.createdAt - b.createdAt);
+      .sort((a, b) => (a.status === 'done') - (b.status === 'done') || (a.time || '99:59').localeCompare(b.time || '99:59') || a.priority - b.priority || a.createdAt - b.createdAt);
   }
   function todoHTML(x) {
     const p = Todo.pInfo(x.priority);
-    return `<div class="cal-event ${x.done ? 'done' : ''}" data-tid="${x.id}">
-      <button class="cal-check" data-act="toggle" aria-label="完成">
-        ${x.done ? '<svg viewBox="0 0 24 24" class="ico"><path d="M5 12.5 10 17 19 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
+    const st = Todo.sInfo(x.status);
+    const chkIcon = x.status === 'done'
+      ? '<svg viewBox="0 0 24 24" class="ico"><path d="M5 12.5 10 17 19 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      : x.status === 'blocked'
+        ? '<svg viewBox="0 0 24 24" class="ico"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>'
+        : '';
+    return `<div class="cal-event ${x.status === 'done' ? 'done' : ''} ${x.status === 'blocked' ? 'blocked' : ''}" data-tid="${x.id}">
+      <button class="cal-check" data-act="toggle" aria-label="${st.name}" style="border-color:${st.color};${x.status !== 'pending' ? 'background:' + st.color : ''}">
+        ${chkIcon}
       </button>
       <div class="cal-ev-body" data-act="open">
         <div class="cal-ev-bar" style="background:${p.color}"></div>
@@ -55,7 +61,7 @@ const Calendar = (() => {
           ${x.time ? `<span class="cal-ev-time">${U.esc(x.time)}</span>` : ''}
           <span class="cal-ev-title">${U.esc(x.title)}</span>
         </div>
-        <div class="cal-ev-meta">${p.name}${x.tag ? ' · ' + U.esc(x.tag) : ''}${x.autoKey ? ' · 自动生成' : ''}</div>
+        <div class="cal-ev-meta">${st.name}${x.status === 'pending' ? ' · ' + p.name : ''}${x.tag ? ' · ' + U.esc(x.tag) : ''}${x.autoKey ? ' · 自动生成' : ''}</div>
       </div>
     </div>`;
   }
@@ -99,13 +105,15 @@ const Calendar = (() => {
       else if (a.dataset.act === 'today') { anchor = U.today(); render(); }
       else if (a.dataset.act === 'add') {
         const dt = a.dataset.day || U.today();
-        const nt = { id: U.uid('td'), title: '', note: '', priority: 1, tag: '', date: dt, done: false, doneAt: null, createdAt: Date.now() };
+        const nt = { id: U.uid('td'), title: '', note: '', priority: 1, tag: '', date: dt, status: 'pending', doneAt: null, createdAt: Date.now() };
         DB.data.todos.push(nt); DB.save(); Todo.editTodo(nt, render); App.refreshBadge();
       }
       else if (a.dataset.act === 'toggle') {
         const x = DB.data.todos.find(y => y.id === a.closest('[data-tid]').dataset.tid);
         if (!x) return;
-        x.done = !x.done; x.doneAt = x.done ? Date.now() : null; DB.save(); render(); App.refreshBadge();
+        x.status = Todo.cycle(x.status);
+        x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
+        DB.save(); render(); App.refreshBadge();
       }
       else if (a.dataset.act === 'open') {
         const x = DB.data.todos.find(y => y.id === a.closest('[data-tid]').dataset.tid);
@@ -191,12 +199,16 @@ const Calendar = (() => {
     const isM = U.isMobile();
     const cellEvents = ls => {
       if (isM) {
-        return `<div class="cal-month-dots">${ls.slice(0, 4).map(x => `<i style="background:${Todo.pInfo(x.priority).color}"></i>`).join('')}${ls.length > 4 ? `<span>+${ls.length - 4}</span>` : ''}</div>`;
+        return `<div class="cal-month-dots">${ls.slice(0, 4).map(x => {
+        const st = Todo.sInfo(x.status);
+        return `<i style="background:${x.status==='pending'?Todo.pInfo(x.priority).color:st.color}"></i>`;
+      }).join('')}${ls.length > 4 ? `<span>+${ls.length - 4}</span>` : ''}</div>`;
       }
       return `${ls.slice(0, 3).map(x => {
         const p = Todo.pInfo(x.priority);
-        return `<div class="cal-month-ev ${x.done?'done':''}" data-tid="${x.id}" title="${U.esc(x.title)}">
-          <i style="background:${p.color}"></i>
+        const st = Todo.sInfo(x.status);
+        return `<div class="cal-month-ev ${x.status==='done'?'done':''} ${x.status==='blocked'?'blocked':''}" data-tid="${x.id}" title="${U.esc(x.title)}">
+          <i style="background:${x.status==='pending'?p.color:st.color}"></i>
           <span>${x.time ? `<b class="cal-month-ev-time">${U.esc(x.time)}</b>` : ''}${U.esc(x.title)}</span>
         </div>`;
       }).join('')}${ls.length > 3 ? `<div class="cal-month-more">+${ls.length - 3} 更多</div>` : ''}`;

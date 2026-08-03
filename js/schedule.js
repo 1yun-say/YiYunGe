@@ -170,6 +170,7 @@ const Schedule = (() => {
   function dayLessonsHTML(date) {
     const ls = DB.data.lessons.filter(l => l.date === date && includeLesson(l));
     const lay = layout(ls);
+    const isM = U.isMobile();
     const pub = App.isPublic();
     return ls.map(l => {
       const s = DB.student(l.studentId) || { parentName: '已删除' };
@@ -177,12 +178,17 @@ const Schedule = (() => {
       const info = lay[l.id] || { cols: 1, idx: 0 };
       const top = U.t2m(l.start) - DAY_START;
       const h = Math.max(24, +l.duration || 60);
-      const w = 100 / info.cols;
       const bd = DB.lessonBreakdown(l);
       const take = `<div class="lm take">到手 ${U.money(bd.takeHome)}${bd.note ? ' · ' + U.esc(bd.note) : ''}</div>`;
+      // 手机端：重叠课程纵向堆叠，避免横向挤成一坨
+      const stackOffset = isM ? info.idx * 14 : 0;
+      const w = isM ? 100 : 100 / info.cols;
+      const left = isM ? '2px' : `calc(${info.idx * w}% + 2px)`;
+      const width = isM ? 'calc(100% - 4px)' : `calc(${w}% - 4px)`;
+      const z = isM ? 2 + info.idx : 2;
       if (isImp) {
         return `<div class="lesson imported" draggable="false" data-lid="${l.id}"
-          style="top:${top}px;height:${h}px;left:calc(${info.idx * w}% + 2px);width:calc(${w}% - 4px);
+          style="top:${top + stackOffset}px;height:${h}px;left:${left};width:${width};z-index:${z};
           border-left-color:#b0b0b0;background:#f5f5f5;color:#666">
           <b>${U.esc(s.parentName)}</b>
           ${take}
@@ -190,8 +196,8 @@ const Schedule = (() => {
       }
       const sub = currentSub(l);
       const c = U.subColor(sub.subject);
-      return `<div class="lesson ${l.status}" draggable="true" data-lid="${l.id}"
-        style="top:${top}px;height:${h}px;left:calc(${info.idx * w}% + 2px);width:calc(${w}% - 4px);
+      return `<div class="lesson ${l.status}" draggable="${isM ? 'false' : 'true'}" data-lid="${l.id}"
+        style="top:${top + stackOffset}px;height:${h}px;left:${left};width:${width};z-index:${z};
         border-left-color:${c};background:${c}14">
         <b>${U.esc(s.parentName)}</b>
         <div class="lm">${l.start}-${U.m2t(endMin(l))} · ${U.money(l.tuition)}${pub ? '' : ` <span style="color:#e85686">到手${U.money(bd.takeHome)}</span>`}</div>
@@ -385,7 +391,7 @@ const Schedule = (() => {
         <input type="checkbox" id="f_fixed" ${fixed0.length ? 'checked' : ''}> 设为该学员该科「固定上课时间」（下次排课本科自动带出）</label></div>
       <div class="row secret">
         <div class="field"><label>实际到手收入</label><input type="number" class="input" id="f_take" placeholder="不填则默认等于抽成" value=""></div>
-        <div class="field"><label>批注（其余钱去哪了）</label><input class="input" id="f_inote" placeholder="如：老师课酬230、买资料50"></div>
+        <div class="field"><label>批注</label><input class="input" id="f_inote" placeholder="如：老师课酬230、买资料50"></div>
       </div>
       <div class="row">
         <div class="field"><label>状态</label>
@@ -496,7 +502,7 @@ const Schedule = (() => {
       </div>
       <div class="row secret">
         <div class="field"><label>实际到手收入</label><input type="number" class="input" id="f_take" placeholder="不填则默认等于抽成" value="${l.actualTakeHome === undefined || l.actualTakeHome === null || l.actualTakeHome === '' ? '' : l.actualTakeHome}"></div>
-        <div class="field"><label>批注（其余钱去哪了）</label><input class="input" id="f_inote" placeholder="如：老师课酬230、买资料50" value="${U.esc(l.incomeNote || '')}"></div>
+        <div class="field"><label>批注</label><input class="input" id="f_inote" placeholder="如：老师课酬230、买资料50" value="${U.esc(l.incomeNote || '')}"></div>
       </div>
       <div class="field"><label>授课老师</label><select class="input" id="f_tid">
         ${DB.data.teachers.map(t => `<option value="${t.id}" ${t.id === l.teacherId ? 'selected' : ''}>${U.esc(t.name)}</option>`).join('')}

@@ -128,10 +128,17 @@ const Dashboard = (() => {
           <div class="todo-list">
             ${ctx.undone.length ? ctx.undone.slice(0, show).map(x => {
       const p = Todo.pInfo(x.priority);
-      return `<div class="todo-item" data-p="${x.priority}" data-tid="${x.id}">
-                <div class="chk" data-act="toggleTodo"></div>
+      const st = Todo.sInfo(x.status);
+      const chkIcon = x.status === 'done'
+        ? '<svg viewBox="0 0 24 24" class="ico"><path d="M5 12.5 10 17 19 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        : x.status === 'blocked'
+          ? '<svg viewBox="0 0 24 24" class="ico"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>'
+          : '';
+      return `<div class="todo-item ${x.status==='done'?'done':''} ${x.status==='blocked'?'blocked':''}" data-p="${x.priority}" data-tid="${x.id}">
+                <div class="chk chk-${x.status}" data-act="toggleTodo" title="${st.name}" style="color:#fff;border-color:${st.color};${x.status !== 'pending' ? 'background:' + st.color : ''}">${chkIcon}</div>
                 <div class="t-body"><div class="t-title">${U.esc(x.title)}</div>
                   <div class="t-meta"><span class="tag" style="background:${p.color}1f;color:${p.color}">${p.name}</span>
+                  ${x.status !== 'pending' ? `<span class="tag" style="background:${st.color}1f;color:${st.color}">${st.name}</span>` : ''}
                   ${!isM && x.autoKey ? '<span class="tag gold">自动</span>' : ''}</div></div>
               </div>`;
     }).join('') : `<div class="empty" style="padding:22px"><p>今日待办已清空</p></div>`}
@@ -354,7 +361,12 @@ const Dashboard = (() => {
         }
         case 'toggleTodo': {
           const x = DB.data.todos.find(y => y.id === b.closest('[data-tid]').dataset.tid);
-          if (x) { x.done = true; x.doneAt = Date.now(); DB.save(); render(); App.refreshBadge(); U.toast('完成一件'); }
+          if (x) {
+            x.status = Todo.cycle(x.status);
+            x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
+            DB.save(); render(); App.refreshBadge();
+            if (x.status === 'done') U.toast('完成一件');
+          }
           break;
         }
       }
@@ -371,7 +383,7 @@ const Dashboard = (() => {
     const todayLessons = DB.data.lessons.filter(l => l.date === t && l.status !== 'cancelled')
       .sort((a, b) => U.t2m(a.start) - U.t2m(b.start));
     const todosAll = Todo.ofDate(t);
-    const undone = todosAll.filter(x => !x.done).sort((a, b) => a.priority - b.priority);
+    const undone = todosAll.filter(x => x.status !== 'done').sort((a, b) => a.priority - b.priority);
     const overdue = DB.data.todos.filter(x => !x.done && x.date < t);
     const mFrom = U.monthFirst(t), mTo = U.monthLast(t);
     const mStat = DB.statIn(mFrom, mTo, { includeScheduled: inc });
@@ -459,7 +471,10 @@ const Dashboard = (() => {
         }
         case 'toggleTodo': {
           const x = DB.data.todos.find(y => y.id === b.closest('[data-tid]').dataset.tid);
-          x.done = true; x.doneAt = Date.now(); DB.save(); render(); App.refreshBadge(); U.toast('完成一件');
+          x.status = Todo.cycle(x.status);
+          x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
+          DB.save(); render(); App.refreshBadge();
+          if (x.status === 'done') U.toast('完成一件');
           break;
         }
         case 'importTpl': {
