@@ -310,7 +310,7 @@ const DB = (() => {
       { key: 'teacher', name: '老师课时排行', visible: true },
       { key: 'student', name: '学员抽成贡献', visible: true },
       { key: 'detail', name: '明细统计', visible: true },
-      { key: 'daily', name: '日账单', visible: true }
+      { key: 'daily', name: '账单明细', visible: true }
     ];
   }
 
@@ -481,21 +481,35 @@ const DB = (() => {
   function lessonsIn(a, b, opt = {}) {
     return data.lessons.filter(l => l.date >= a && l.date <= b && (opt.withCancelled || l.status !== 'cancelled'));
   }
+  // 收入口径：以 lesson.actualTakeHome（实际到手）为准；未填写时回退到 commission。
+  // 其余 = gross - takeHome，表示没落到自己手里的钱（老师课酬/资料/其他支出）。
+  function takeHomeOf(l) {
+    const hasExplicit = l.actualTakeHome !== undefined && l.actualTakeHome !== null && l.actualTakeHome !== '';
+    return hasExplicit ? (+l.actualTakeHome || 0) : (+l.commission || 0);
+  }
+  function takeHomeNote(l, rest) {
+    const note = (l.incomeNote || '').trim();
+    if (note) return note;
+    if (l.importedCommission) return '导入抽成（无课时费明细）';
+    if (rest > 0) return `其余 ${U.money(rest)} 为老师课酬等支出`;
+    return '';
+  }
+
   // 抽成口径：默认只统计已完成课程
   function statIn(a, b, opt = {}) {
     const ls = lessonsIn(a, b).filter(l => opt.includeScheduled ? true : l.status === 'done');
     const gross = ls.reduce((s, l) => s + (+l.tuition || 0), 0);
-    const profit = ls.reduce((s, l) => s + (+l.commission || 0), 0);
+    const profit = ls.reduce((s, l) => s + takeHomeOf(l), 0);
     return { lessons: ls, count: ls.length, gross, profit, cost: gross - profit, minutes: ls.reduce((s, l) => s + (+l.duration || 0), 0) };
   }
 
-  // 单节课收入拆分：抽成=实际到手收入；其余=老师课酬（导入抽成无课时费明细，老师课酬为 0）
+  // 单节课收入拆分：takeHome=实际到手收入；rest=未落到自己手里的钱
   function lessonBreakdown(l) {
-    const commission = +l.commission || 0;
     const gross = +l.tuition || 0;
+    const takeHome = takeHomeOf(l);
     const imported = !!l.importedCommission;
-    const teacherPay = imported ? 0 : Math.max(0, gross - commission);
-    return { gross, commission, teacherPay, imported };
+    const rest = imported ? 0 : Math.max(0, gross - takeHome);
+    return { gross, takeHome, rest, imported, note: takeHomeNote(l, rest) };
   }
 
   function reset(withDemo) {

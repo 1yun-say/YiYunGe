@@ -23,7 +23,7 @@ const Finance = (() => {
   function effectiveRate(lessons) {
     const ls = (lessons || []).filter(l => !l.importedCommission && l.date >= RATE_CUTOFF && l.status === 'done');
     const gross = ls.reduce((s, l) => s + (+l.tuition || 0), 0);
-    const profit = ls.reduce((s, l) => s + (+l.commission || 0), 0);
+    const profit = ls.reduce((s, l) => s + DB.lessonBreakdown(l).takeHome, 0);
     return { gross, profit, rate: gross ? Math.round(profit / gross * 100) : 0 };
   }
 
@@ -88,7 +88,7 @@ const Finance = (() => {
       else { key = l.teacherId || 'none'; label = DB.teacherName(l.teacherId); }
       if (!map.has(key)) map.set(key, { key, label, count: 0, minutes: 0, gross: 0, profit: 0, hist: 0, lessons: [] });
       const g = map.get(key);
-      g.count++; g.minutes += +l.duration || 0; g.gross += +l.tuition || 0; g.profit += +l.commission || 0; g.lessons.push(l);
+      g.count++; g.minutes += +l.duration || 0; g.gross += +l.tuition || 0; g.profit += DB.lessonBreakdown(l).takeHome; g.lessons.push(l);
     });
     Array.from(map.values()).forEach(g => { g.hist = 0; });
     return Array.from(map.values()).sort((a, b) => b.profit - a.profit);
@@ -97,7 +97,7 @@ const Finance = (() => {
   /* ---------- 各卡片独立渲染（标题取配置 name） ---------- */
   function cardTrend(ctx, title) {
     return `<div class="card">
-      <div class="card-h"><h3>${U.esc(title)}</h3><span class="sub">柱高 = 当月抽成</span></div>
+      <div class="card-h"><h3>${U.esc(title)}</h3><span class="sub">柱高 = 当月实际到手</span></div>
       ${U.columns(ctx.monthly, { money: true })}
     </div>`;
   }
@@ -122,10 +122,10 @@ const Finance = (() => {
       <div class="card-h"><h3>${U.esc(title)}</h3><span class="sub">谁带的课最多</span></div>
       ${U.bars(by.map((t, i) => ({ label: t.label, value: t.count, color: PALETTE[i % PALETTE.length] })), { unit: ' 节' })}
       <div class="divider"></div>
-      <table class="tbl"><thead><tr><th>老师</th><th class="num">课时</th><th class="num">课酬支出</th><th class="num">我的抽成</th></tr></thead>
+      <table class="tbl"><thead><tr><th>老师</th><th class="num">课时</th><th class="num">其余支出</th><th class="num">实际到手</th></tr></thead>
         <tbody>${by.map(t => `<tr><td data-label="老师">${U.esc(t.label)}</td><td class="num" data-label="课时">${t.count}</td>
-          <td class="num money out" data-label="课酬支出">${U.money(t.gross - t.profit)}</td>
-          <td class="num money in" data-label="我的抽成">${U.money(t.profit)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">暂无数据</td></tr>'}</tbody></table>
+          <td class="num money out" data-label="其余支出">${U.money(t.gross - t.profit)}</td>
+          <td class="num money in" data-label="实际到手">${U.money(t.profit)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">暂无数据</td></tr>'}</tbody></table>
     </div>`;
   }
   function cardStudent(ctx, title) {
@@ -151,15 +151,15 @@ const Finance = (() => {
       <table class="tbl">
         <thead><tr><th>${{ student: '学员', grade: '年级', subject: '学科', teacher: '老师' }[dim]}</th>
           <th class="num">课时</th><th class="num">总时长</th>          <th class="num">家长流水</th>
-          <th class="num">老师课酬</th><th class="num">我的抽成</th><th class="num">抽成率</th><th style="width:110px">占比</th></tr></thead>
+          <th class="num">其余支出</th><th class="num">实际到手</th><th class="num">有效抽成率</th><th style="width:110px">占比</th></tr></thead>
         <tbody>
           ${cur.map(g => `<tr>
             <td data-label="名称">${U.esc(g.label)}</td>
             <td class="num" data-label="课时">${g.count}</td>
             <td class="num" data-label="总时长">${(g.minutes / 60).toFixed(1)} h</td>
             <td class="num money" data-label="家长流水">${U.money(g.gross)}</td>
-            <td class="num money out" data-label="老师课酬">${U.money(g.gross - g.profit)}</td>
-            <td class="num money in" data-label="我的抽成">${U.money(g.profit)}</td>
+            <td class="num money out" data-label="其余支出">${U.money(g.gross - g.profit)}</td>
+            <td class="num money in" data-label="实际到手">${U.money(g.profit)}</td>
             <td class="num" data-label="有效抽成率" title="不含导入抽成表数据，自 8 月 1 日起的真实课时抽成率">${(() => { const r = effectiveRate(g.lessons); return `${r.rate}%`; })()}</td>
             <td data-label="占比"><div class="bt" style="height:8px;background:var(--pink-75);border-radius:6px;overflow:hidden">
               <i style="display:block;height:100%;width:${st.profit ? g.profit / st.profit * 100 : 0}%;background:linear-gradient(90deg,#ffb6ce,#f9709d)"></i></div></td>
@@ -181,9 +181,9 @@ const Finance = (() => {
   function cardOverview(ctx, title) {
     const st = ctx.st;
     const cards = [
-      ['我的抽成', U.money(st.profit + ctx.histTotal), 'in'],
+      ['实际到手', U.money(st.profit + ctx.histTotal), 'in'],
       ['家长流水', U.money(st.gross), ''],
-      ['老师课酬', U.money(st.cost), 'out'],
+      ['其余支出', U.money(st.cost), 'out'],
       ['课时数', st.count + ' 节', '']
     ];
     return `<div class="card">
@@ -209,8 +209,9 @@ const Finance = (() => {
   }
 
   function cardDailyBill(ctx, title) {
+    const billTitle = { week: '周账单', month: '月账单', year: '年账单', custom: '自定义账单' }[billRange] || '账单';
     const ls = DB.statIn(billFrom, billTo, { includeScheduled }).lessons
-      .filter(l => l.status === 'done' && (+l.commission || 0) > 0)
+      .filter(l => l.status === 'done' && DB.lessonBreakdown(l).takeHome > 0)
       .sort((a, b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start));
     const groups = {};
     ls.forEach(l => { (groups[l.date] ||= []).push(l); });
@@ -218,12 +219,12 @@ const Finance = (() => {
 
     const rows = dates.map(date => {
       const items = groups[date];
-      const dayTotal = items.reduce((s, l) => s + (+l.commission || 0), 0);
-      const dayTeacherPay = items.reduce((s, l) => s + DB.lessonBreakdown(l).teacherPay, 0);
+      const dayTotal = items.reduce((s, l) => s + DB.lessonBreakdown(l).takeHome, 0);
+      const dayRest = items.reduce((s, l) => s + DB.lessonBreakdown(l).rest, 0);
       return `<tbody class="bill-day">
         <tr class="bill-day-head"><td colspan="3">
           <div class="bill-day-title"><b>${U.cnDate(date)} ${U.wdName(date)}</b><span class="money in">+${U.money(dayTotal)}</span></div>
-          <div class="bill-day-sub">实际到手合计 ${U.money(dayTotal)} ｜ 其余 ${U.money(dayTeacherPay)} 老师课酬</div>
+          <div class="bill-day-sub">实际到手合计 ${U.money(dayTotal)} ｜ 其余 ${U.money(dayRest)} ${dayRest > 0 ? '未落袋' : ''}</div>
         </td></tr>
         ${items.map(l => {
         const s = DB.student(l.studentId);
@@ -233,15 +234,17 @@ const Finance = (() => {
         const label = isImp ? '家教 - 抽成（导入）' : `家教 - ${sub || '抽成'}`;
         const sublabel = s ? s.parentName : '已删除学员';
         const icon = isImp ? '抽' : (sub ? sub.slice(0, 1) : '家');
-        const note = bd.imported ? '导入抽成（无课时费明细）' : `其余 ${U.money(bd.teacherPay)} 老师课酬`;
-        return `<tr class="bill-item">
+        return `<tr class="bill-item" data-lid="${l.id}">
           <td class="bill-icon"><span>${U.esc(icon)}</span></td>
           <td>
             <div class="bill-main">${U.esc(label)}</div>
             <div class="bill-sub">${U.esc(sublabel)}${l.note ? ' · ' + U.esc(String(l.note).slice(0, 24)) : ''}</div>
-            <div class="bill-note">实际到手 ${U.money(bd.commission)} ｜ ${U.esc(note)}</div>
+            <div class="bill-note">实际到手 ${U.money(bd.takeHome)} ｜ ${U.esc(bd.note)}</div>
           </td>
-          <td class="bill-amt money in">${U.money(l.commission)}</td>
+          <td class="bill-amt money in">
+            <div>${U.money(bd.takeHome)}</div>
+            <button class="btn btn-ghost btn-sm bill-edit" data-edit-lid="${l.id}">编辑</button>
+          </td>
         </tr>`;
       }).join('')}
       </tbody>`;
@@ -249,7 +252,7 @@ const Finance = (() => {
 
     return `<div class="card">
       <div class="card-h">
-        <h3>${U.esc(title)}</h3>
+        <h3>${U.esc(billTitle)}</h3>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <div class="tabs">
             ${[['week', '周账单'], ['month', '月账单'], ['year', '年账单'], ['custom', '自定义']]
@@ -259,10 +262,10 @@ const Finance = (() => {
         </div>
       </div>
       <table class="tbl bill-table">
-        <thead><tr><th style="width:44px"></th><th>来源</th><th class="num">收入</th></tr></thead>
+        <thead><tr><th style="width:44px"></th><th>来源</th><th class="num">实际到手</th></tr></thead>
         ${rows || '<tbody><tr><td colspan="3" class="muted" style="text-align:center;padding:26px">该周期还没有收入记录</td></tr></tbody>'}
       </table>
-      <p class="muted" style="font-size:11.5px;margin-top:10px">按日期倒序，仅显示有抽成收入的记录。每行「实际到手」即你的抽成，其余为老师课酬；导入的抽成表记录会标注「导入」。</p>
+      <p class="muted" style="font-size:11.5px;margin-top:10px">按日期倒序，仅显示有实际到手收入的记录。每行显示实际到手与其余未落袋金额/批注；导入的抽成表记录会标注「导入」。点右侧「编辑」可修改该课节的实际到手与批注。</p>
     </div>`;
   }
 
@@ -335,7 +338,7 @@ const Finance = (() => {
     try {
       const cur = group(DB.statIn(from, to, { includeScheduled }).lessons, dim);
       const head = { student: '学员', grade: '年级', subject: '学科', teacher: '老师' }[dim];
-      const header = [head, '课时', '总时长(h)', '家长流水', '老师课酬', '我的抽成', '有效抽成率(8.1起)'];
+      const header = [head, '课时', '总时长(h)', '家长流水', '其余支出', '实际到手', '有效抽成率(8.1起)'];
       const rows = cur.map(g => [g.label, g.count, (g.minutes / 60).toFixed(1), g.gross, g.gross - g.profit, g.profit, effectiveRate(g.lessons).rate]);
       const st = DB.statIn(from, to, { includeScheduled });
       rows.push(['合计', st.count, (st.minutes / 60).toFixed(1), st.gross, st.cost, st.profit, effectiveRate(st.lessons).rate]);
@@ -442,6 +445,11 @@ const Finance = (() => {
     const bfFrom = U.$('#bf_from', root), bfTo = U.$('#bf_to', root);
     if (bfFrom) bfFrom.onchange = e => { billFrom = e.target.value; billRange = 'custom'; render(); };
     if (bfTo) bfTo.onchange = e => { billTo = e.target.value; billRange = 'custom'; render(); };
+
+    /* 日账单每一行编辑入口 */
+    root.querySelectorAll('[data-edit-lid]').forEach(b => b.onclick = () => {
+      if (window.Schedule && Schedule.editLesson) Schedule.editLesson(b.dataset.editLid);
+    });
 
     /* 编辑模式：桌面端启用拖动排序（包一层 try，避免拖动初始化异常影响下面的事件绑定） */
     if (editMode && !U.isMobile()) {
@@ -641,7 +649,7 @@ const Finance = (() => {
 
   Views.finance = {
     title: '财务统计',
-    sub: '中间人视角：家长流水 / 老师课酬 / 我的抽成三本账分开算',
+    sub: '中间人视角：家长流水 / 其余支出 / 实际到手三本账分开算',
     render() { editMode = false; applyRange('month'); applyBillRange('month'); render(); }
   };
 

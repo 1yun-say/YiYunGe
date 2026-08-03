@@ -164,7 +164,7 @@ const Students = (() => {
     return {
       done: ls.length,
       gross: ls.reduce((a, l) => a + (+l.tuition || 0), 0),
-      profit: ls.reduce((a, l) => a + (+l.commission || 0), 0)
+      profit: ls.reduce((a, l) => a + DB.lessonBreakdown(l).takeHome, 0)
     };
   }
 
@@ -391,9 +391,9 @@ const Students = (() => {
       <div class="grid g4" style="gap:10px;margin-bottom:14px">
         <div class="stat"><div class="lab">已完成课时</div><div class="val">${st.done}</div><div class="sub">待上 ${up} 节</div></div>
         <div class="stat"><div class="lab">家长已付流水</div><div class="val">${U.money(st.gross)}</div></div>
-        <div class="stat hl secret"><div class="lab">我的累计抽成</div><div class="val">${U.money(st.profit)}</div>
+        <div class="stat hl secret"><div class="lab">累计实际到手</div><div class="val">${U.money(st.profit)}</div>
           <div class="sub">单节 ${U.money(DB.primarySubject(s).commission)} · ${U.pct(DB.primarySubject(s).commission, DB.primarySubject(s).tuition)}%</div></div>
-        <div class="stat secret"><div class="lab">老师累计课酬</div><div class="val">${U.money(st.gross - st.profit)}</div>
+        <div class="stat secret"><div class="lab">累计其余支出</div><div class="val">${U.money(st.gross - st.profit)}</div>
           <div class="sub">${U.esc(DB.teacherName(s.teacherId))}</div></div>
       </div>
       ${s.note ? `<div class="stu-note" style="margin-bottom:14px">备注：${U.esc(s.note)}</div>` : ''}
@@ -401,12 +401,12 @@ const Students = (() => {
       <div style="max-height:320px;overflow:auto">
         <table class="tbl"><thead><tr>
           <th>日期</th><th>时间</th><th>时长</th><th>老师</th><th class="num">课时费</th>
-          <th class="num secret">抽成</th><th>状态</th></tr></thead><tbody>
+          <th class="num secret">实际到手</th><th>状态</th></tr></thead><tbody>
           ${ls.length ? ls.map(l => `<tr>
             <td data-label="日期">${l.date} <span class="muted">${U.wdName(l.date)}</span></td>
             <td data-label="时间">${l.start}</td><td data-label="时长">${l.duration}分</td><td data-label="老师">${U.esc(DB.teacherName(l.teacherId))}</td>
             <td class="num money" data-label="课时费">${U.money(l.tuition)}</td>
-            <td class="num money in secret" data-label="抽成">${U.money(l.commission)}</td>
+            <td class="num money in secret" data-label="实际到手">${U.money(DB.lessonBreakdown(l).takeHome)}</td>
             <td data-label="状态"><span class="tag ${l.status === 'done' ? 'leaf' : l.status === 'cancelled' ? 'gray' : 'sky'}">
               ${l.status === 'done' ? '已完成' : l.status === 'cancelled' ? '已取消' : '待上课'}</span></td>
           </tr>`).join('') : `<tr><td colspan="7" class="muted" style="text-align:center;padding:22px">还没有排课</td></tr>`}

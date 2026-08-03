@@ -371,6 +371,14 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.7.7</div><div class="log-date">2026-08-03</div>
+      <ul class="log-list">
+        <li>课节新增「实际到手收入」独立字段：排课/编辑弹窗都可填写，未填写时自动回退到「我的抽成」（兼容旧数据）。后续所有收入统计、财务、课表、学员档案、主页全部以「实际到手」为口径。</li>
+        <li>课节新增「批注（其余钱去哪了）」：可填写老师课酬、资料费等说明；可视化课表周视图内联显示、月视图悬浮提示；财务日账单每一条同步显示。</li>
+        <li>财务统计 · 日账单标题随「周/月/年/自定义」动态切换，不再固定显示「日账单」；每笔记录右侧新增「编辑」按钮，可直接修改该课节的实际到手与批注。</li>
+        <li>统一口径复盘：store.statIn / finance.effectiveRate / finance.group / schedule 各视图 / dashboard / students.js 全部改为从 DB.lessonBreakdown 读取 takeHome，避免 67/70 这类不一致。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.7.6</div><div class="log-date">2026-08-03</div>
       <ul class="log-list">
         <li>可视化课表 · 每节课新增「实际到手收入（抽成）」与「批注：其余＝老师课酬」，周视图内联显示、月视图悬浮提示，导入抽成卡片也标注实际到手。</li>

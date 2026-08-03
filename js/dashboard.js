@@ -76,7 +76,7 @@ const Dashboard = (() => {
         <div class="sub">共 ${ctx.todayLessons.reduce((s, l) => s + l.duration, 0)} 分钟</div></div>
       <div class="stat"><div class="lab">今日待办</div><div class="val">${ctx.undone.length}</div>
         <div class="sub">已完成 ${ctx.todosAll.length - ctx.undone.length} 件</div></div>
-      <div class="stat hl secret"><div class="lab">本月抽成（${ctx.inc ? '含未上课' : '已上课'}）</div><div class="val">${U.money(ctx.mStat.profit)}</div>
+      <div class="stat hl secret"><div class="lab">本月实际到手（${ctx.inc ? '含未上课' : '已上课'}）</div><div class="val">${U.money(ctx.mStat.profit)}</div>
         <div class="sub">已落袋 ${U.money(ctx.mDone.profit)}</div></div>
       <div class="stat ${ctx.pub ? 'hl' : ''}"><div class="lab">本月课时 / 流水</div><div class="val">${ctx.mStat.count}</div>
         <div class="sub">${U.money(ctx.mStat.gross)}</div></div>
@@ -106,7 +106,7 @@ const Dashboard = (() => {
                 <div class="t-meta">
                   <span class="tag gray">${U.esc(DB.teacherName(l.teacherId))}</span>
                   <span class="tag">${U.money(l.tuition)}</span>
-                  <span class="tag secret" style="background:#ffe9f1;color:#e85686">抽成 ${U.money(l.commission)}</span>
+                  <span class="tag secret" style="background:#ffe9f1;color:#e85686">到手 ${U.money(DB.lessonBreakdown(l).takeHome)}</span>
                   ${l.status === 'done' ? '<span class="tag leaf">已完成</span>' : ''}
                 </div>
               </div>
@@ -313,7 +313,7 @@ const Dashboard = (() => {
       <div class="dash-mobile-stats">
         <div class="dash-mobile-stat"><div class="lab">今日课程</div><div class="val">${todayLessons.length}</div><div class="sub">${totalMin} 分钟</div></div>
         <div class="dash-mobile-stat"><div class="lab">今日待办</div><div class="val">${undone.length}</div><div class="sub">待完成</div></div>
-        <div class="dash-mobile-stat"><div class="lab">本月抽成</div><div class="val">${U.money(profit).replace('¥', '')}</div><div class="sub">${profitLabel}</div></div>
+        <div class="dash-mobile-stat"><div class="lab">本月到手</div><div class="val">${U.money(profit).replace('¥', '')}</div><div class="sub">${profitLabel}</div></div>
       </div>
       <div class="dash-mobile-card">
         <h4>今日课程</h4>

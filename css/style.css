@@ -178,7 +178,8 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .bill-sub{font-size:11.5px;color:var(--ink-3);margin-top:2px}
 .bill-note{font-size:10.5px;color:var(--ink-3);margin-top:1px;opacity:.9}
 .bill-day-sub{font-size:10.5px;color:var(--pink-600);padding:0 10px 7px;background:var(--pink-50)}
-.bill-amt{font-size:14px;font-weight:700;white-space:nowrap}
+.bill-amt{font-size:14px;font-weight:700;white-space:nowrap;text-align:right}
+.bill-amt .bill-edit{margin-top:4px;font-size:11px;padding:2px 8px;height:auto;line-height:1.4}
 
 /* ---------- 待办 ---------- */
 .todo-list{display:flex;flex-direction:column;gap:8px}

@@ -117,7 +117,7 @@
           来源文件：<b>${U.esc(res.fileName)}</b><br>
           共解析到 <b>${res.records.length}</b> 条抽成记录，合计 <b class="money in">${U.money(res.totalCommission)}</b> 元。<br>
           将 <b style="color:var(--green,#2e9e5b)">匹配 ${matchedNames.length}</b> 个现有学员、<b style="color:var(--pink,#e85686)">新建 ${newNames.length}</b> 个学员（${newNames.length ? U.esc(newNames.join('、')) : '无'}）。<br>
-          <span class="muted">导入后按日期记入财务"我的抽成"；为避免打扰课表，这些记录不会显示在日历周视图（已标记）。请核对下方明细，确认无误再导入。</span>
+          <span class="muted">导入后按日期记入财务"实际到手"（导入抽成直接作为实际到手，不拆分课酬）；为避免打扰课表，这些记录不会显示在日历周视图（已标记）。请核对下方明细，确认无误再导入。</span>
         </div>
         <div style="overflow:auto;max-height:56vh">
           <table class="tbl" style="font-size:12.5px;min-width:max-content">
@@ -168,6 +168,7 @@
           duration: 60,
           tuition: 0,
           commission: rec.commission,
+          actualTakeHome: rec.commission,
           teacherId: stu.teacherId || 'tc_me',
           status: 'done',
           note: rec.note ? ('[抽成表] ' + rec.note) : '[抽成表导入]',
