@@ -481,17 +481,28 @@ const DB = (() => {
   function lessonsIn(a, b, opt = {}) {
     return data.lessons.filter(l => l.date >= a && l.date <= b && (opt.withCancelled || l.status !== 'cancelled'));
   }
-  // 收入口径：以 lesson.actualTakeHome（实际到手）为准；未填写时回退到 commission。
-  // 其余 = gross - takeHome，表示没落到自己手里的钱（老师课酬/资料/其他支出）。
-  function takeHomeOf(l) {
-    const hasExplicit = l.actualTakeHome !== undefined && l.actualTakeHome !== null && l.actualTakeHome !== '';
-    return hasExplicit ? (+l.actualTakeHome || 0) : (+l.commission || 0);
+  // 报销支出：从批注(incomeNote)提取所有数字求和（如「买资料50、交通30」→ 80）
+  function reimburseOf(l) {
+    const note = (l.incomeNote || '').toString();
+    if (!note.trim()) return 0;
+    const matches = note.match(/\d+(\.\d+)?/g);
+    if (!matches) return 0;
+    return matches.reduce((s, m) => s + parseFloat(m), 0);
   }
-  function takeHomeNote(l, rest) {
+  // 收入口径：实际到手收入 = 我的抽成 − 报销支出。
+  // 兼容 v1.7.7/1.7.8 手动录入的 actualTakeHome（若显式填写则以它为准）；导入抽成=全额到手。
+  function takeHomeOf(l) {
+    const imported = !!l.importedCommission;
+    const commission = +l.commission || 0;
+    if (imported) return commission;
+    const hasExplicit = l.actualTakeHome !== undefined && l.actualTakeHome !== null && l.actualTakeHome !== '';
+    if (hasExplicit) return +l.actualTakeHome || 0;
+    return Math.max(0, commission - reimburseOf(l));
+  }
+  function takeHomeNote(l) {
     const note = (l.incomeNote || '').trim();
     if (note) return note;
     if (l.importedCommission) return '导入抽成（无课时费明细）';
-    if (rest > 0) return `其余 ${U.money(rest)} 为老师课酬等支出`;
     return '';
   }
 
@@ -499,17 +510,21 @@ const DB = (() => {
   function statIn(a, b, opt = {}) {
     const ls = lessonsIn(a, b).filter(l => opt.includeScheduled ? true : l.status === 'done');
     const gross = ls.reduce((s, l) => s + (+l.tuition || 0), 0);
+    const commission = ls.reduce((s, l) => s + (+l.commission || 0), 0);
+    const reimb = ls.reduce((s, l) => s + reimburseOf(l), 0);
     const profit = ls.reduce((s, l) => s + takeHomeOf(l), 0);
-    return { lessons: ls, count: ls.length, gross, profit, cost: gross - profit, minutes: ls.reduce((s, l) => s + (+l.duration || 0), 0) };
+    return { lessons: ls, count: ls.length, gross, commission, reimb, profit, cost: gross - profit, minutes: ls.reduce((s, l) => s + (+l.duration || 0), 0) };
   }
 
-  // 单节课收入拆分：takeHome=实际到手收入；rest=未落到自己手里的钱
+  // 单节课收入拆分
   function lessonBreakdown(l) {
-    const gross = +l.tuition || 0;
-    const takeHome = takeHomeOf(l);
+    const gross = +l.tuition || 0;                 // 家长流水
+    const commission = +l.commission || 0;         // 我的抽成
     const imported = !!l.importedCommission;
-    const rest = imported ? 0 : Math.max(0, gross - takeHome);
-    return { gross, takeHome, rest, imported, note: takeHomeNote(l, rest) };
+    const reimb = imported ? 0 : reimburseOf(l);   // 报销支出（批注提取）
+    const takeHome = takeHomeOf(l);                // 实际到手
+    const teacherPay = imported ? 0 : Math.max(0, gross - commission); // 老师课酬
+    return { gross, commission, reimb, takeHome, teacherPay, imported, note: takeHomeNote(l) };
   }
 
   function reset(withDemo) {

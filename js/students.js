@@ -164,6 +164,8 @@ const Students = (() => {
     return {
       done: ls.length,
       gross: ls.reduce((a, l) => a + (+l.tuition || 0), 0),
+      commission: ls.reduce((a, l) => a + (+l.commission || 0), 0),
+      reimb: ls.reduce((a, l) => a + DB.lessonBreakdown(l).reimb, 0),
       profit: ls.reduce((a, l) => a + DB.lessonBreakdown(l).takeHome, 0)
     };
   }
@@ -390,10 +392,10 @@ const Students = (() => {
       body: `
       <div class="grid g4" style="gap:10px;margin-bottom:14px">
         <div class="stat"><div class="lab">已完成课时</div><div class="val">${st.done}</div><div class="sub">待上 ${up} 节</div></div>
-        <div class="stat"><div class="lab">家长已付流水</div><div class="val">${U.money(st.gross)}</div></div>
+        <div class="stat"><div class="lab">我的抽成</div><div class="val">${U.money(st.commission)}</div></div>
         <div class="stat hl secret"><div class="lab">累计实际到手</div><div class="val">${U.money(st.profit)}</div>
           <div class="sub">单节 ${U.money(DB.primarySubject(s).commission)} · ${U.pct(DB.primarySubject(s).commission, DB.primarySubject(s).tuition)}%</div></div>
-        <div class="stat secret"><div class="lab">累计其余支出</div><div class="val">${U.money(st.gross - st.profit)}</div>
+        <div class="stat secret"><div class="lab">报销支出</div><div class="val">${U.money(st.reimb)}</div>
           <div class="sub">${U.esc(DB.teacherName(s.teacherId))}</div></div>
       </div>
       ${s.note ? `<div class="stu-note" style="margin-bottom:14px">备注：${U.esc(s.note)}</div>` : ''}

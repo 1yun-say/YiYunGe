@@ -11,6 +11,7 @@ const Finance = (() => {
   // 日账单独立周期：周 / 月 / 年 / 自定义
   let billRange = 'month';
   let billFrom = U.monthFirst(U.today()), billTo = U.monthLast(U.today());
+  let includeImported = false;   // 账单/明细是否纳入导入抽成；勾选时不显示抽成率
   function applyBillRange(r) {
     billRange = r; const t = U.today();
     if (r === 'week') { const d = U.weekDays(t); billFrom = d[0]; billTo = d[6]; }
@@ -86,9 +87,11 @@ const Finance = (() => {
       else if (by === 'grade') { key = sub.grade || '未知'; label = key; }
       else if (by === 'subject') { key = sub.subject || '未知'; label = key; }
       else { key = l.teacherId || 'none'; label = DB.teacherName(l.teacherId); }
-      if (!map.has(key)) map.set(key, { key, label, count: 0, minutes: 0, gross: 0, profit: 0, hist: 0, lessons: [] });
+      if (!map.has(key)) map.set(key, { key, label, count: 0, minutes: 0, gross: 0, commission: 0, teacherPay: 0, reimb: 0, profit: 0, hist: 0, lessons: [] });
       const g = map.get(key);
-      g.count++; g.minutes += +l.duration || 0; g.gross += +l.tuition || 0; g.profit += DB.lessonBreakdown(l).takeHome; g.lessons.push(l);
+      g.count++; g.minutes += +l.duration || 0; g.gross += +l.tuition || 0; g.commission += +l.commission || 0;
+      g.teacherPay += l.importedCommission ? 0 : Math.max(0, (+l.tuition || 0) - (+l.commission || 0));
+      g.reimb += DB.lessonBreakdown(l).reimb; g.profit += DB.lessonBreakdown(l).takeHome; g.lessons.push(l);
     });
     Array.from(map.values()).forEach(g => { g.hist = 0; });
     return Array.from(map.values()).sort((a, b) => b.profit - a.profit);
@@ -122,9 +125,9 @@ const Finance = (() => {
       <div class="card-h"><h3>${U.esc(title)}</h3><span class="sub">谁带的课最多</span></div>
       ${U.bars(by.map((t, i) => ({ label: t.label, value: t.count, color: PALETTE[i % PALETTE.length] })), { unit: ' 节' })}
       <div class="divider"></div>
-      <table class="tbl"><thead><tr><th>老师</th><th class="num">课时</th><th class="num">其余支出</th><th class="num">实际到手</th></tr></thead>
+      <table class="tbl"><thead><tr><th>老师</th><th class="num">课时</th><th class="num">课酬</th><th class="num">实际到手</th></tr></thead>
         <tbody>${by.map(t => `<tr><td data-label="老师">${U.esc(t.label)}</td><td class="num" data-label="课时">${t.count}</td>
-          <td class="num money out" data-label="其余支出">${U.money(t.gross - t.profit)}</td>
+          <td class="num money out" data-label="课酬">${U.money(t.teacherPay)}</td>
           <td class="num money in" data-label="实际到手">${U.money(t.profit)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">暂无数据</td></tr>'}</tbody></table>
     </div>`;
   }
@@ -137,6 +140,7 @@ const Finance = (() => {
   }
   function cardDetail(ctx, title) {
     const cur = ctx.cur, st = ctx.st;
+    const showRate = !includeImported;   // 勾选「含导入数据」时不显示抽成率
     return `<div class="card">
       <div class="card-h">
         <h3>${U.esc(title)}</h3>
@@ -150,26 +154,26 @@ const Finance = (() => {
       </div>
       <table class="tbl">
         <thead><tr><th>${{ student: '学员', grade: '年级', subject: '学科', teacher: '老师' }[dim]}</th>
-          <th class="num">课时</th><th class="num">总时长</th>          <th class="num">家长流水</th>
-          <th class="num">其余支出</th><th class="num">实际到手</th><th class="num">有效抽成率</th><th style="width:110px">占比</th></tr></thead>
+          <th class="num">课时</th><th class="num">总时长</th>
+          <th class="num">我的抽成</th><th class="num">报销支出</th><th class="num">实际到手</th>${showRate ? '<th class="num">有效抽成率</th>' : ''}<th style="width:110px">占比</th></tr></thead>
         <tbody>
           ${cur.map(g => `<tr>
             <td data-label="名称">${U.esc(g.label)}</td>
             <td class="num" data-label="课时">${g.count}</td>
             <td class="num" data-label="总时长">${(g.minutes / 60).toFixed(1)} h</td>
-            <td class="num money" data-label="家长流水">${U.money(g.gross)}</td>
-            <td class="num money out" data-label="其余支出">${U.money(g.gross - g.profit)}</td>
+            <td class="num money" data-label="我的抽成">${U.money(g.commission)}</td>
+            <td class="num money out" data-label="报销支出">${U.money(g.reimb)}</td>
             <td class="num money in" data-label="实际到手">${U.money(g.profit)}</td>
-            <td class="num" data-label="有效抽成率" title="不含导入抽成表数据，自 8 月 1 日起的真实课时抽成率">${(() => { const r = effectiveRate(g.lessons); return `${r.rate}%`; })()}</td>
+            ${showRate ? `<td class="num" data-label="有效抽成率" title="不含导入抽成表数据，自 8 月 1 日起的真实课时抽成率">${(() => { const r = effectiveRate(g.lessons); return `${r.rate}%`; })()}</td>` : ''}
             <td data-label="占比"><div class="bt" style="height:8px;background:var(--pink-75);border-radius:6px;overflow:hidden">
               <i style="display:block;height:100%;width:${st.profit ? g.profit / st.profit * 100 : 0}%;background:linear-gradient(90deg,#ffb6ce,#f9709d)"></i></div></td>
-          </tr>`).join('') || `<tr><td colspan="8" class="muted" style="text-align:center;padding:26px">该区间还没有课程记录</td></tr>`}
+          </tr>`).join('') || `<tr><td colspan="${showRate ? 8 : 7}" class="muted" style="text-align:center;padding:26px">该区间还没有课程记录</td></tr>`}
         </tbody>
         ${cur.length ? `<tfoot><tr style="font-weight:700;background:var(--pink-50)">
           <td>合计</td>          <td class="num">${st.count}</td><td class="num">${(st.minutes / 60).toFixed(1)} h</td>
-          <td class="num money">${U.money(st.gross)}</td><td class="num money out">${U.money(st.cost)}</td>
+          <td class="num money">${U.money(st.commission)}</td><td class="num money out">${U.money(st.reimb)}</td>
           <td class="num money in">${U.money(st.profit)}</td>
-          <td class="num" title="不含导入抽成表数据，自 8 月 1 日起">${(() => { const r = effectiveRate(st.lessons || ls); return `${r.rate}%`; })()}%</td><td></td></tr></tfoot>` : ''}
+          ${showRate ? `<td class="num" title="不含导入抽成表数据，自 8 月 1 日起">${(() => { const r = effectiveRate(st.lessons || ls); return `${r.rate}%`; })()}%</td>` : ''}<td></td></tr></tfoot>` : ''}
       </table>
       <p class="muted" style="font-size:11.5px;margin-top:10px">
         统计口径：${includeScheduled ? '已完成 + 待上课程' : '仅已完成课程'}；区间 ${from} 至 ${to}（共 ${ctx.days} 天）。
@@ -182,8 +186,8 @@ const Finance = (() => {
     const st = ctx.st;
     const cards = [
       ['实际到手', U.money(st.profit + ctx.histTotal), 'in'],
-      ['家长流水', U.money(st.gross), ''],
-      ['其余支出', U.money(st.cost), 'out'],
+      ['我的抽成', U.money(st.commission), ''],
+      ['报销支出', U.money(st.reimb), 'out'],
       ['课时数', st.count + ' 节', '']
     ];
     return `<div class="card">
@@ -211,7 +215,7 @@ const Finance = (() => {
   function cardDailyBill(ctx, title) {
     const billTitle = { week: '周账单', month: '月账单', year: '年账单', custom: '自定义账单' }[billRange] || '账单';
     const ls = DB.statIn(billFrom, billTo, { includeScheduled }).lessons
-      .filter(l => l.status === 'done' && DB.lessonBreakdown(l).takeHome > 0)
+      .filter(l => l.status === 'done' && (!l.importedCommission || includeImported) && DB.lessonBreakdown(l).takeHome > 0)
       .sort((a, b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start));
     const groups = {};
     ls.forEach(l => { (groups[l.date] ||= []).push(l); });
@@ -220,11 +224,11 @@ const Finance = (() => {
     const rows = dates.map(date => {
       const items = groups[date];
       const dayTotal = items.reduce((s, l) => s + DB.lessonBreakdown(l).takeHome, 0);
-      const dayRest = items.reduce((s, l) => s + DB.lessonBreakdown(l).rest, 0);
+      const dayReimb = items.reduce((s, l) => s + DB.lessonBreakdown(l).reimb, 0);
       return `<tbody class="bill-day">
         <tr class="bill-day-head"><td colspan="3">
           <div class="bill-day-title"><b>${U.cnDate(date)} ${U.wdName(date)}</b><span class="money in">+${U.money(dayTotal)}</span></div>
-          <div class="bill-day-sub">实际到手合计 ${U.money(dayTotal)} ｜ 其余 ${U.money(dayRest)} ${dayRest > 0 ? '未落袋' : ''}</div>
+          <div class="bill-day-sub">实际到手合计 ${U.money(dayTotal)} ｜ 报销支出 ${U.money(dayReimb)}</div>
         </td></tr>
         ${items.map(l => {
         const s = DB.student(l.studentId);
@@ -234,12 +238,13 @@ const Finance = (() => {
         const label = isImp ? '家教 - 抽成（导入）' : `家教 - ${sub || '抽成'}`;
         const sublabel = s ? s.parentName : '已删除学员';
         const icon = isImp ? '抽' : (sub ? sub.slice(0, 1) : '家');
+        const hasNote = !!(bd.note && bd.note.trim());
         return `<tr class="bill-item" data-lid="${l.id}">
           <td class="bill-icon"><span>${U.esc(icon)}</span></td>
           <td>
             <div class="bill-main">${U.esc(label)}</div>
-            <div class="bill-sub">${U.esc(sublabel)}${l.note ? ' · ' + U.esc(String(l.note).slice(0, 24)) : ''}</div>
-            <div class="bill-note">实际到手 ${U.money(bd.takeHome)} ｜ ${U.esc(bd.note)}</div>
+            <div class="bill-sub">${U.esc(sublabel)}${hasNote ? ' · <span class="bill-note-toggle">有批注 ▾</span>' : ''}</div>
+            <div class="bill-note">实际到手 ${U.money(bd.takeHome)} ｜ 批注：${U.esc(bd.note)}</div>
           </td>
           <td class="bill-amt money in">
             <div>${U.money(bd.takeHome)}</div>
@@ -254,6 +259,8 @@ const Finance = (() => {
       <div class="card-h">
         <h3>${U.esc(billTitle)}</h3>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-2);cursor:pointer">
+            <input type="checkbox" id="bill_inc" ${includeImported ? 'checked' : ''}> 含导入数据</label>
           <div class="tabs">
             ${[['week', '周账单'], ['month', '月账单'], ['year', '年账单'], ['custom', '自定义']]
               .map(([k, n]) => `<button class="tab ${billRange === k ? 'active' : ''}" data-br="${k}">${n}</button>`).join('')}
@@ -265,7 +272,7 @@ const Finance = (() => {
         <thead><tr><th style="width:44px"></th><th>来源</th><th class="num">实际到手</th></tr></thead>
         ${rows || '<tbody><tr><td colspan="3" class="muted" style="text-align:center;padding:26px">该周期还没有收入记录</td></tr></tbody>'}
       </table>
-      <p class="muted" style="font-size:11.5px;margin-top:10px">按日期倒序，仅显示有实际到手收入的记录。每行显示实际到手与其余未落袋金额/批注；导入的抽成表记录会标注「导入」。点右侧「编辑」可修改该课节的实际到手与批注。</p>
+      <p class="muted" style="font-size:11.5px;margin-top:10px">按日期倒序，仅显示有实际到手收入的记录。点任意一行可展开查看「批注」（钱花哪了）；导入的抽成表记录会标注「导入」。勾选「含导入数据」可把导入抽成也纳入本账单，此时明细统计不再显示抽成率。</p>
     </div>`;
   }
 
@@ -338,10 +345,10 @@ const Finance = (() => {
     try {
       const cur = group(DB.statIn(from, to, { includeScheduled }).lessons, dim);
       const head = { student: '学员', grade: '年级', subject: '学科', teacher: '老师' }[dim];
-      const header = [head, '课时', '总时长(h)', '家长流水', '其余支出', '实际到手', '有效抽成率(8.1起)'];
-      const rows = cur.map(g => [g.label, g.count, (g.minutes / 60).toFixed(1), g.gross, g.gross - g.profit, g.profit, effectiveRate(g.lessons).rate]);
+      const header = [head, '课时', '总时长(h)', '我的抽成', '报销支出', '实际到手', '有效抽成率(8.1起)'];
+      const rows = cur.map(g => [g.label, g.count, (g.minutes / 60).toFixed(1), g.commission, g.reimb, g.profit, includeImported ? '' : effectiveRate(g.lessons).rate]);
       const st = DB.statIn(from, to, { includeScheduled });
-      rows.push(['合计', st.count, (st.minutes / 60).toFixed(1), st.gross, st.cost, st.profit, effectiveRate(st.lessons).rate]);
+      rows.push(['合计', st.count, (st.minutes / 60).toFixed(1), st.commission, st.reimb, st.profit, includeImported ? '' : effectiveRate(st.lessons).rate]);
       const csv = [header, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n');
       const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
       const a = document.createElement('a');
@@ -446,9 +453,19 @@ const Finance = (() => {
     if (bfFrom) bfFrom.onchange = e => { billFrom = e.target.value; billRange = 'custom'; render(); };
     if (bfTo) bfTo.onchange = e => { billTo = e.target.value; billRange = 'custom'; render(); };
 
-    /* 日账单每一行编辑入口 */
-    root.querySelectorAll('[data-edit-lid]').forEach(b => b.onclick = () => {
-      if (window.Schedule && Schedule.editLesson) Schedule.editLesson(b.dataset.editLid);
+    /* 含导入数据开关 */
+    const billInc = U.$('#bill_inc', root);
+    if (billInc) billInc.onchange = e => { includeImported = e.target.checked; render(); };
+
+    /* 日账单每一行：点开/收起批注；点「编辑」按钮打开编辑弹窗 */
+    root.querySelectorAll('.bill-item').forEach(tr => tr.onclick = e => {
+      if (e.target.closest('.bill-edit')) return;       // 编辑按钮单独处理
+      if (e.target.closest('a,button,input')) return;
+      tr.classList.toggle('open');
+    });
+    root.querySelectorAll('[data-edit-lid]').forEach(b => b.onclick = e => {
+      e.stopPropagation();
+      if (typeof Schedule !== 'undefined' && Schedule.editLesson) Schedule.editLesson(b.dataset.editLid);
     });
 
     /* 编辑模式：桌面端启用拖动排序（包一层 try，避免拖动初始化异常影响下面的事件绑定） */
@@ -649,7 +666,7 @@ const Finance = (() => {
 
   Views.finance = {
     title: '财务统计',
-    sub: '中间人视角：家长流水 / 其余支出 / 实际到手三本账分开算',
+    sub: '中间人视角：我的抽成 − 报销支出 = 实际到手',
     render() { editMode = false; applyRange('month'); applyBillRange('month'); render(); }
   };
 

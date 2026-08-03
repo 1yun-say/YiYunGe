@@ -290,27 +290,31 @@ const Schedule = (() => {
   function renderYear(box) {
     const y = anchor.slice(0, 4);
     const months = Array.from({ length: 12 }, (_, i) => `${y}-${U.pad(i + 1)}-01`);
-    const data = months.map(m => {
+      const data = months.map(m => {
       const a = m, b = U.monthLast(m);
       const ls = DB.lessonsIn(a, b).filter(l => includeLesson(l));
       const s = ls.filter(l => l.status === 'done');
       const gross = s.reduce((x, l) => x + (+l.tuition || 0), 0);
+      const commission = s.reduce((x, l) => x + (+l.commission || 0), 0);
+      const reimb = s.reduce((x, l) => x + DB.lessonBreakdown(l).reimb, 0);
       const profit = s.reduce((x, l) => x + DB.lessonBreakdown(l).takeHome, 0);
-      return { m, label: +m.slice(5, 7) + '月', count: ls.length, gross, profit, a, b };
+      return { m, label: +m.slice(5, 7) + '月', count: ls.length, gross, commission, reimb, profit, a, b };
     });
     const maxC = Math.max(...data.map(d => d.count), 1);
     const pub = App.isPublic();
     const totalC = data.reduce((s, d) => s + d.count, 0);
     const totalG = data.reduce((s, d) => s + d.gross, 0);
+    const totalCommission = data.reduce((s, d) => s + d.commission, 0);
+    const totalReimb = data.reduce((s, d) => s + d.reimb, 0);
     const totalP = data.reduce((s, d) => s + d.profit, 0);
 
     box.innerHTML = `
     <div class="grid g4" style="margin-bottom:16px">
       <div class="stat"><div class="lab">${y} 年总课时</div><div class="val">${totalC}</div><div class="sub">节</div></div>
-      <div class="stat"><div class="lab">全年流水（家长端）</div><div class="val">${U.money(totalG)}</div></div>
+      <div class="stat"><div class="lab">我的抽成</div><div class="val">${U.money(totalCommission)}</div></div>
       <div class="stat hl secret"><div class="lab">全年实际到手</div><div class="val">${U.money(totalP)}</div>
         <div class="sub">占流水 ${totalG ? Math.round(totalP / totalG * 100) : 0}%</div></div>
-      <div class="stat secret"><div class="lab">全年其余支出</div><div class="val">${U.money(totalG - totalP)}</div></div>
+      <div class="stat secret"><div class="lab">全年报销支出</div><div class="val">${U.money(totalReimb)}</div></div>
     </div>
     <div class="year-grid">
       ${data.map(d => {
@@ -389,10 +393,7 @@ const Schedule = (() => {
       <div class="field" id="weeksWrap" style="display:${fixed0.length ? 'flex' : 'none'}"><label>重复周数</label><input type="number" class="input" id="f_weeks" value="12" min="1" max="52" style="width:120px"></div>
       <div class="field"><label class="switch-row" style="margin:0;cursor:pointer">
         <input type="checkbox" id="f_fixed" ${fixed0.length ? 'checked' : ''}> 设为该学员该科「固定上课时间」（下次排课本科自动带出）</label></div>
-      <div class="row secret">
-        <div class="field"><label>实际到手收入</label><input type="number" class="input" id="f_take" placeholder="不填则默认等于抽成" value=""></div>
-        <div class="field"><label>批注</label><input class="input" id="f_inote" placeholder="如：老师课酬230、买资料50"></div>
-      </div>
+      <div class="field secret"><label>批注（报销支出）</label><input class="input" id="f_inote" placeholder="如：买资料50、交通30（数字自动算作报销支出）"></div>
       <div class="row">
         <div class="field"><label>状态</label>
           <select class="input" id="f_st"><option value="scheduled">待上课</option><option value="done">已完成</option></select></div>
@@ -417,8 +418,6 @@ const Schedule = (() => {
         }
         const dates = genDates(mode, wds, d0, weeks);
         const seriesId = (mode !== 'none' && dates.length > 1) ? U.uid('ser') : null;
-        const takeVal = U.$('#f_take', b).value.trim();
-        const actualTakeHome = takeVal === '' ? '' : (+takeVal || 0);
         const incomeNote = U.$('#f_inote', b).value.trim();
         let conf = 0;
         dates.forEach(date => {
@@ -428,7 +427,7 @@ const Schedule = (() => {
             date, start: t0, duration: len,
             tuition: sub.tuition, commission: sub.commission, teacherId: stu.teacherId,
             status: U.$('#f_st', b).value, note: U.$('#f_n', b).value.trim(), seriesId,
-            actualTakeHome, incomeNote
+            incomeNote
           };
           if (overlaps(l).length) conf++;
           DB.data.lessons.push(l);
@@ -500,10 +499,7 @@ const Schedule = (() => {
           <option value="cancelled" ${l.status === 'cancelled' ? 'selected' : ''}>已取消 / 请假</option>
         </select></div>
       </div>
-      <div class="row secret">
-        <div class="field"><label>实际到手收入</label><input type="number" class="input" id="f_take" placeholder="不填则默认等于抽成" value="${l.actualTakeHome === undefined || l.actualTakeHome === null || l.actualTakeHome === '' ? '' : l.actualTakeHome}"></div>
-        <div class="field"><label>批注</label><input class="input" id="f_inote" placeholder="如：老师课酬230、买资料50" value="${U.esc(l.incomeNote || '')}"></div>
-      </div>
+      <div class="field secret"><label>批注（报销支出）</label><input class="input" id="f_inote" placeholder="如：买资料50、交通30（数字自动算作报销支出）" value="${U.esc(l.incomeNote || '')}"></div>
       <div class="field"><label>授课老师</label><select class="input" id="f_tid">
         ${DB.data.teachers.map(t => `<option value="${t.id}" ${t.id === l.teacherId ? 'selected' : ''}>${U.esc(t.name)}</option>`).join('')}
         <option value="" ${!l.teacherId ? 'selected' : ''}>未指派</option></select></div>
@@ -519,13 +515,11 @@ const Schedule = (() => {
         const dur = +U.$('#f_len', b).value || l.duration;
         const fee = +U.$('#f_fee', b).value || 0;
         const com = +U.$('#f_com', b).value || 0;
-        const takeVal = U.$('#f_take', b).value.trim();
-        const actualTakeHome = takeVal === '' ? '' : (+takeVal || 0);
         const incomeNote = U.$('#f_inote', b).value.trim();
         const st = U.$('#f_st', b).value, tid = U.$('#f_tid', b).value, note = U.$('#f_n', b).value.trim();
         set.forEach(x => {
           x.start = start; x.duration = dur; x.tuition = fee; x.commission = com; x.status = st; x.teacherId = tid; x.note = note;
-          x.actualTakeHome = actualTakeHome; x.incomeNote = incomeNote;
+          x.incomeNote = incomeNote;
           if (scope === 'once') { x.date = date; x.seriesId = null; }  // 仅此一次：日期也改，并脱离系列
         });
         DB.save(); DB.touch('lesson'); render(); U.toast(scope === 'future' ? '已应用到此后所有同一重复课程' : '已保存');
