@@ -256,16 +256,16 @@ const DB = (() => {
     };
     const students = [
       mk(normDateFlexible('240815') || U.addDays(t, -30), '李明', '', 'tc_wang', '妈妈很关注细节，每节课后一定要文字反馈；孩子基础中等偏上，函数薄弱。', 'active',
-        [{ grade: '高二', subject: '数学', tuition: 300, commission: 50, duration: 90 }], { freq: '1w3', histIncome: { '2026-05': 3000, '2026-06': 3200, '2026-07': 3500 } }),
+        [{ grade: '高二', subject: '数学', tuition: 300, commission: 50, duration: 90 }], { freq: '1w3' }),
       mk(normDateFlexible('250302') || U.addDays(t, -20), '张昊', '', 'tc_chen', '爸爸做生意比较忙，微信回复慢；中考目标 110+。', 'active',
         [{ grade: '初三', subject: '英语', tuition: 240, commission: 60, duration: 120 },
-         { grade: '初三', subject: '数学', tuition: 260, commission: 55, duration: 120 }], { freq: '1w2', histIncome: { '2026-05': 2400, '2026-06': 2600, '2026-07': 2800 } }),
+         { grade: '初三', subject: '数学', tuition: 260, commission: 55, duration: 120 }], { freq: '1w2' }),
       mk(normDateFlexible('250520') || U.addDays(t, -10), '王思', '', 'tc_wang', '冲刺阶段，要求老师准时；一个孩子在这上语数英三科。', 'active',
         [{ grade: '高三', subject: '物理', tuition: 380, commission: 80, duration: 120 },
          { grade: '高三', subject: '数学', tuition: 350, commission: 70, duration: 120 },
-         { grade: '高三', subject: '英语', tuition: 300, commission: 60, duration: 120 }], { freq: '1w4', histIncome: { '2026-05': 4200, '2026-06': 4500, '2026-07': 5000 } }),
+         { grade: '高三', subject: '英语', tuition: 300, commission: 60, duration: 120 }], { freq: '1w4' }),
       mk(normDateFlexible('250610') || U.addDays(t, -5), '刘洋', '', 'tc_me', '孩子注意力短，建议 60 分钟一节；家长在意性价比。', 'trial',
-        [{ grade: '五年级', subject: '数学', tuition: 200, commission: 40, duration: 60 }], { trialDate: U.addDays(t, -1), freq: '1w1', histIncome: { '2026-06': 800, '2026-07': 900 } })
+        [{ grade: '五年级', subject: '数学', tuition: 200, commission: 40, duration: 60 }], { trialDate: U.addDays(t, -1), freq: '1w1' })
     ];
     students.forEach(s => s.code = studentCode(s));
     const lessons = [];
@@ -300,7 +300,7 @@ const DB = (() => {
       duration: cs.duration, tuition: cs.tuition, commission: cs.commission,
       teacherId: students[1].teacherId, status: 'scheduled', note: '与高三物理时间重叠，注意确认'
     });
-    return { teachers, students, lessons };
+    return { teachers, students, lessons, histIncome: { '2026-05': 9600, '2026-06': 11100, '2026-07': 12200 } };
   }
 
   function defaultFinanceSections() {
@@ -337,6 +337,7 @@ const DB = (() => {
       version: 1,
       settings: { route: 'dashboard', ownerName: '我', night: false, financeSections: defaultFinanceSections(), dashboardLayout: defaultDashboardLayout(), customSub: {}, codeTemplate: '[日期]-[年级学科]-[家长]-[抽成]/[课时费]|[课时长]', brandLogo: '' },
       teachers: [], students: [], lessons: [], todos: [],
+      histIncome: {},                // 历史收入：按月总额 { 'YYYY-MM': 金额 }
       templates: defaultTemplates(), phrases: defaultPhrases(),
       meta: { lastLessonEdit: null, lastStudentEdit: null }
     };
@@ -357,6 +358,7 @@ const DB = (() => {
         for (const k in b) if (d[k] === undefined) d[k] = b[k];
         d.settings = Object.assign(b.settings, d.settings || {});
         migrateSubjects(d);
+        migrateHistIncome(d);
         return d;
       }
     } catch (e) { console.warn('数据读取失败', e); }
@@ -439,6 +441,29 @@ const DB = (() => {
         if (ps) { l.grade = ps.grade; l.subject = ps.subject; l.subjectId = ps.id; }
       }
     });
+    return d;
+  }
+
+  // 数据迁移：把旧版「按学员拆分」的历史收入合并成「按月总额」全局对象 data.histIncome；
+  // 同时丢弃 v1.6 初版误用的单个累计数。幂等：若 data.histIncome 已存在则跳过学员侧合并。
+  function migrateHistIncome(d) {
+    if (!d || !Array.isArray(d.students)) return d;
+    if (!d.histIncome) {
+      const total = {};
+      let any = false;
+      d.students.forEach(s => {
+        if (s.histIncome && typeof s.histIncome === 'object') {
+          any = true;
+          Object.keys(s.histIncome).forEach(m => { total[m] = (total[m] || 0) + (+s.histIncome[m] || 0); });
+          delete s.histIncome;
+        } else if (typeof s.histIncome === 'number') {
+          any = true; delete s.histIncome;   // legacy 累计数，作废
+        }
+      });
+      d.histIncome = any ? total : {};
+    } else if (typeof d.histIncome === 'number') {
+      d.histIncome = {};
+    }
     return d;
   }
 
