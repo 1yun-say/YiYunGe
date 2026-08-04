@@ -5,7 +5,12 @@ const U = (() => {
   /* --- 日期 --- */
   const today = () => fmt(new Date());
   const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const parse = s => {
+    if (s == null || s === '') return new Date(NaN);   // 空值守卫：避免 s.split 崩溃拖垮整页
+    const [y, m, d] = String(s).split('-').map(Number);
+    if (!y || !m) return new Date(NaN);
+    return new Date(y, m - 1, d);
+  };
   const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return fmt(d); };
   const addMonths = (s, n) => { const d = parse(s); d.setMonth(d.getMonth() + n); return fmt(d); };
   const dow = s => parse(s).getDay();                    // 0=周日
@@ -84,11 +89,11 @@ const U = (() => {
   const isMobile = () => window.matchMedia('(max-width: 820px)').matches;
 
   /* --- Toast --- */
-  function toast(msg, type = 'ok') {
+  function toast(msg, type = 'ok', dur = 2000) {
     const t = el(`<div class="toast ${type}">${esc(msg)}</div>`);
     $('#toastRoot').appendChild(t);
-    setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(-8px)'; t.style.transition = '.3s'; }, 1900);
-    setTimeout(() => t.remove(), 2300);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(-8px)'; t.style.transition = '.3s'; }, Math.max(800, dur - 400));
+    setTimeout(() => t.remove(), Math.max(1200, dur));
   }
 
   /* --- Modal --- */
@@ -263,10 +268,241 @@ function editableSub(node, viewKey, fallback) {
     });
   }
 
+  /* ============ 通用重复规则引擎 ============
+   * 兼容两种存储形态：
+   *  - 旧版预设字符串：'never'|'daily'|'weekdays'|'weekly'|'biweekly'|'monthly'|'yearly'
+   *  - 新版自定义对象：{ type:'custom', unit:'day|week|month|year', every:N,
+   *                      weekdays:[0..6]|null, end:'never|until|count', until:'YYYY-MM-DD', count:N }
+   * 规则统一规整为带 start（起始日期）的对象，便于计算「某天是否发生」。
+   */
+  function monthDay(y, m, day) {
+    const last = new Date(y, m, 0).getDate();   // m 为自然月(1-12)，0 日为上月最后一天
+    const d = Math.min(day, last);
+    return `${y}-${pad(m)}-${pad(d)}`;
+  }
+
+  function recurRuleOf(v, start) {
+    const base = { start: start || null };
+    if (typeof v === 'string') {
+      const map = {
+        never: { type: 'never' }, daily: { type: 'daily' }, weekdays: { type: 'weekdays' },
+        weekly: { type: 'weekly' }, biweekly: { type: 'biweekly' },
+        monthly: { type: 'monthly' }, yearly: { type: 'yearly' }
+      };
+      return Object.assign({}, base, map[v] || { type: 'never' });
+    }
+    if (v && typeof v === 'object') {
+      if (v.type === 'custom') {
+        return Object.assign({}, base, {
+          type: 'custom',
+          unit: v.unit || 'week',
+          every: Math.max(1, +v.every || 1),
+          weekdays: Array.isArray(v.weekdays) ? v.weekdays.map(Number) : null,
+          end: v.end || 'never',
+          until: v.until || '',
+          count: Math.max(1, +v.count || 1)
+        });
+      }
+      return Object.assign({}, base, {
+        type: v.type || 'never', unit: v.unit, every: v.every,
+        weekdays: Array.isArray(v.weekdays) ? v.weekdays.map(Number) : null,
+        end: v.end, until: v.until, count: v.count
+      });
+    }
+    return Object.assign({}, base, { type: 'never' });
+  }
+
+  /* 枚举 [from,to] 区间内所有「发生日」(anchor 日期)，含 end 条件裁剪。
+   * 起始日恒为 rule.start；所有发生日都 >= start。 */
+  function recurOccurrencesBetween(rule, from, to) {
+    const S = rule.start;
+    if (!S) return [];
+    const r = rule;
+    if (r.type === 'never') return (S >= from && S <= to) ? [S] : [];
+
+    const out = [];
+    const LIMIT = 4000;
+    let idx = 0;                 // 从 start 起算的发生序号（含被 from 裁掉的）
+    const pushIf = d => {
+      if (r.end === 'count' && idx >= r.count) return false;   // 已达次数上限
+      if (r.end === 'until' && r.until && d > r.until) return false; // 已超过截止日
+      if (d >= from && d <= to) out.push(d);
+      idx++;
+      return true;
+    };
+
+    if (r.type === 'daily' || r.type === 'weekdays' || (r.type === 'custom' && r.unit === 'day')) {
+      const step = (r.type === 'custom') ? r.every : 1;
+      const wdOnly = r.type === 'weekdays';
+      let d = S, i = 0;
+      while (d <= to && i < LIMIT) {
+        if (!wdOnly || [1, 2, 3, 4, 5].includes(dow(d))) { if (!pushIf(d)) break; }
+        d = addDays(d, step); i++;
+      }
+    } else if (r.type === 'weekly' || r.type === 'biweekly') {
+      const step = (r.type === 'weekly') ? 7 : 14;
+      let d = S, i = 0;
+      while (d <= to && i < LIMIT) { if (!pushIf(d)) break; d = addDays(d, step); i++; }
+    } else if (r.type === 'custom' && r.unit === 'week') {
+      if (r.weekdays && r.weekdays.length) {
+        // 每 N 周、且只在该周指定的星期几发生（可多选，如周一/周四/周五）
+        const day = +S.slice(8);
+        let d = S, i = 0;
+        while (d <= to && i < LIMIT) {
+          const wk = Math.round(daysDiff(S, d) / 7);
+          if (wk >= 0 && wk % r.every === 0 && r.weekdays.includes(dow(d))) { if (!pushIf(d)) break; }
+          d = addDays(d, 1); i++;
+        }
+      } else {
+        // 每 N 周、同一星期几（start 的星期）
+        let d = S, i = 0;
+        while (d <= to && i < LIMIT) { if (!pushIf(d)) break; d = addDays(d, r.every * 7); i++; }
+      }
+    } else if (r.type === 'monthly') {
+      const day = +S.slice(8);
+      let cur = S, i = 0;
+      while (cur <= to && i < LIMIT) {
+        if (!pushIf(cur)) break;
+        cur = addMonths(cur, 1); cur = monthDay(+cur.slice(0, 4), +cur.slice(5, 7), day); i++;
+      }
+    } else if (r.type === 'yearly') {
+      let y = +S.slice(0, 4); const md = S.slice(5); let i = 0;
+      while (i < LIMIT) { const cur = `${y}-${md}`; if (cur > to) break; if (!pushIf(cur)) break; y++; i++; }
+    } else if (r.type === 'custom' && r.unit === 'month') {
+      const day = +S.slice(8);
+      let cur = S, i = 0;
+      while (cur <= to && i < LIMIT) {
+        if (!pushIf(cur)) break;
+        cur = addMonths(cur, r.every); cur = monthDay(+cur.slice(0, 4), +cur.slice(5, 7), day); i++;
+      }
+    } else if (r.type === 'custom' && r.unit === 'year') {
+      let y = +S.slice(0, 4); const md = S.slice(5); let i = 0;
+      while (i < LIMIT) { const cur = `${y}-${md}`; if (cur > to) break; if (!pushIf(cur)) break; y += r.every; i++; }
+    }
+    return out;
+  }
+
+  /* 指定日期是否发生（已含 end 裁剪）。 */
+  function recurOccursOn(d, rule) {
+    if (!d || !rule || !rule.start) return false;
+    if (d < rule.start) return false;
+    return recurOccurrencesBetween(rule, d, d).length > 0;
+  }
+
+  /* 人类可读描述。 */
+  function recurDescribe(rule) {
+    const r = rule || { type: 'never' };
+    const wn = ['日', '一', '二', '三', '四', '五', '六'];
+    switch (r.type) {
+      case 'daily': return '每天';
+      case 'weekdays': return '每个工作日';
+      case 'weekly': return '每周（同一星期几）';
+      case 'biweekly': return '每两周';
+      case 'monthly': return '每月（同日期）';
+      case 'yearly': return '每年（同月日）';
+      case 'custom': {
+        let s = '';
+        if (r.unit === 'day') s = `每 ${r.every} 天`;
+        else if (r.unit === 'week') s = `每 ${r.every} 周` + ((r.weekdays && r.weekdays.length) ? (' ' + r.weekdays.map(w => '周' + wn[w]).join('、')) : '');
+        else if (r.unit === 'month') s = `每 ${r.every} 个月`;
+        else if (r.unit === 'year') s = `每 ${r.every} 年`;
+        if (r.end === 'until' && r.until) s += `，至 ${r.until}`;
+        if (r.end === 'count') s += `，共 ${r.count} 次`;
+        return s;
+      }
+      default: return '不重复';
+    }
+  }
+
+  /* ============ 重复控件（日程 / 提醒事项共用） ============ */
+  // 返回一段 HTML：预设下拉 + 自定义面板。value 可为旧字符串或新对象。
+  function buildRepeatControl(value) {
+    const presetKey = (typeof value === 'string') ? value
+      : (value && value.type === 'custom') ? 'custom'
+        : (value && value.type) || 'never';
+    const opt = (k, n) => `<option value="${k}" ${presetKey === k ? 'selected' : ''}>${n}</option>`;
+    const wdChips = [1, 2, 3, 4, 5, 6, 0].map(w =>
+      `<button type="button" class="wd-chip" data-w="${w}">${WD[w].slice(1)}</button>`).join('');
+    return `<div class="field"><label>重复</label>
+        <select class="input" id="repPreset">
+          ${opt('never', '永不')}${opt('daily', '每天')}${opt('weekdays', '工作日')}
+          ${opt('weekly', '每周')}${opt('biweekly', '每两周')}${opt('monthly', '每月')}${opt('yearly', '每年')}
+          ${opt('custom', '自定义…')}
+        </select></div>
+      <div id="repCustom" style="display:${presetKey === 'custom' ? 'block' : 'none'};border-left:3px solid var(--pink-200);padding-left:12px;margin:4px 0 10px">
+        <div class="row">
+          <div class="field"><label>每</label><input type="number" class="input" id="repEvery" min="1" value="1" style="width:78px"></div>
+          <div class="field"><label>单位</label><select class="input" id="repUnit">
+            <option value="day">天</option><option value="week">周</option>
+            <option value="month">个月</option><option value="year">年</option></select></div>
+        </div>
+        <div class="field" id="repWeekdaysWrap" style="display:none"><label>在星期（可多选）</label>
+          <div class="wd-pick">${wdChips}</div></div>
+        <div class="row">
+          <div class="field"><label>结束</label><select class="input" id="repEnd">
+            <option value="never">永不</option><option value="until">直到某天</option><option value="count">重复次数</option></select></div>
+          <div class="field" id="repUntilWrap" style="display:none"><label>结束日期</label><input type="date" class="input" id="repUntil"></div>
+          <div class="field" id="repCountWrap" style="display:none"><label>次数</label><input type="number" class="input" id="repCount" min="1" value="10" style="width:88px"></div>
+        </div>
+      </div>`;
+  }
+
+  // 把已存值回填到控件并绑定联动。
+  function wireRepeatControl(b, value) {
+    const preset = $('#repPreset', b);
+    const custom = $('#repCustom', b);
+    const every = $('#repEvery', b), unit = $('#repUnit', b);
+    const wdWrap = $('#repWeekdaysWrap', b), untilWrap = $('#repUntilWrap', b), countWrap = $('#repCountWrap', b);
+    const endSel = $('#repEnd', b), until = $('#repUntil', b), count = $('#repCount', b);
+
+    const sync = () => {
+      const isCustom = preset.value === 'custom';
+      custom.style.display = isCustom ? 'block' : 'none';
+      wdWrap.style.display = (isCustom && unit.value === 'week') ? 'block' : 'none';
+      untilWrap.style.display = (endSel.value === 'until') ? 'block' : 'none';
+      countWrap.style.display = (endSel.value === 'count') ? 'block' : 'none';
+    };
+    preset.onchange = sync;
+    unit.onchange = sync;
+    endSel.onchange = sync;
+
+    if (value && typeof value === 'object' && value.type === 'custom') {
+      every.value = value.every || 1;
+      unit.value = value.unit || 'week';
+      if (Array.isArray(value.weekdays)) {
+        custom.querySelectorAll('.wd-chip').forEach(c => c.classList.toggle('on', value.weekdays.map(Number).includes(+c.dataset.w)));
+      }
+      endSel.value = value.end || 'never';
+      if (value.until) until.value = value.until;
+      if (value.count) count.value = value.count;
+    } else {
+      every.value = 1; unit.value = 'week'; endSel.value = 'never'; count.value = 10;
+    }
+    custom.querySelectorAll('.wd-chip').forEach(c => c.onclick = () => c.classList.toggle('on'));
+    sync();
+  }
+
+  // 读取控件当前值，返回字符串(预设)或对象(自定义)。
+  function readRepeatControl(b) {
+    const preset = $('#repPreset', b).value;
+    if (preset !== 'custom') return preset;
+    const every = Math.max(1, +$('#repEvery', b).value || 1);
+    const unit = $('#repUnit', b).value;
+    const weekdays = (unit === 'week')
+      ? Array.from(b.querySelectorAll('#repWeekdaysWrap .wd-chip.on')).map(x => +x.dataset.w)
+      : null;
+    const end = $('#repEnd', b).value;
+    const until = (end === 'until') ? ($('#repUntil', b).value || '') : '';
+    const count = (end === 'count') ? Math.max(1, +$('#repCount', b).value || 1) : 1;
+    return { type: 'custom', unit, every, weekdays, end, until, count };
+  }
+
   return {
     pad, today, fmt, parse, addDays, addMonths, dow, mondayOf, weekDays, monthFirst, monthLast,
     yearFirst, yearLast, wdName, cnDate, between, daysDiff, t2m, m2t, uid, money, esc, el, $, $$,
     toast, modal, confirm, copy, pie, bars, columns, subColor, SUBJECT_COLORS, WEEK_MUTED, WD, rebind, unbindNode, pct, fmtTime, isMobile,
-    editableSub, draggableSortable
+    editableSub, draggableSortable,
+    monthDay, recurRuleOf, recurOccurrencesBetween, recurOccursOn, recurDescribe,
+    buildRepeatControl, wireRepeatControl, readRepeatControl
   };
 })();

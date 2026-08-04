@@ -44,6 +44,7 @@ const Search = (() => {
   }
   return { open };
 })();
+window.Search = Search;
 
 /* ---------- 更多 / 我的 ---------- */
 const More = (() => {
@@ -208,7 +209,7 @@ const AI = (() => {
     if (/(今天|今日|今天有|今天几|今天还有)/.test(q)) {
       const t = U.today();
       const ls = DB.data.lessons.filter(l => l.date === t && l.status !== 'cancelled');
-      const td = DB.data.todos.filter(x => x.date === t && !x.done).length;
+      const td = Todo.ofDate(t).filter(x => x.status !== 'done').length;
       return `今天排了 ${ls.length} 节课，还有 ${td} 条提醒事项未完成。` + (ls.length ? ` 第一节 ${ls[0].start} 开始。` : ' 今天没有排课，可以专心拓客～');
     }
     if (/(抽成|赚|收入|利润|多少钱)/.test(q)) {
@@ -316,7 +317,7 @@ const Link = (() => {
     const root = U.$('#view');
     if (!root || App.route !== 'link') return;
     const linked = DB.data.todos.filter(t => t.studentId);
-    const unlinked = DB.data.todos.filter(t => !t.studentId && !t.done);
+    const unlinked = DB.data.todos.filter(t => !t.studentId && t.status !== 'done');
     const opt = DB.data.students.map(s => `<option value="${s.id}">${U.esc(s.parentName)}（${U.esc(s.grade + s.subject)}）</option>`).join('');
     const optT = unlinked.map(t => `<option value="${t.id}">${U.esc(t.title)}</option>`).join('');
 
@@ -370,6 +371,42 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.9.5</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>提醒事项 / 日程「重复」全面自定义</b>：不再只有固定的「每天/每周/每月」等预设。新增<b>自定义重复</b>——可选择每 N 天 / 周 / 个月 / 年，按星期多选（例如<b>每周一、周四、周五</b>），并设置<b>结束方式</b>：永不 / 直到某天 / 重复 N 次。旧版固定值（如 daily / weekly）自动兼容，无需重新录入。</li>
+        <li><b>重复真正展开</b>：日历的日 / 周 / 月视图、提醒事项列表、工作台首页、小助手都会按重复规则<b>逐日展开</b>显示，不再只记一条看不见。</li>
+        <li><b>单次完成</b>：重复任务可在某一天单独勾选完成（记录到该发生日），<b>不会一次勾掉全部</b>；把日历 / 列表切到其它天仍会正常显示未完成的实例。</li>
+        <li><b>提醒事项对齐 iOS 提醒页</b>：编辑 / 新建页补全<b>「重复」</b>与<b>「标记（旗标）」</b>两项——标记项会<b>置顶高亮</b>，并在列表上显示 🚩 与 🔁 重复说明。</li>
+      </ul>
+      <div class="divider"></div>
+      <div class="log-ver">v1.9.4</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>云同步体验增强（解决「两端是否连到同一空间」困扰）</b>：连接成功后，下方以<b>醒目绿色卡片</b>展示本机的<b>真实空间 ID</b> 与一键「复制此 ID」；并新增<b>空间指纹</b>（取 ID 首尾各 4 位，如 <code>5a9c-191b</code>）。两端连到<b>同一份</b>数据时指纹必然相同，用户只要对比指纹即可确认两端是否同步到同一份，不再靠肉眼比对一长串 ID。</li>
+        <li><b>复制按钮升级为醒目主按钮</b>，并延长成功提示停留时间（2s → 6s），确保「已连接 / 请核对指纹」的关键提示不被快速淹没。</li>
+        <li><b>Toast 支持自定义时长</b>：<code>U.toast(msg, type, dur)</code> 新增可选的 <code>dur</code> 毫秒参数。</li>
+        <li><b>ID 格式复核</b>：用户提供的自动生成 ID <code>5a9c0cabf5a31b0802b6ce20a385191b</code>（32 位十六进制）经验证为合法 GitHub Gist ID，可在新版正则下正确识别、不会新建。</li>
+      </ul>
+      <div class="divider"></div>
+      <div class="log-ver">v1.9.3</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>全站「零错误」体检通过</b>：新建一套真正加载全部 19 个脚本（含两个第三方库）、启动 App、逐一渲染全部 17 个视图（仪表盘 / 提醒事项 / 学员 / 老师 / 课表 / 财务 / 日历 / 话术 / 设置 / 我的 / AI / 帮助 / 关联 / 更新日志等）、并触发各视图主要交互（打开新建弹窗、切换日历日 / 周 / 月 / 年、打开搜索、夜间模式切换等）的无头浏览器冒烟测试，全程捕获 <code>console.error</code> / 未捕获异常 / <code>unhandledrejection</code>。结果：<b>运行时错误总数 = 0</b>，并与原有 79 项全流程断言、7 项云同步 ID 断言一同全部通过。</li>
+        <li><b>一致性微修</b>：<code>Search</code>（全局搜索）补挂到 <code>window</code>（与 <code>CommissionImport</code> / <code>Brand</code> / <code>Sync</code> 等工具模块一致），避免任何通过 <code>window.Search</code> 调用的路径在未来出错。</li>
+      </ul>
+      <div class="divider"></div>
+      <div class="log-ver">v1.9.2</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>云同步「正确 ID 也被新建」彻底修复（核心 bug，正是你反馈的现象）</b>：之前 GitHub 的 ID 校验正则错误地写成「固定 20 位十六进制」，而 GitHub 真实 Gist ID 是 <b>32 位</b>。于是你从一端复制出来的正确 32 位 ID，在另一端被判定为「格式非法」→ 自动清空 → 重新生成新空间，于是三端连不到同一份数据（尽管网络 / Token / ID 本身都没问题）。现已改正为「20~40 位均可」，并新增「粘贴完整链接也能自动识别 ID」的容错（如 <code>https://gist.github.com/用户名/32位ID</code>）。随附回归测试用真实 32 位 ID 覆盖 断网 / 404 / 成功 / 空 / 格式非法 / 完整链接 共 7 项，全部通过：<b>格式合法的 ID 在任何情况下都不会被丢弃新建</b>。</li>
+        <li><b>健壮性</b>：日期解析 <code>U.parse</code> 增加空值 / 非法值守卫，避免任何空日期调用导致整页崩溃（防未来隐患）。</li>
+        <li><b>体验一致性</b>：日历页右下「+」按钮现在走日历自己的「新建（日程 / 提醒事项）」弹窗，与其它页面行为统一；之前日历页 FAB 走的是通用快捷菜单。</li>
+      </ul>
+      <div class="divider"></div>
+      <div class="log-ver">v1.9.1</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>修复「遗留提醒」误把已完成项算进去（核心 bug）</b>：v1.7.9 把提醒事项从「完成 / 未完成」两态升级为「未完成 / 已完成 / 今日无法完成」三态后，主页「遗留未完成」计数、AI 助手「未完成提醒数」、关联中心「可关联列表」、以及「全部拉到今天」动作这 4 处仍沿用旧的两态 <code>.done</code> 布尔字段判断。迁移后的新数据已不含 <code>.done</code> 字段（恒为 undefined），导致「是否完成」永远判定为假——<b>已完成的提醒也会被当成遗留项、被一键拉到今天</b>，且主页遗留计数虚高。现 4 处统一改为按三态 <code>status !== 'done'</code> 判断，并已加自动化回归测试（含已完成 / 未完成 / 今日无法完成三种迁移数据）覆盖。</li>
+        <li><b>文案一致性</b>：主页模块默认标题「今日待办」改为「今日提醒事项」，与全站重命名统一（用户不可见的内部配置项）。</li>
+        <li><b>清理</b>：财务合计行的抽成率调用去掉一处未定义变量兜底；主页模块注释同步更新。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.9.0</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>新增「日程」模块（参考 iOS 日历 / 提醒事项分工）</b>：① 日历现同时承载两类条目——「日程」彩色时间块、<b>无需打勾</b>（如上课、会议、考试）；「提醒事项」保留原有需打勾的勾选框（如回访、待办）。两者在日 / 周 / 月 / 年视图分区展示（「日程 · N」「提醒事项 · N」），互不混淆。② 日程支持：标题、地点、全天开关、起止日期与时间、重复、提醒、颜色分类（考研课程 / 工作 / 个人 / 家庭 / 健康 / 社交 / 其它）、备注；跨天多日日程自动按天聚合显示。③ 日历右上「新建」按钮改为 iOS 风格选择弹窗，先选「日程」或「提醒事项」再进入对应编辑页。</li>

@@ -313,11 +313,11 @@ const DB = (() => {
   }
 
   // 主页模块默认顺序（key 用于持久化定位 + 默认标题查询）
-  // 三端统一：今日待办在今日课程之上；每日模板库紧跟今日待办；不再含走势/年级/话术
+  // 三端统一：今日提醒事项在今日课程之上；每日模板库紧跟今日提醒事项；不再含走势/年级/话术
   const DASH_MODULES = [
     { key: 'greet',        name: '今日问候' },
     { key: 'kpi',          name: '关键指标' },
-    { key: 'todayTodo',    name: '今日待办' },
+    { key: 'todayTodo',    name: '今日提醒事项' },
     { key: 'templates',    name: '每日模板库' },
     { key: 'todayLessons', name: '今日课程' }
   ];
@@ -357,6 +357,7 @@ const DB = (() => {
         migrateSubjects(d);
         migrateHistIncome(d);
         migrateLessonTeacher(d);
+        migrateRecurrence(d);
         return d;
       }
     } catch (e) { console.warn('数据读取失败', e); }
@@ -471,6 +472,22 @@ const DB = (() => {
     const map = {};
     d.students.forEach(s => { map[s.id] = s.teacherId || ''; });
     d.lessons.forEach(l => { if (!l.teacherId && l.studentId && map[l.studentId]) l.teacherId = map[l.studentId]; });
+    return d;
+  }
+
+  // 数据迁移：提醒事项 / 日程补「重复规则 + 已完成实例 + 标记(flag)」字段；
+  // 旧版 repeat 可能是字符串('daily'等)或缺失，统一兜底为 'never'（引擎兼容字符串/对象）。
+  function migrateRecurrence(d) {
+    if (!d) return d;
+    if (Array.isArray(d.todos)) d.todos.forEach(t => {
+      if (t.repeat === undefined || t.repeat === null) t.repeat = 'never';
+      if (!Array.isArray(t.completedDates)) t.completedDates = [];
+      if (typeof t.flag !== 'boolean') t.flag = false;
+    });
+    if (Array.isArray(d.events)) d.events.forEach(e => {
+      if (e.repeat === undefined || e.repeat === null) e.repeat = 'never';
+      if (!Array.isArray(e.completedDates)) e.completedDates = [];
+    });
     return d;
   }
 
@@ -599,6 +616,7 @@ const DB = (() => {
     migrateSubjects(d);
     migrateHistIncome(d);
     migrateLessonTeacher(d);
+    migrateRecurrence(d);
     return d;
   }
 

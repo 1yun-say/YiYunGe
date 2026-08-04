@@ -368,8 +368,15 @@ const Dashboard = (() => {
         case 'toggleTodo': {
           const x = DB.data.todos.find(y => y.id === b.closest('[data-tid]').dataset.tid);
           if (x) {
-            x.status = Todo.cycle(x.status);
-            x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
+            const rule = U.recurRuleOf(x.repeat, x.date);
+            if (U.recurOccursOn(t, rule)) {
+              x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
+              const i = x.completedDates.indexOf(t);
+              if (i >= 0) { x.completedDates.splice(i, 1); x.doneAt = null; } else { x.completedDates.push(t); x.doneAt = Date.now(); }
+            } else {
+              x.status = Todo.cycle(x.status);
+              x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
+            }
             DB.save(); render(); App.refreshBadge();
             if (x.status === 'done') U.toast('完成一件');
           }
@@ -396,7 +403,7 @@ const Dashboard = (() => {
       .sort((a, b) => U.t2m(a.start) - U.t2m(b.start));
     const todosAll = Todo.ofDate(t);
     const undone = todosAll.filter(x => x.status !== 'done').sort((a, b) => a.priority - b.priority);
-    const overdue = DB.data.todos.filter(x => !x.done && x.date < t);
+    const overdue = DB.data.todos.filter(x => { const r = U.recurRuleOf(x.repeat, x.date); return U.recurOccursOn(t, r) && x.status !== 'done' && x.date < t; });
     const mFrom = U.monthFirst(t), mTo = U.monthLast(t);
     const mStat = DB.statIn(mFrom, mTo, { includeScheduled: inc });
     const mDone = DB.statIn(mFrom, mTo);
@@ -486,10 +493,19 @@ const Dashboard = (() => {
         }
         case 'toggleTodo': {
           const x = DB.data.todos.find(y => y.id === b.closest('[data-tid]').dataset.tid);
-          x.status = Todo.cycle(x.status);
-          x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
-          DB.save(); render(); App.refreshBadge();
-          if (x.status === 'done') U.toast('完成一件');
+          if (x) {
+            const rule = U.recurRuleOf(x.repeat, x.date);
+            if (U.recurOccursOn(t, rule)) {
+              x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
+              const i = x.completedDates.indexOf(t);
+              if (i >= 0) { x.completedDates.splice(i, 1); x.doneAt = null; } else { x.completedDates.push(t); x.doneAt = Date.now(); }
+            } else {
+              x.status = Todo.cycle(x.status);
+              x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
+            }
+            DB.save(); render(); App.refreshBadge();
+            if (x.status === 'done') U.toast('完成一件');
+          }
           break;
         }
         case 'importTpl': {

@@ -47,17 +47,35 @@ const Calendar = (() => {
   }
 
   /* ---------- 按日期聚合提醒事项 ---------- */
+  /* ---------- 按日期聚合提醒事项（含重复展开） ---------- */
   function todosOf(dt) {
-    return DB.data.todos.filter(x => x.date === dt)
-      .sort((a, b) => (a.status === 'done') - (b.status === 'done') || (a.time || '99:59').localeCompare(b.time || '99:59') || a.priority - b.priority || a.createdAt - b.createdAt);
+    const out = [];
+    for (const x of DB.data.todos) {
+      const rule = U.recurRuleOf(x.repeat, x.date);
+      if (!U.recurOccursOn(dt, rule)) continue;
+      out.push(x);
+    }
+    out.sort((a, b) => (a.status === 'done') - (b.status === 'done') || (a.time || '99:59').localeCompare(b.time || '99:59') || a.priority - b.priority || a.createdAt - b.createdAt);
+    return out;
   }
 
-  /* ---------- 按日期聚合日程（发生在该天的日程） ---------- */
+  /* ---------- 按日期聚合日程（发生在该天的日程，含重复展开） ---------- */
   function eventsOf(dt) {
-    return DB.data.events.filter(e => {
-      if (e.allDay) return e.startDate <= dt && e.endDate >= dt;
-      return e.startDate === dt || e.endDate === dt || (e.startDate < dt && e.endDate > dt);
-    }).sort((a, b) => (a.startTime || '00:00').localeCompare(b.startTime || '00:00') || a.createdAt - b.createdAt);
+    const out = [];
+    for (const e of DB.data.events) {
+      const rule = U.recurRuleOf(e.repeat, e.startDate);
+      if (!U.recurOccursOn(dt, rule)) continue;
+      // 复制一份并把日期偏移到该发生日，保证全天区间 / 时间块正确
+      const off = U.daysDiff(e.startDate, dt);
+      const inst = Object.assign({}, e);
+      if (off) {
+        inst.startDate = dt;
+        inst.endDate = U.addDays(e.endDate, off);
+      }
+      out.push(inst);
+    }
+    out.sort((a, b) => (a.startTime || '00:00').localeCompare(b.startTime || '00:00') || a.createdAt - b.createdAt);
+    return out;
   }
 
   function todoHTML(x) {
@@ -134,8 +152,8 @@ const Calendar = (() => {
     if (ev.allDay) { ev.startTime = ''; ev.endTime = ''; }
 
     const calOpts = Object.keys(EVENT_COLORS).map(k => `<option value="${k}" ${ev.calendar === k ? 'selected' : ''}>${k}</option>`).join('');
-    const repeatOpts = REPEAT_OPTIONS.map(r => `<option value="${r.v}" ${ev.repeat === r.v ? 'selected' : ''}>${r.name}</option>`).join('');
     const alertOpts = ALERT_OPTIONS.map(a => `<option value="${a.v}" ${String(ev.alert) === String(a.v) ? 'selected' : ''}>${a.name}</option>`).join('');
+    const startVal = ev.startDate || ev.sd || U.today();
 
     const mm = U.modal({
       title: isNew ? '新建日程' : '编辑日程',
@@ -148,15 +166,15 @@ const Calendar = (() => {
           <input type="checkbox" id="ev_allday" ${ev.allDay ? 'checked' : ''} style="display:none">
         </div>
         <div class="row">
-          <div class="field"><label>开始</label><input type="date" class="input" id="ev_sd" value="${ev.startDate}"></div>
+          <div class="field"><label>开始</label><input type="date" class="input" id="ev_sd" value="${startVal}"></div>
           <div class="field ev-time ${ev.allDay ? 'hide' : ''}"><label>&nbsp;</label><input type="time" class="input" id="ev_st" value="${ev.startTime}"></div>
         </div>
         <div class="row">
-          <div class="field"><label>结束</label><input type="date" class="input" id="ev_ed" value="${ev.endDate}"></div>
+          <div class="field"><label>结束</label><input type="date" class="input" id="ev_ed" value="${ev.endDate || startVal}"></div>
           <div class="field ev-time ${ev.allDay ? 'hide' : ''}"><label>&nbsp;</label><input type="time" class="input" id="ev_et" value="${ev.endTime}"></div>
         </div>
+        ${U.buildRepeatControl(ev.repeat && typeof ev.repeat === 'string' ? ev.repeat : (ev.repeat && ev.repeat.type === 'custom' ? 'custom' : (ev.repeat && ev.repeat.type) || 'never'))}
         <div class="row">
-          <div class="field"><label>重复</label><select class="input" id="ev_rep">${repeatOpts}</select></div>
           <div class="field"><label>提醒</label><select class="input" id="ev_alert">${alertOpts}</select></div>
           <div class="field"><label>日历</label><select class="input" id="ev_cal">${calOpts}</select></div>
         </div>
@@ -170,7 +188,7 @@ const Calendar = (() => {
         ev.endDate = U.$('#ev_ed', b).value || ev.endDate;
         ev.startTime = ev.allDay ? '' : (U.$('#ev_st', b).value || '00:00');
         ev.endTime = ev.allDay ? '' : (U.$('#ev_et', b).value || '00:00');
-        ev.repeat = U.$('#ev_rep', b).value;
+        ev.repeat = U.readRepeatControl(b);
         ev.alert = U.$('#ev_alert', b).value;
         ev.calendar = U.$('#ev_cal', b).value;
         ev.note = U.$('#ev_note', b).value.trim();
@@ -190,6 +208,8 @@ const Calendar = (() => {
       sw.classList.toggle('on', cb.checked);
       mm.body.querySelectorAll('.ev-time').forEach(el => el.classList.toggle('hide', cb.checked));
     };
+    U.wireRepeatControl(mm.body, (typeof ev.repeat === 'string' || (ev.repeat && ev.repeat.type === 'custom'))
+      ? ev.repeat : (ev.repeat && ev.repeat.type) || 'never');
   }
 
   /* ---------- 主渲染 ---------- */
@@ -235,8 +255,19 @@ const Calendar = (() => {
       else if (a.dataset.act === 'toggleTodo') {
         const x = DB.data.todos.find(y => y.id === a.closest('[data-tid]').dataset.tid);
         if (!x) return;
-        x.status = Todo.cycle(x.status);
-        x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
+        const rule = U.recurRuleOf(x.repeat, x.date);
+        const occursHere = U.recurOccursOn(anchor, rule);   // 是否就是这个发生日
+        if (occursHere) {
+          // 重复任务：按发生日单独勾选完成
+          x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
+          const i = x.completedDates.indexOf(anchor);
+          if (i >= 0) x.completedDates.splice(i, 1);
+          else x.completedDates.push(anchor);
+          x.doneAt = i >= 0 ? null : Date.now();
+        } else {
+          x.status = Todo.cycle(x.status);
+          x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
+        }
         DB.save(); render(); App.refreshBadge();
       }
       else if (a.dataset.act === 'openTodo') {
@@ -439,5 +470,5 @@ const Calendar = (() => {
       render();
     }
   };
-  return { render, setView, editEvent };
+  return { render, setView, editEvent, showAddChoice };
 })();

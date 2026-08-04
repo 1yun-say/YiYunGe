@@ -175,7 +175,7 @@ const Finance = (() => {
           <td>合计</td>          <td class="num">${st.count}</td><td class="num">${(st.minutes / 60).toFixed(1)} h</td>
           <td class="num money">${U.money(st.commission)}</td><td class="num money out">${U.money(st.reimb)}</td>
           <td class="num money in">${U.money(st.profit)}</td>
-          ${showRate ? `<td class="num" title="不含导入抽成表数据，自 8 月 1 日起">${(() => { const r = effectiveRate(st.lessons || ls); return `${r.rate}%`; })()}%</td>` : ''}<td></td></tr></tfoot>` : ''}
+          ${showRate ? `<td class="num" title="不含导入抽成表数据，自 8 月 1 日起">${(() => { const r = effectiveRate(st.lessons); return `${r.rate}%`; })()}%</td>` : ''}<td></td></tr></tfoot>` : ''}
       </table>
       <p class="muted" style="font-size:11.5px;margin-top:10px">
         统计口径：${includeScheduled ? '已完成 + 待上课程' : '仅已完成课程'}；区间 ${from} 至 ${to}（共 ${ctx.days} 天）。

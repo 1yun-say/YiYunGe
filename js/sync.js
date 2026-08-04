@@ -123,12 +123,40 @@ window.Sync = (() => {
     if (el) { el.textContent = msg; el.className = 'sync-status' + (kind ? ' ' + kind : ''); }
   }
 
+  // 从用户输入中规整出真实空间 ID：
+  // - 允许直接粘贴完整链接（如 https://gist.github.com/用户名/32位ID），自动截取路径里的 ID 段；
+  // - 纯 ID 原样返回；其余（自定义名/乱填）原样返回，交给下方格式校验处理。
+  // 注意：GitHub 真实 Gist ID 是 32 位十六进制（旧示例偶见 20 位），故合法区间为 20~40 位。
+  function normalizeGistId(raw) {
+    if (!raw) return '';
+    const r = String(raw).trim();
+    if (/^https?:\/\//i.test(r) || r.indexOf('/') >= 0) {
+      const m = r.match(/\/([0-9a-f]{20,40})(?:[/?#]|$)/i);
+      if (m) return m[1];
+    }
+    if (/^[0-9a-f]{20,40}$/i.test(r)) return r;
+    return r;
+  }
+  // 空间指纹：由真实空间 ID 确定性推导（两端连到同一份空间 → 指纹必然相同）。
+  // 用于「两端是否连到同一空间」的直观核对；不依赖联网，只看 ID 本身。
+  function fingerprint(id) {
+    const s = (id || '').toLowerCase();
+    if (!/^[0-9a-f]+$/.test(s)) return '';
+    if (s.length <= 10) return s;
+    return s.slice(0, 4) + '-' + s.slice(-4);
+  }
+
   async function ensureGist() {
     const s = cfg();
-    const idRe = providerType() === 'gitee' ? /^[0-9a-f]{32}$/i : /^[0-9a-f]{20}$/i;
+    const idRe = providerType() === 'gitee' ? /^[0-9a-f]{32}$/i : /^[0-9a-f]{20,40}$/i;
+
+    // 0) 容错：把粘贴的链接 / 多余空格规整成纯 ID（仅当确实能提取时才改写）
+    const norm = normalizeGistId(s.gistId);
+    if (norm && norm !== s.gistId) { s.gistId = norm; DB.save(); }
 
     // 1) 格式校验：手动填的 ID 必须符合服务商格式，否则视为「留空」，自动新建。
     // 这是为了防止用户填自定义名（如 20260802）导致各端各自新建、无法同步同一份数据。
+    // 关键修复：此前 GitHub 误用 20 位固定长度正则，会把正确的 32 位 ID 判为「格式非法」而清空新建。
     if (s.gistId && !idRe.test(s.gistId)) {
       s.gistId = '';
       DB.save();
@@ -324,6 +352,6 @@ window.Sync = (() => {
   }
 
   return { cfg, schedulePush, push, pull, ensureGist, status, refreshStatus,
-           startAutoPull, stopAutoPull,
+           startAutoPull, stopAutoPull, fingerprint,
            _crypto: { seal, open, sealWithKey, openWithKey, secureCtx } };
 })();
