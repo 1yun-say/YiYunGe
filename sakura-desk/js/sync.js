@@ -335,7 +335,10 @@ window.Sync = (() => {
       if (localDirty) {
         try { await push(); return; }               // 上传成功会同步 baseSavedAt
         catch (e) {
-          if (e.message === 'conflict') status('云端和本机都有改动，已暂停自动同步，请手动「下载同步」处理', 'warn');
+          if (e.message === 'conflict') {
+            stopAutoPull();   // 停止自动拉取，避免每 20s 重复弹同一警告刷屏
+            status('云端和本机都有改动，已暂停自动同步，请手动「下载同步」处理', 'warn');
+          }
           return;
         }
       }

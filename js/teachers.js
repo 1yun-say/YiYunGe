@@ -84,9 +84,11 @@ const Teachers = (() => {
         case 'addT': editTeacher(null); break;
         case 'editT': editTeacher(t); break;
         case 'delT':
-          U.confirm(`删除老师「${t.name}」？其名下学员会变为「未指派」。`, () => {
+          U.confirm(`删除老师「${t.name}」？其名下学员会变为「未指派」，相关课时记录也会解除老师关联。`, () => {
             DB.data.teachers = DB.data.teachers.filter(x => x.id !== t.id);
             DB.data.students.forEach(s => { if (s.teacherId === t.id) s.teacherId = ''; });
+            // 同步解除课表中该老师的关联，避免财务「按老师」分组出现幽灵项。
+            (DB.data.lessons || []).forEach(l => { if (l.teacherId === t.id) l.teacherId = ''; });
             DB.save(); render();
           }, '删除');
           break;

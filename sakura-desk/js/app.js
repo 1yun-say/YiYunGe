@@ -170,7 +170,13 @@ const App = (() => {
     boot();
     backupGuard();
     if (DB.data.__demo) {
-      setTimeout(() => U.toast('已载入演示数据，可在「设置」中清空'), 600);
+      if (DB.data.__corrupt) {
+        // 本地数据损坏：本次是回退的示例数据，明确告知用户真实数据已被暂存可恢复。
+        setTimeout(() => U.toast('本地数据损坏，已载入示例（原数据已暂存，可在「设置→数据管理」恢复）', 'warn', 6000), 600);
+        delete DB.data.__corrupt;
+      } else {
+        setTimeout(() => U.toast('已载入演示数据，可在「设置」中清空'), 600);
+      }
       delete DB.data.__demo; DB.save();
     }
   }

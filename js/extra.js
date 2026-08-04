@@ -79,14 +79,14 @@ const More = (() => {
     }
     const connected = s.token && s.gistId;
     if (!connected) {
-      return `<div class="card only-mobile" style="background:linear-gradient(120deg,#fff,var(--pink-50));border-color:var(--pink-200)">
+      return `<div class="card only-mobile" style="background:linear-gradient(120deg,var(--card),var(--pink-50));border-color:var(--pink-200)">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
           <div><b style="font-size:14px">☁ 云同步</b></div>
           <button class="btn btn-primary btn-sm" data-go="settings">去连接</button>
         </div></div>`;
     }
     const last = s.lastSync ? U.fmtTime(s.lastSync) : '尚未同步';
-    return `<div class="card only-mobile" style="background:linear-gradient(120deg,#fff,#eefaf1);border-color:#bfe6c9">
+    return `<div class="card only-mobile" style="background:linear-gradient(120deg,var(--card),#eefaf1);border-color:#bfe6c9">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
         <div><b style="font-size:14px">☁ 云同步</b>
           <div class="muted" style="font-size:12px">已连接 · 上次 ${last}</div></div>
@@ -105,7 +105,7 @@ const More = (() => {
     if (!root || App.route !== 'more') return;
     root.innerHTML = `
     <div class="more-view">
-      <div class="card brand-card" style="margin-bottom:12px;background:linear-gradient(120deg,#fff,var(--pink-50));border-color:var(--pink-200)">
+      <div class="card brand-card" style="margin-bottom:12px;background:linear-gradient(120deg,var(--card),var(--pink-50));border-color:var(--pink-200)">
         <div style="display:flex;align-items:center;gap:10px">
           <div class="brand-mark" style="width:36px;height:36px;color:var(--pink-400)">
             <svg viewBox="0 0 40 40"><g fill="currentColor">
@@ -371,6 +371,12 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.9.7</div><div class="log-date">2026-08-05</div>
+      <ul class="log-list">
+        <li><b>全身体检（第二批）：逐文件 + 跨模块 + 双盲审计，共修复 18 项</b>：① <b>重复任务跨视图一致</b>——周视图勾选重复实例改用被点单元格真实日期（此前误记成周焦点，导致跨视图错位）；重复完成态在日历/待办/首页统一读 completedDates 并显示绿色勾选。② <b>遗留列表不再误收重复任务</b>——重复任务只在其发生日出现，不再永久塞进「遗留」。③ <b>「拉到今天」不再偏移重复锚点</b>——仅移动非重复过期任务。④ <b>本地数据损坏不再静默覆盖</b>——损坏时保留原串并尝试从内嵌备份恢复，否则明确提示而非用示例数据覆盖真实数据。⑤ <b>ServiceWorker 离线首开崩溃修复</b>——预缓存键剥离 ?v 查询串，装到主屏离线打开不再把 index.html 当 JS 返回。⑥ <b>删老师级联解绑课时</b>，避免财务按老师分组出现幽灵项；⑦ 年重复以 2/29 为起点时非闰年规整为 2/28；⑧ 导入仅含抽成无课时费时不再误填；⑨ 自动同步冲突后停止轮询，避免每 20s 重复弹警告；⑩ 删除单节课加确认；⑪ 首页/小助手写死白色背景改用主题变量（夜览不再白块）；⑫ 补全 favicon；⑬ 保存学员时对 Todo/App 做存在性守护等若干稳健性修复。</li>
+        <li>回归测试扩充至 43 条全绿；全流程 79 条、冒烟 0 运行时错误，三套全绿。</li>
+      </ul>
+
       <div class="log-ver">v1.9.6</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>全身体检修复（4 项真实问题）</b>：① 修复<b>跨标签页同步未跑数据迁移</b>——同一浏览器多标签时，旧结构数据同步到本页会缺失 repeat / 完成记录等字段，导致重复与完成逻辑错乱；现已复用迁移逻辑，两端数据严格一致。② 修复<b>年视图热力图不展开重复</b>——此前年度统计把重复日程/提醒按原始日期计数，漏掉重复实例，现改为按重复规则逐天展开。③ 修复<b>首页「遗留未完成」误判</b>——重复任务（如每周一回访）因基准日早于今天被全部算作遗留，导致首页拥塞；现仅把「今天不再发生、且未完成」的旧任务判为遗留。④ <b>重复任务勾选视觉一致</b>——当天勾掉的重复待办，勾选框正确显示为已勾选态。</li>

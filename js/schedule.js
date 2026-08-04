@@ -698,8 +698,10 @@ const Schedule = (() => {
     mm.body.addEventListener('click', e => {
       if (e.target.id === 'btnDone') { l.status = 'done'; DB.save(); DB.touch('lesson'); render(); U.toast('已标记完成'); e.target.closest('.mask').remove(); }
       if (e.target.id === 'btnDel') {
-        DB.data.lessons = DB.data.lessons.filter(x => x.id !== l.id); DB.save(); DB.touch('lesson'); render();
-        U.toast('已删除'); e.target.closest('.mask').remove();
+        U.confirm('确定删除这一节课吗？此操作不可撤销。', () => {
+          DB.data.lessons = DB.data.lessons.filter(x => x.id !== l.id); DB.save(); DB.touch('lesson'); render();
+          U.toast('已删除'); e.target.closest('.mask').remove();
+        }, '删除');
       }
     });
     mm.body.addEventListener('input', e => {

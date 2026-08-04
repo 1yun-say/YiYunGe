@@ -96,7 +96,15 @@ const Todo = (() => {
     const undone = list.filter(t => t.status !== 'done').sort(sortFn);
     const done = list.filter(t => t.status === 'done').sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
     const shown = filter < 0 ? undone : undone.filter(t => t.priority === filter);
-    const overdue = DB.data.todos.filter(t => t.status === 'pending' && t.date < U.today());
+    // 与 dashboard 一致的遗留判定：仅“非重复且过去日期未完成”的旧任务算遗留。
+    // 重复任务从不计入遗留——它们按发生日由 ofDate 在当天列表里自然出现，避免重复/错位。
+    const today = U.today();
+    const overdue = DB.data.todos.filter(t => {
+      if (t.status === 'done') return false;
+      const r = U.recurRuleOf(t.repeat, t.date);
+      if (r && r.type !== 'never') return false;   // 重复任务不进遗留
+      return t.date < today;
+    });
     const isM = U.isMobile();
     const segHTML = isM ? '' : `<div class="seg" style="margin-bottom:12px">
             <div class="opt ${filter < 0 ? 'on' : ''}" data-f="-1">全部</div>
@@ -229,8 +237,10 @@ const Todo = (() => {
         ? '<svg viewBox="0 0 24 24" class="ico"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>'
         : '';
     const chkCls = doneOnCur ? 'done' : (blockedOnCur ? 'blocked' : 'pending');
+    // 重复任务勾掉（写进 completedDates）的完成态用绿色语义，而非「未完成」粉色。
+    const chkColor = doneOnCur ? 'var(--leaf, #38a169)' : st.color;
     return `<div class="todo-item ${doneOnCur ? 'done' : ''} ${blockedOnCur ? 'blocked' : ''}" data-p="${t.priority}" data-id="${t.id}">
-      <div class="chk chk-${chkCls}" data-act="toggle" title="${doneOnCur ? '已完成' : (blockedOnCur ? '今日无法完成' : '未完成')}" style="color:#fff;border-color:${st.color};${doneOnCur || blockedOnCur ? 'background:' + st.color : ''}">${chkIcon}</div>
+      <div class="chk chk-${chkCls}" data-act="toggle" title="${doneOnCur ? '已完成' : (blockedOnCur ? '今日无法完成' : '未完成')}" style="color:#fff;border-color:${chkColor};${doneOnCur || blockedOnCur ? 'background:' + chkColor : ''}">${chkIcon}</div>
       <div class="t-body">
         <div class="t-title">
           ${t.time ? `<span class="t-time">${U.esc(t.time)}</span>` : ''}${U.esc(t.title)}
@@ -291,7 +301,14 @@ const Todo = (() => {
         case 'edit': editTodo(t); break;
         case 'del': DB.data.todos = DB.data.todos.filter(x => x.id !== tid); DB.save(); render(); App.refreshBadge(); break;
         case 'pullOverdue':
-          DB.data.todos.forEach(x => { if (x.status !== 'done' && x.date < U.today()) x.date = U.today(); });
+          // 仅把「非重复」的过期未完成任务拉到今天；重复任务以 repeat 为锚点，
+          // 改 date 会悄悄偏移发生日，故跳过（重复任务本就会在今天发生）。
+          DB.data.todos.forEach(x => {
+            if (x.status === 'done') return;
+            const r = U.recurRuleOf(x.repeat, x.date);
+            if (r && r.type !== 'never') return;
+            if (x.date < U.today()) x.date = U.today();
+          });
           DB.save(); curDate = U.today(); render(); U.toast('已全部拉到今天');
           break;
         case 'toggleArch': {

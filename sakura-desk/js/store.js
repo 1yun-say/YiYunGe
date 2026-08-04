@@ -346,6 +346,19 @@ const DB = (() => {
   let data = blank();
   data = load();
 
+  // 数据损坏兜底：尝试从内嵌备份（离线版自带）恢复真实数据；否则返回 null 由调用方回退演示。
+  // 绝不直接用示例数据静默覆盖真实数据。
+  function salvageCorrupt() {
+    try {
+      const emb = (typeof window !== 'undefined') && window.__EMBEDDED_BACKUP__;
+      if (emb && Array.isArray(emb.students)) {
+        const d = JSON.parse(JSON.stringify(emb));
+        if (Array.isArray(d.students) && d.students.length) return d;
+      }
+    } catch (e) { console.warn('损坏恢复-内嵌备份失败', e); }
+    return null;
+  }
+
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
@@ -360,7 +373,22 @@ const DB = (() => {
         migrateRecurrence(d);
         return d;
       }
-    } catch (e) { console.warn('数据读取失败', e); }
+    } catch (e) {
+      // 本地数据损坏：暂存原串以便恢复，绝不直接用示例数据覆盖真实数据。
+      console.warn('本地数据解析失败，已保留原串并尝试恢复', e);
+      try { localStorage.setItem(KEY + '__corrupt', localStorage.getItem(KEY)); } catch (_) {}
+      const recovered = salvageCorrupt();
+      if (recovered) {
+        const d = adoptData(recovered);
+        d.__corruptRecovered = true;
+        return d;
+      }
+      const d = blank();
+      Object.assign(d, demoData());
+      d.__demo = true;
+      d.__corrupt = true;   // 标记：本次是损坏回退的示例数据，UI 需提示
+      return d;
+    }
     // 本机尚无任何数据时：若当前打开的是「内含数据的离线版」文件，优先用它自带的备份开局。
     // 这样即便原网页彻底失效，双击这个文件就能直接看到全部数据，无需再手动导入。
     try {

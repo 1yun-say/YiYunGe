@@ -308,7 +308,10 @@ const Students = (() => {
           DB.data.students.push(Object.assign({ id: U.uid('stu'), createdAt: Date.now() }, o));
         }
         else Object.assign(s, o);
-        DB.save(); DB.touch('student'); Todo.checkAuto(); App.refreshBadge(); render();
+        DB.save(); DB.touch('student');
+        if (typeof Todo !== 'undefined' && Todo.checkAuto) { try { Todo.checkAuto(); } catch (_) {} }
+        if (typeof App !== 'undefined' && App.refreshBadge) { try { App.refreshBadge(); } catch (_) {} }
+        render();
         U.toast(isNew ? '档案已创建' : '已保存');
       }
     });
@@ -426,7 +429,9 @@ const Students = (() => {
   }
   function createStudentFromRow(r) {
     const grade = r.grade || '未分级', subject = r.subject || '其它';
-    const sub = { id: U.uid('sbj'), grade, subject, tuition: r.tuition || r.commission || 0, commission: r.commission || 0, duration: r.duration || 60, fixed: [] };
+    // 仅提供「抽成」而无「课时费」时，课时费留空(0)，不把抽成误填为课时费（否则 takeHome=0 且统计失真）。
+    const hasTuition = (r.tuition !== undefined && r.tuition !== null && r.tuition !== '');
+    const sub = { id: U.uid('sbj'), grade, subject, tuition: hasTuition ? r.tuition : 0, commission: r.commission || 0, duration: r.duration || 60, fixed: [] };
     const st = {
       id: U.uid('stu'), code: '', signDate: r.date, parentName: r.name, studentName: '',
       teacherId: '', status: 'active', note: '', trialDate: '', createdAt: Date.now(),

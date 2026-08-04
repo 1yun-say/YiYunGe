@@ -46,7 +46,7 @@ const Dashboard = (() => {
 
   function moduleGreet(ctx) {
     return `
-    <div class="card dash-greet" style="margin-bottom:16px;background:linear-gradient(120deg,#fff,var(--pink-50));border-color:var(--pink-200)">
+    <div class="card dash-greet" style="margin-bottom:16px;background:linear-gradient(120deg,var(--card),var(--pink-50));border-color:var(--pink-200)">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
         <div>
           <h2 style="font-size:19px">${greet()}，今天有 <span style="color:var(--pink-600)">${ctx.todayLessons.length}</span> 节课、
@@ -369,16 +369,19 @@ const Dashboard = (() => {
           const x = DB.data.todos.find(y => y.id === b.closest('[data-tid]').dataset.tid);
           if (x) {
             const rule = U.recurRuleOf(x.repeat, x.date);
+            let justDone = false;
             if (U.recurOccursOn(t, rule)) {
               x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
               const i = x.completedDates.indexOf(t);
-              if (i >= 0) { x.completedDates.splice(i, 1); x.doneAt = null; } else { x.completedDates.push(t); x.doneAt = Date.now(); }
+              if (i >= 0) { x.completedDates.splice(i, 1); x.doneAt = null; }
+              else { x.completedDates.push(t); x.doneAt = Date.now(); justDone = true; }
             } else {
               x.status = Todo.cycle(x.status);
               x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
+              if (x.status === 'done') justDone = true;
             }
             DB.save(); render(); App.refreshBadge();
-            if (x.status === 'done') U.toast('完成一件');
+            if (justDone) U.toast('完成一件');
           }
           break;
         }
@@ -504,16 +507,19 @@ const Dashboard = (() => {
           const x = DB.data.todos.find(y => y.id === b.closest('[data-tid]').dataset.tid);
           if (x) {
             const rule = U.recurRuleOf(x.repeat, x.date);
+            let justDone = false;
             if (U.recurOccursOn(t, rule)) {
               x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
               const i = x.completedDates.indexOf(t);
-              if (i >= 0) { x.completedDates.splice(i, 1); x.doneAt = null; } else { x.completedDates.push(t); x.doneAt = Date.now(); }
+              if (i >= 0) { x.completedDates.splice(i, 1); x.doneAt = null; }
+              else { x.completedDates.push(t); x.doneAt = Date.now(); justDone = true; }
             } else {
               x.status = Todo.cycle(x.status);
               x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
+              if (x.status === 'done') justDone = true;
             }
             DB.save(); render(); App.refreshBadge();
-            if (x.status === 'done') U.toast('完成一件');
+            if (justDone) U.toast('完成一件');
           }
           break;
         }

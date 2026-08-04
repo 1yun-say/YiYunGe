@@ -78,16 +78,22 @@ const Calendar = (() => {
     return out;
   }
 
-  function todoHTML(x) {
+  function todoHTML(x, day) {
     const p = Todo.pInfo(x.priority);
     const st = Todo.sInfo(x.status);
-    const chkIcon = x.status === 'done'
+    // 重复任务在某天被勾掉（completedDates 含该日）→ 视为已完成态，与 todo 视图一致。
+    const r = U.recurRuleOf(x.repeat, x.date);
+    const doneOnDay = (r && r.type !== 'never')
+      ? (Array.isArray(x.completedDates) && x.completedDates.includes(day))
+      : (x.status === 'done');
+    const chkColor = doneOnDay ? 'var(--leaf, #38a169)' : st.color;
+    const chkIcon = doneOnDay
       ? '<svg viewBox="0 0 24 24" class="ico"><path d="M5 12.5 10 17 19 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
       : x.status === 'blocked'
         ? '<svg viewBox="0 0 24 24" class="ico"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>'
         : '';
-    return `<div class="cal-event ${x.status === 'done' ? 'done' : ''} ${x.status === 'blocked' ? 'blocked' : ''}" data-tid="${x.id}">
-      <button class="cal-check" data-act="toggleTodo" aria-label="${st.name}" style="border-color:${st.color};${x.status !== 'pending' ? 'background:' + st.color : ''}">
+    return `<div class="cal-event ${doneOnDay ? 'done' : ''} ${x.status === 'blocked' ? 'blocked' : ''}" data-tid="${x.id}">
+      <button class="cal-check" data-act="toggleTodo" aria-label="${doneOnDay ? '已完成' : st.name}" style="border-color:${chkColor};${doneOnDay || x.status !== 'pending' ? 'background:' + chkColor : ''}">
         ${chkIcon}
       </button>
       <div class="cal-ev-body" data-act="openTodo">
@@ -96,7 +102,7 @@ const Calendar = (() => {
           ${x.time ? `<span class="cal-ev-time">${U.esc(x.time)}</span>` : ''}
           <span class="cal-ev-title">${U.esc(x.title)}</span>
         </div>
-        <div class="cal-ev-meta">${st.name}${x.status === 'pending' ? ' · ' + p.name : ''}${x.tag ? ' · ' + U.esc(x.tag) : ''}${x.autoKey ? ' · 自动生成' : ''}</div>
+        <div class="cal-ev-meta">${(doneOnDay ? '已完成' : st.name)}${x.status === 'pending' && !doneOnDay ? ' · ' + p.name : ''}${x.tag ? ' · ' + U.esc(x.tag) : ''}${x.autoKey ? ' · 自动生成' : ''}</div>
       </div>
     </div>`;
   }
@@ -255,14 +261,17 @@ const Calendar = (() => {
       else if (a.dataset.act === 'toggleTodo') {
         const x = DB.data.todos.find(y => y.id === a.closest('[data-tid]').dataset.tid);
         if (!x) return;
+        // 取被点击单元格的真实发生日（周/月视图列携带 data-day），而非整周焦点 anchor，
+        // 否则在周三列勾掉重复实例会被记成 anchor（周一），导致跨视图与今日统计错位。
+        const day = a.closest('[data-day]')?.dataset.day || anchor;
         const rule = U.recurRuleOf(x.repeat, x.date);
-        const occursHere = U.recurOccursOn(anchor, rule);   // 是否就是这个发生日
+        const occursHere = U.recurOccursOn(day, rule);   // 是否就是这个发生日
         if (occursHere) {
           // 重复任务：按发生日单独勾选完成
           x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
-          const i = x.completedDates.indexOf(anchor);
+          const i = x.completedDates.indexOf(day);
           if (i >= 0) x.completedDates.splice(i, 1);
-          else x.completedDates.push(anchor);
+          else x.completedDates.push(day);
           x.doneAt = i >= 0 ? null : Date.now();
         } else {
           x.status = Todo.cycle(x.status);
@@ -292,7 +301,7 @@ const Calendar = (() => {
     const tds = todosOf(dt);
     const parts = [];
     if (evs.length) parts.push(`<div class="cal-seg-h">日程 · ${evs.length}</div>` + evs.map(eventHTML).join(''));
-    if (tds.length) parts.push(`<div class="cal-seg-h">提醒事项 · ${tds.length}</div>` + tds.map(todoHTML).join(''));
+    if (tds.length) parts.push(`<div class="cal-seg-h">提醒事项 · ${tds.length}</div>` + tds.map(x => todoHTML(x, dt)).join(''));
     return parts.length ? parts.join('') : `<div class="cal-empty">这一天还没有日程和提醒事项，点上方按钮添加</div>`;
   }
 
@@ -327,7 +336,7 @@ const Calendar = (() => {
             return `<div class="cal-week-col ${d===anchor?'sel':''}" data-day="${d}">
               <div class="cal-week-col-h">${evs.length ? evs.length + ' 个日程' : ''}${evs.length && tds.length ? ' · ' : ''}${tds.length ? tds.length + ' 个提醒' : ''}</div>
               ${evs.map(eventHTML).join('')}
-              ${tds.map(todoHTML).join('')}
+              ${tds.map(x => todoHTML(x, d)).join('')}
               ${!evs.length && !tds.length ? '<div class="cal-empty-mini">无</div>' : ''}
               <button class="cal-add-mini" data-act="add" data-day="${d}" aria-label="添加">+</button>
             </div>`;
@@ -349,7 +358,7 @@ const Calendar = (() => {
           <span class="cnt">${evs.length || tds.length ? (evs.length + tds.length) + ' 项' : '无'}</span>
         </div>
         ${evs.map(eventHTML).join('')}
-        ${tds.map(todoHTML).join('')}
+        ${tds.map(x => todoHTML(x, d)).join('')}
         ${!evs.length && !tds.length ? '<div class="cal-empty-mini">这一天还没有安排</div>' : ''}
       </div>`;
     }).join('')}</div>`;
@@ -372,7 +381,7 @@ const Calendar = (() => {
     }
     const mm = first.slice(0, 7);
     const isM = U.isMobile();
-    const cellEvents = (evs, tds) => {
+    const cellEvents = (evs, tds, dt) => {
       if (isM) {
         const dots = [];
         evs.slice(0, 3).forEach(x => dots.push(`<i style="background:${eventColor(x.calendar)}"></i>`));
@@ -389,8 +398,13 @@ const Calendar = (() => {
       html += tds.slice(0, Math.max(0, 3 - evs.length)).map(x => {
         const p = Todo.pInfo(x.priority);
         const st = Todo.sInfo(x.status);
-        return `<div class="cal-month-ev ${x.status==='done'?'done':''} ${x.status==='blocked'?'blocked':''}" data-tid="${x.id}" title="${U.esc(x.title)}">
-          <i style="background:${x.status==='pending'?p.color:st.color}"></i>
+        const r = U.recurRuleOf(x.repeat, x.date);
+        const doneOnDay = (r && r.type !== 'never')
+          ? (Array.isArray(x.completedDates) && x.completedDates.includes(dt))
+          : (x.status === 'done');
+        const dotColor = doneOnDay ? 'var(--leaf, #38a169)' : (x.status === 'pending' ? p.color : st.color);
+        return `<div class="cal-month-ev ${doneOnDay?'done':''} ${x.status==='blocked'?'blocked':''}" data-tid="${x.id}" title="${U.esc(x.title)}">
+          <i style="background:${dotColor}"></i>
           <span>${x.time ? `<b class="cal-month-ev-time">${U.esc(x.time)}</b>` : ''}${U.esc(x.title)}</span>
         </div>`;
       }).join('');
@@ -409,7 +423,7 @@ const Calendar = (() => {
             const out = dt.slice(0, 7) !== mm;
             return `<div class="cal-month-cell ${out?'out':''} ${dt===today?'today':''} ${dt===anchor?'sel':''}" data-day="${dt}">
               <div class="cal-month-dn">${+dt.slice(8)}</div>
-              <div class="cal-month-events">${cellEvents(evs, tds)}</div>
+              <div class="cal-month-events">${cellEvents(evs, tds, dt)}</div>
               <button class="cal-month-add" data-act="add" data-day="${dt}" aria-label="添加">+</button>
             </div>`;
           }).join('')}

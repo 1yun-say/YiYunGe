@@ -346,7 +346,6 @@ function editableSub(node, viewKey, fallback) {
     } else if (r.type === 'custom' && r.unit === 'week') {
       if (r.weekdays && r.weekdays.length) {
         // 每 N 周、且只在该周指定的星期几发生（可多选，如周一/周四/周五）
-        const day = +S.slice(8);
         let d = S, i = 0;
         while (d <= to && i < LIMIT) {
           const wk = Math.round(daysDiff(S, d) / 7);
@@ -366,8 +365,8 @@ function editableSub(node, viewKey, fallback) {
         cur = addMonths(cur, 1); cur = monthDay(+cur.slice(0, 4), +cur.slice(5, 7), day); i++;
       }
     } else if (r.type === 'yearly') {
-      let y = +S.slice(0, 4); const md = S.slice(5); let i = 0;
-      while (i < LIMIT) { const cur = `${y}-${md}`; if (cur > to) break; if (!pushIf(cur)) break; y++; i++; }
+      let y = +S.slice(0, 4); const mm = +S.slice(5, 7), dd = +S.slice(8); let i = 0;
+      while (i < LIMIT) { const cur = monthDay(y, mm, dd); if (cur > to) break; if (!pushIf(cur)) break; y++; i++; }
     } else if (r.type === 'custom' && r.unit === 'month') {
       const day = +S.slice(8);
       let cur = S, i = 0;
@@ -376,8 +375,8 @@ function editableSub(node, viewKey, fallback) {
         cur = addMonths(cur, r.every); cur = monthDay(+cur.slice(0, 4), +cur.slice(5, 7), day); i++;
       }
     } else if (r.type === 'custom' && r.unit === 'year') {
-      let y = +S.slice(0, 4); const md = S.slice(5); let i = 0;
-      while (i < LIMIT) { const cur = `${y}-${md}`; if (cur > to) break; if (!pushIf(cur)) break; y += r.every; i++; }
+      let y = +S.slice(0, 4); const mm = +S.slice(5, 7), dd = +S.slice(8); let i = 0;
+      while (i < LIMIT) { const cur = monthDay(y, mm, dd); if (cur > to) break; if (!pushIf(cur)) break; y += r.every; i++; }
     }
     return out;
   }
