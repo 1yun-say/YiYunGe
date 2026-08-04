@@ -370,9 +370,14 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.8.6</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>根治可视化课表「空白」+ 全站稳定性体检</b>：① 修掉 v1.8.5 引入的两个真 bug——safeT2m 函数写成自己调用自己导致栈溢出崩溃、WEEK_MUTED 周视图淡色映射忘记从 U 导出导致每节普通课渲染即崩溃；② 修掉 v1.8.5 更新日志里的反引号导致 extra.js 语法错误、更新日志页打不开；③ 用 Node 把全部 13 个视图逐一真实渲染跑了一遍，确认无异常；④ 全校验跨模块符号引用，确认无「引用未导出」类隐患。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.8.5</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
-        <li><b>真正修复可视化课表「空白」</b>：电脑/平板端周视图只显示头部、整个 grid 不渲染，根因是部分课程数据异常（如上课时间 start 字段缺失/格式错误），导致 `U.t2m` 抛异常、`renderWeek` 整体失败。已加多层防御：① `includeLesson` 过滤掉 start 无效的课程；② 新增 `safeT2m`/`safeEndMin` 遇到异常时间不再抛错；③ 排序/冲突分组时把 id 强转字符串，避免 `undefined.localeCompare` 崩溃；④ `renderWeek`/`renderWeekMobile` 外层包 try-catch，再出错会在页面显示具体错误信息而不是空白。</li>
+        <li><b>真正修复可视化课表「空白」</b>：电脑/平板端周视图只显示头部、整个 grid 不渲染，根因是部分课程数据异常（如上课时间 start 字段缺失/格式错误），导致 U.t2m 抛异常、renderWeek 整体失败。已加多层防御：① includeLesson 过滤掉 start 无效的课程；② 新增 safeT2m/safeEndMin 遇到异常时间不再抛错；③ 排序/冲突分组时把 id 强转字符串，避免 undefined.localeCompare 崩溃；④ renderWeek/renderWeekMobile 外层包 try-catch，再出错会在页面显示具体错误信息而不是空白。</li>
       </ul>
       <div class="divider"></div>
       <div class="log-ver">v1.8.4</div><div class="log-date">2026-08-04</div>

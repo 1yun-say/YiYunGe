@@ -266,7 +266,7 @@ function editableSub(node, viewKey, fallback) {
   return {
     pad, today, fmt, parse, addDays, addMonths, dow, mondayOf, weekDays, monthFirst, monthLast,
     yearFirst, yearLast, wdName, cnDate, between, daysDiff, t2m, m2t, uid, money, esc, el, $, $$,
-    toast, modal, confirm, copy, pie, bars, columns, subColor, SUBJECT_COLORS, WD, rebind, unbindNode, pct, fmtTime, isMobile,
+    toast, modal, confirm, copy, pie, bars, columns, subColor, SUBJECT_COLORS, WEEK_MUTED, WD, rebind, unbindNode, pct, fmtTime, isMobile,
     editableSub, draggableSortable
   };
 })();

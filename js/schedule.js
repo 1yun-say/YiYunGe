@@ -11,7 +11,7 @@ const Schedule = (() => {
   /* 数据防御：有用户反馈电脑/平板周视图完全空白。根因疑似个别课程 start 字段缺失/格式错误，
      导致 U.t2m 抛异常、renderWeek 整体失败。以下辅助函数用于过滤/容错。 */
   function validStart(l) { return typeof l.start === 'string' && /^\d{1,2}:\d{2}$/.test(l.start); }
-  function safeT2m(l) { return validStart(l) ? safeT2m(l) : DAY_START; }
+  function safeT2m(l) { return validStart(l) ? U.t2m(l.start) : DAY_START; }
   function safeEndMin(l) { return safeT2m(l) + (+l.duration || 60); }
   const endMin = safeEndMin; // 兼容旧调用
 
