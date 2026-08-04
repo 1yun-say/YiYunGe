@@ -203,7 +203,6 @@ const Dashboard = (() => {
         <h3 data-title="templates">${U.esc(resolveTitle('templates'))}</h3>
         <button class="btn btn-icon" data-act="addTpl" title="新增模板"><svg class="ico"><use href="#i-plus"/></svg></button>
       </div>
-      <p class="muted" style="font-size:12px;margin-bottom:10px">在主页即可直接编辑或删除模板，改动会同步到「待办」的模板库。</p>
       <button class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:11px" data-act="importAll">一键导入全部到今天</button>
       <div style="display:flex;flex-direction:column;gap:7px">
         ${DB.data.templates.length ? DB.data.templates.map(tpl => `
@@ -226,9 +225,6 @@ const Dashboard = (() => {
     kpi:          { title: '关键指标',    render: moduleKpi,          layout: 'full' },
     todayLessons: { title: '今日课程',    render: moduleTodayLessons, layout: 'col' },
     todayTodo:    { title: '今日待办',    render: moduleTodayTodo,    layout: 'col' },
-    trend:        { title: '近半年抽成走势', render: moduleTrend,     layout: 'col' },
-    grade:        { title: '本月年级贡献', render: moduleGrade,       layout: 'col' },
-    phrases:      { title: '高频话术',    render: modulePhrases,      layout: 'col' },
     templates:    { title: '每日模板库',  render: moduleTemplates,    layout: 'col' }
   };
 
@@ -326,23 +322,24 @@ const Dashboard = (() => {
         <div class="dash-mobile-stat"><div class="lab">本月到手</div><div class="val">${U.money(profit).replace('¥', '')}</div><div class="sub">${profitLabel}</div></div>
       </div>
       <div class="dash-mobile-card">
-        <h4>今日课程</h4>
-        ${todayLessons.length ? todayLessons.slice(0, 3).map(lessonRow).join('') : '<div class="muted" style="font-size:12px;padding:6px 0">今天没有排课</div>'}
-        ${todayLessons.length > 3 ? `<div class="muted" style="font-size:11px;text-align:center;padding-top:6px">还有 ${todayLessons.length - 3} 节</div>` : ''}
-      </div>
-      <div class="dash-mobile-card">
         <h4>今日待办</h4>
         ${undone.length ? undone.slice(0, 3).map(todoRow).join('') : '<div class="muted" style="font-size:12px;padding:6px 0">今日待办已清空</div>'}
         ${undone.length > 3 ? `<div class="muted" style="font-size:11px;text-align:center;padding-top:6px">还有 ${undone.length - 3} 件</div>` : ''}
       </div>
       <div class="dash-mobile-card">
-        <h4>本月财务 ${trend}</h4>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center">
-          <div><div class="muted" style="font-size:10px">我的抽成</div><div style="font-size:16px;font-weight:700;color:var(--pink-600)">${U.money(mStat.commission).replace('¥', '')}</div></div>
-          <div><div class="muted" style="font-size:10px">报销支出</div><div style="font-size:16px;font-weight:700;color:var(--ink-3)">${U.money(mStat.reimb).replace('¥', '')}</div></div>
-          <div><div class="muted" style="font-size:10px">实际到手</div><div style="font-size:16px;font-weight:700;color:var(--pink-600)">${U.money(profit).replace('¥', '')}</div></div>
-        </div>
-        <div class="muted" style="font-size:10px;margin-top:6px">${profitLabel} · 点下方「财务」看明细</div>
+        <h4>每日模板库</h4>
+        ${DB.data.templates.length ? DB.data.templates.slice(0, 3).map(tpl => `
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line-2)">
+            <span class="pdot" style="background:${Todo.pInfo(tpl.priority).color}"></span>
+            <span style="flex:1;min-width:0;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(tpl.title)}</span>
+            <button class="btn btn-ghost btn-sm" data-act="useTpl" data-tpl="${tpl.id}">导入</button>
+          </div>`).join('') : '<div class="muted" style="font-size:12px;padding:6px 0">还没有模板</div>'}
+        <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:8px" data-act="importAll">一键导入全部到今天</button>
+      </div>
+      <div class="dash-mobile-card">
+        <h4>今日课程</h4>
+        ${todayLessons.length ? todayLessons.slice(0, 3).map(lessonRow).join('') : '<div class="muted" style="font-size:12px;padding:6px 0">今天没有排课</div>'}
+        ${todayLessons.length > 3 ? `<div class="muted" style="font-size:11px;text-align:center;padding-top:6px">还有 ${todayLessons.length - 3} 节</div>` : ''}
       </div>
       <div class="dash-mobile-card">
         <h4>快捷入口</h4>
@@ -384,6 +381,12 @@ const Dashboard = (() => {
           }
           break;
         }
+        case 'useTpl': {
+          const tpl = DB.data.templates.find(x => x.id === b.closest('[data-tpl]').dataset.tpl);
+          if (tpl) { Todo.importTemplates([tpl.id]); render(); }
+          break;
+        }
+        case 'importAll': { Todo.importTemplates(); render(); break; }
       }
     });
   }

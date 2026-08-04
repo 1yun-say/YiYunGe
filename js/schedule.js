@@ -90,7 +90,7 @@ const Schedule = (() => {
           <label class="switch-row" style="margin:0;cursor:pointer;font-size:12px;color:var(--ink-2)">
             <input type="checkbox" id="schShowImp" ${showImported ? 'checked' : ''}> 显示导入抽成
           </label>
-          <button class="btn btn-primary" data-act="book"><svg class="ico"><use href="#i-plus"/></svg>排课</button>
+          ${mode === 'year' ? '' : `<button class="btn btn-primary" data-act="book"><svg class="ico"><use href="#i-plus"/></svg>排课</button>`}
         </div>
       </div>
       <div id="schBody"></div>`;
@@ -180,14 +180,15 @@ const Schedule = (() => {
       const h = Math.max(24, +l.duration || 60);
       const bd = DB.lessonBreakdown(l);
       const take = `<div class="lm take">到手 ${U.money(bd.takeHome)}${bd.note ? ' · ' + U.esc(bd.note) : ''}</div>`;
-      // 手机端：重叠课程纵向堆叠，避免横向挤成一坨
-      const stackOffset = isM ? info.idx * 14 : 0;
-      const w = isM ? 100 : 100 / info.cols;
-      const left = isM ? '2px' : `calc(${info.idx * w}% + 2px)`;
-      const width = isM ? 'calc(100% - 4px)' : `calc(${w}% - 4px)`;
-      const z = isM ? 2 + info.idx : 2;
+      // 重叠时：列仍占满整列，仅纵向错开并用色块/标识提示，不再横向压窄
+      const conflict = info.cols > 1;
+      const stackOffset = conflict ? info.idx * 16 : 0;
+      const left = '2px';
+      const width = 'calc(100% - 4px)';
+      const z = 2 + info.idx;
+      const badge = conflict ? '<span class="conflict-tag">重叠</span>' : '';
       if (isImp) {
-        return `<div class="lesson imported" draggable="false" data-lid="${l.id}"
+        return `<div class="lesson imported ${conflict ? 'conflict' : ''}" draggable="false" data-lid="${l.id}"
           style="top:${top + stackOffset}px;height:${h}px;left:${left};width:${width};z-index:${z};
           border-left-color:#b0b0b0;background:#f5f5f5;color:#666">
           <b>${U.esc(s.parentName)}</b>
@@ -196,10 +197,11 @@ const Schedule = (() => {
       }
       const sub = currentSub(l);
       const c = U.subColor(sub.subject);
-      return `<div class="lesson ${l.status}" draggable="${isM ? 'false' : 'true'}" data-lid="${l.id}"
+      return `<div class="lesson ${l.status} ${conflict ? 'conflict' : ''}" draggable="${isM ? 'false' : 'true'}" data-lid="${l.id}"
         style="top:${top + stackOffset}px;height:${h}px;left:${left};width:${width};z-index:${z};
         border-left-color:${c};background:${c}14">
         <b>${U.esc(s.parentName)}</b>
+        ${badge}
         <div class="lm">${l.start}-${U.m2t(endMin(l))} · ${U.money(l.tuition)}${pub ? '' : ` <span style="color:#e85686">到手${U.money(bd.takeHome)}</span>`}</div>
         ${h > 62 ? `<div class="lm">${U.esc(DB.teacherName(l.teacherId))}${l.status === 'done' ? ' · 已完成' : ''}</div>` : ''}
         ${take}

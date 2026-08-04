@@ -7,7 +7,26 @@ const Teachers = (() => {
     if (!root || App.route !== 'teachers') return;
     const d = DB.data;
 
+    // 老师课时排行（自财务页移来）：按老师汇总已完成课时 / 课酬 / 我的收入
+    const tRank = (() => {
+      const map = {};
+      DB.data.lessons.filter(l => l.status === 'done').forEach(l => {
+        const tid = l.teacherId || (DB.student(l.studentId) || {}).teacherId || '';
+        if (!map[tid]) map[tid] = { tid, name: DB.teacherName(tid), count: 0, teacherPay: 0, profit: 0 };
+        const g = map[tid];
+        g.count++;
+        g.teacherPay += l.importedCommission ? 0 : Math.max(0, (+l.tuition || 0) - (+l.commission || 0));
+        g.profit += DB.lessonBreakdown(l).takeHome;
+      });
+      return Object.values(map).sort((a, b) => b.profit - a.profit);
+    })();
+
     root.innerHTML = `
+    <div class="card">
+      <div class="card-h"><h3>老师课时排行</h3></div>
+      <table class="tbl"><thead><tr><th>老师</th><th class="num">课时</th><th class="num">课酬</th><th class="num">我的收入</th></tr></thead>
+        <tbody>${tRank.map(t => `<tr><td data-label="老师">${U.esc(t.name)}</td><td class="num" data-label="课时">${t.count}</td><td class="num money out" data-label="课酬">${U.money(t.teacherPay)}</td><td class="num money in" data-label="我的收入">${U.money(t.profit)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted" style="text-align:center;padding:20px">还没有已完成课程</td></tr>'}</tbody></table>
+    </div>
     <div class="card">
       <div class="card-h"><h3>老师名册</h3>
         <button class="btn btn-sm btn-primary" data-act="addT"><svg class="ico"><use href="#i-plus"/></svg>添加老师</button></div>

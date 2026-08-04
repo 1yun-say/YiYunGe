@@ -103,18 +103,6 @@ const Settings = (() => {
       </div>
 
       <div class="card">
-        <div class="card-h"><h3>安装到桌面（添加到主屏幕）</h3></div>
-        <p class="muted" style="font-size:12.5px;margin-bottom:12px">
-          把逸云阁变成一个桌面 / 主屏幕图标，一点就开。<b style="color:#b5587a">它仍是网页入口，不是安装的 App，也不会打包成 APK。</b>
-          需要以 https 方式打开本网页（当前地址已是 https）。</p>
-        <div style="display:flex;flex-wrap:wrap;gap:9px">
-          <button class="btn btn-primary" data-act="installApp" id="installAppBtn">安装到桌面</button>
-          <button class="btn btn-ghost" data-act="installGuide">如何手动添加？</button>
-        </div>
-        <div id="installHint" class="edit-time" style="margin-top:10px"></div>
-      </div>
-
-      <div class="card">
         <div class="card-h"><h3>外观（夜览模式）</h3></div>
         <p class="muted" style="font-size:12.5px;margin-bottom:14px">开启后整体切换为深色背景，夜晚或弱光下更护眼。设置仅保存在本机与加密云同步中。</p>
         <div style="display:flex;align-items:center;gap:12px;cursor:pointer" data-act="nightToggle">
@@ -261,28 +249,8 @@ const Settings = (() => {
           render();
           U.toast('已恢复默认图标');
           break;
-        case 'installApp':
-          if (window.PWA && PWA.isInstallable()) {
-            PWA.prompt();
-          } else {
-            U.toast('当前浏览器没有直接安装入口，请点「如何手动添加？」按步骤操作', 'warn');
-          }
-          break;
-        case 'installGuide': {
-          const steps = (window.PWA && PWA.platformSteps()) || { title: '你的设备', steps: ['用 Chrome / Edge / Safari 打开本网页', '点菜单里的「安装应用 / 添加到主屏幕」'] };
-          U.modal({
-            title: '如何添加到主屏幕 / 桌面',
-            okText: '知道了',
-            body: '<p style="font-size:13.5px;margin-bottom:10px"><b>' + U.esc(steps.title) + '</b></p>' +
-              '<ol style="margin:0 0 0 18px;font-size:13px;line-height:2">' +
-              steps.steps.map(function (s) { return '<li>' + U.esc(s) + '</li>'; }).join('') + '</ol>' +
-              '<p class="muted" style="font-size:12px;margin-top:10px">提示：必须用系统浏览器（Safari / Chrome / Edge）打开；微信、抖音等 App 内浏览器通常没有此入口，可点「在浏览器打开」跳转过去再添加。</p>'
-          });
-          break;
-        }
       }
     });
-
     U.$('#syncAuto', root).onchange = e => { Sync.cfg().auto = e.target.checked; DB.save(); };
     const provSel = U.$('#syncProvider', root);
     if (provSel) provSel.onchange = e => {
@@ -296,16 +264,6 @@ const Settings = (() => {
       Sync.refreshStatus();
     };
     Sync.refreshStatus();
-
-    /* ---------- 安装到桌面：根据浏览器能力给出提示 ---------- */
-    const installHint = U.$('#installHint', root);
-    if (installHint) {
-      if (window.PWA && PWA.isInstallable()) {
-        installHint.innerHTML = '<svg class="ico"><use href="#i-check"/></svg> 检测到你的浏览器支持一键安装，点上方「安装到桌面」即可';
-      } else {
-        installHint.innerHTML = '<svg class="ico"><use href="#i-help"/></svg> 浏览器未提供一键安装（如 iPhone 的 Safari、或微信内打开），请点「如何手动添加？」看步骤';
-      }
-    }
 
     U.$('#fileIn', root).onchange = e => {
       const f = e.target.files[0];

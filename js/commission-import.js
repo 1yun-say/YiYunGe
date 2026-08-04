@@ -100,12 +100,18 @@
       });
       const newNames = [...new Set(res.records.filter(r => !r.matched).map(r => r.name))];
       const matchedNames = [...new Set(res.records.filter(r => r.matched).map(r => r.name))];
-      const rowsHTML = res.records.map(r => `<tr>
-        <td data-label="日期" style="white-space:nowrap">${r.date}</td>
-        <td data-label="学员" style="white-space:nowrap;font-weight:600">${U.esc(r.name)}</td>
+      const optsFor = r => data.students.map(s => `<option value="${s.id}" ${r.matched === s.id ? 'selected' : ''}>${U.esc(s.parentName)}</option>`).join('');
+      const rowsHTML = res.records.map((r, i) => `<tr>
+        <td data-label="日期" style="white-space:nowrap"><input class="input" data-date="${i}" value="${r.date}" style="width:104px;padding:4px 6px"></td>
+        <td data-label="学员" style="white-space:nowrap">
+          <select class="input" data-sel="${i}" style="min-width:92px;max-width:150px;padding:4px 6px">
+            <option value="__new__" ${r.matched ? '' : 'selected'}>新建：${U.esc(r.name)}</option>
+            ${optsFor(r)}
+          </select>
+        </td>
         <td data-label="动作" style="white-space:nowrap;color:${r.matched ? 'var(--green,#2e9e5b)' : 'var(--pink,#e85686)'}">${r.matched ? '✔ 匹配' : '➕ 新建'}</td>
-        <td class="num money in" data-label="抽成">${U.money(r.commission)}</td>
-        <td data-label="备注" style="color:var(--ink-2);font-size:12px">${r.note ? U.esc(r.note) : '<span class=\"muted\">—</span>'}</td>
+        <td class="num money in" data-label="抽成"><input class="input" data-comm="${i}" value="${r.commission}" style="width:84px;padding:4px 6px;text-align:right"></td>
+        <td data-label="备注" style="color:var(--ink-2);font-size:12px"><input class="input" data-note="${i}" value="${U.esc(r.note || '')}" style="width:100%;min-width:120px;padding:4px 6px"></td>
       </tr>`).join('');
 
       U.modal({
@@ -121,11 +127,26 @@
         </div>
         <div style="overflow:auto;max-height:56vh">
           <table class="tbl" style="font-size:12.5px;min-width:max-content">
-            <thead><tr><th>日期</th><th>学员</th><th>动作</th><th class="num">抽成</th><th>备注</th></tr></thead>
+            <thead><tr><th>日期</th><th>学员（可改匹配）</th><th>动作</th><th class="num">抽成</th><th>备注</th></tr></thead>
             <tbody>${rowsHTML}</tbody>
           </table>
         </div>`,
-        onOk: () => C.commit(res)
+        onOk: (bodyEl) => {
+          res.records.forEach((rec, i) => {
+            const d = bodyEl.querySelector('[data-date="' + i + '"]');
+            const c = bodyEl.querySelector('[data-comm="' + i + '"]');
+            const n = bodyEl.querySelector('[data-note="' + i + '"]');
+            const s = bodyEl.querySelector('[data-sel="' + i + '"]');
+            if (d) rec.date = d.value.trim();
+            if (c) rec.commission = Number(c.value) || 0;
+            if (n) rec.note = n.value.trim();
+            if (s) {
+              if (s.value === '__new__') { rec.matched = null; rec.action = '新建'; }
+              else { rec.matched = s.value; rec.action = '匹配'; }
+            }
+          });
+          C.commit(res);
+        }
       });
     },
 

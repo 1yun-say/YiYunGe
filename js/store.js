@@ -307,23 +307,19 @@ const DB = (() => {
     return [
       { key: 'trend', name: '月度抽成走势', visible: true },
       { key: 'grade', name: '年级贡献', visible: true },
-      { key: 'teacher', name: '老师课时排行', visible: true },
-      { key: 'student', name: '学员抽成贡献', visible: true },
       { key: 'detail', name: '明细统计', visible: true },
       { key: 'daily', name: '账单明细', visible: true }
     ];
   }
 
   // 主页模块默认顺序（key 用于持久化定位 + 默认标题查询）
+  // 三端统一：今日待办在今日课程之上；每日模板库紧跟今日待办；不再含走势/年级/话术
   const DASH_MODULES = [
     { key: 'greet',        name: '今日问候' },
     { key: 'kpi',          name: '关键指标' },
-    { key: 'todayLessons', name: '今日课程' },
     { key: 'todayTodo',    name: '今日待办' },
-    { key: 'trend',        name: '近半年抽成走势' },
-    { key: 'grade',        name: '本月年级贡献' },
-    { key: 'phrases',      name: '高频话术' },
-    { key: 'templates',    name: '每日模板库' }
+    { key: 'templates',    name: '每日模板库' },
+    { key: 'todayLessons', name: '今日课程' }
   ];
   function defaultDashboardLayout() {
     return {

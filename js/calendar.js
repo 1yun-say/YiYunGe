@@ -81,9 +81,11 @@ const Calendar = (() => {
         </div>
         <div class="cal-nav">
           <button class="cal-navbtn" data-act="prev" aria-label="上一段">&#8249;</button>
-          <div class="cal-title">${titleBig()}</div>
+          <div class="cal-title-wrap">
+            <div class="cal-title">${titleBig()}</div>
+            <button class="cal-today" data-act="today">今天</button>
+          </div>
           <button class="cal-navbtn" data-act="next" aria-label="下一段">&#8250;</button>
-          <button class="cal-today" data-act="today">今天</button>
         </div>
         <button class="btn btn-primary btn-sm" data-act="add" data-day="${anchor}">
           <svg class="ico"><use href="#i-plus"/></svg>添加待办</button>

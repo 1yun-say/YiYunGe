@@ -58,7 +58,9 @@ const Finance = (() => {
       const s = savedByKey[k] || {};
       if (s.deleted) return null;
       if (base) return { key: k, name: (s.name || base.name), visible: s.visible !== false, custom: false };
-      return { key: k, name: s.name || '自定义模块', visible: s.visible !== false, custom: true, type: s.type || 'overview' };
+      // 已不再存在的默认块（如「老师课时排行」已移至老师名册、「学员抽成贡献」已删除）→ 直接丢弃，不渲染
+      if (s.custom) return { key: k, name: s.name || '自定义模块', visible: s.visible !== false, custom: true, type: s.type || 'overview' };
+      return null;
     }).filter(Boolean);
   }
   function sectionName(key) {
@@ -122,13 +124,13 @@ const Finance = (() => {
   function cardTeacher(ctx, title) {
     const by = ctx.byTeacher;
     return `<div class="card">
-      <div class="card-h"><h3>${U.esc(title)}</h3><span class="sub">谁带的课最多</span></div>
+      <div class="card-h"><h3>${U.esc(title)}</h3></div>
       ${U.bars(by.map((t, i) => ({ label: t.label, value: t.count, color: PALETTE[i % PALETTE.length] })), { unit: ' 节' })}
       <div class="divider"></div>
-      <table class="tbl"><thead><tr><th>老师</th><th class="num">课时</th><th class="num">课酬</th><th class="num">实际到手</th></tr></thead>
+      <table class="tbl"><thead><tr><th>老师</th><th class="num">课时</th><th class="num">课酬</th><th class="num">我的收入</th></tr></thead>
         <tbody>${by.map(t => `<tr><td data-label="老师">${U.esc(t.label)}</td><td class="num" data-label="课时">${t.count}</td>
           <td class="num money out" data-label="课酬">${U.money(t.teacherPay)}</td>
-          <td class="num money in" data-label="实际到手">${U.money(t.profit)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">暂无数据</td></tr>'}</tbody></table>
+          <td class="num money in" data-label="我的收入">${U.money(t.profit)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">暂无数据</td></tr>'}</tbody></table>
     </div>`;
   }
   function cardStudent(ctx, title) {
@@ -235,15 +237,17 @@ const Finance = (() => {
         const sub = (l.grade || '') + (l.subject || '');
         const isImp = !!l.importedCommission;
         const bd = DB.lessonBreakdown(l);
-        const label = isImp ? '家教 - 抽成（导入）' : `家教 - ${sub || '抽成'}`;
+        // 导入抽成：直接清爽显示「名字 + 实际收入」，不再用「家教 - 抽成（导入）」标题与「抽」图标
+        const label = isImp ? (s ? s.parentName : '已删除学员') : `家教 - ${sub || '抽成'}`;
         const sublabel = s ? s.parentName : '已删除学员';
-        const icon = isImp ? '抽' : (sub ? sub.slice(0, 1) : '家');
+        const icon = isImp ? '' : (sub ? sub.slice(0, 1) : '家');
         const hasNote = !!(bd.note && bd.note.trim());
+        const iconHTML = icon ? `<span>${U.esc(icon)}</span>` : `<span class="bill-imp-dot"></span>`;
         return `<tr class="bill-item" data-lid="${l.id}">
-          <td class="bill-icon"><span>${U.esc(icon)}</span></td>
+          <td class="bill-icon">${iconHTML}</td>
           <td>
             <div class="bill-main">${U.esc(label)}</div>
-            <div class="bill-sub">${U.esc(sublabel)}${hasNote ? ' · <span class="bill-note-toggle">有批注 ▾</span>' : ''}</div>
+            <div class="bill-sub">${isImp ? '<span class="bill-imp-tag">导入</span>' : U.esc(sublabel)}${hasNote ? ' · <span class="bill-note-toggle">有批注 ▾</span>' : ''}</div>
             <div class="bill-note">实际到手 ${U.money(bd.takeHome)} ｜ 批注：${U.esc(bd.note)}</div>
           </td>
           <td class="bill-amt money in">
