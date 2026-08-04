@@ -81,16 +81,18 @@ const Schedule = (() => {
             <button class="tab ${mode === 'week' ? 'active' : ''}" data-m="week">周视图</button>
           </div>
           <button class="btn btn-ghost btn-sm" data-act="prev">&#8249;</button>
-          <div class="sch-title">${titleText()}</div>
+          <div class="sch-title-wrap">
+            <div class="sch-title">${titleText()}</div>
+            <button class="btn btn-ghost btn-sm" data-act="today">回到今天</button>
+          </div>
           <button class="btn btn-ghost btn-sm" data-act="next">&#8250;</button>
-          <button class="btn btn-ghost btn-sm" data-act="today">回到今天</button>
         </div>
         <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">
           <span class="muted" style="font-size:12px">${summaryText()}</span>
           <label class="switch-row" style="margin:0;cursor:pointer;font-size:12px;color:var(--ink-2)">
             <input type="checkbox" id="schShowImp" ${showImported ? 'checked' : ''}> 显示导入抽成
           </label>
-          ${mode === 'year' ? '' : `<button class="btn btn-primary" data-act="book"><svg class="ico"><use href="#i-plus"/></svg>排课</button>`}
+          ${(mode === 'year' || (U.isMobile() && mode !== 'week')) ? '' : `<button class="btn btn-primary" data-act="book"><svg class="ico"><use href="#i-plus"/></svg>排课</button>`}
         </div>
       </div>
       <div id="schBody"></div>`;
@@ -142,6 +144,7 @@ const Schedule = (() => {
 
   /* ---------- 周视图 ---------- */
   function renderWeek(box) {
+    if (U.isMobile()) { renderWeekMobile(box); return; }
     const days = U.weekDays(anchor), t = U.today();
     const slots = [];
     for (let m = DAY_START; m < DAY_END; m += 30) slots.push(m);
@@ -167,6 +170,41 @@ const Schedule = (() => {
     bindWeek(box);
   }
 
+  /* 手机端周视图：iOS 风格「按天议程清单」，避免 7 列时间轴在窄屏挤压、重叠 */
+  function renderWeekMobile(box) {
+    const days = U.weekDays(anchor), t = U.today();
+    box.innerHTML = `<div class="cal-week-list">
+      ${days.map(d => {
+        const ls = DB.data.lessons.filter(l => l.date === d && includeLesson(l))
+          .sort((a, b) => U.t2m(a.start) - U.t2m(b.start));
+        const isToday = d === t, isSel = d === anchor;
+        return `<div class="cal-week-row">
+          <div class="cal-week-dayhead ${isToday ? 'today' : ''} ${isSel ? 'sel' : ''}" style="cursor:default">
+            <span class="wd">${U.wdName(d)}</span><span class="dn">${+d.slice(8)}</span>
+            <span class="cnt">${ls.length ? ls.length + ' 节' : '无'}</span>
+          </div>
+          ${ls.length ? ls.map(l => lessonCardMobile(l)).join('') : '<div class="cal-empty-mini">这天没课</div>'}
+        </div>`;
+      }).join('')}
+    </div>`;
+    box.querySelectorAll('.sch-lesson-card').forEach(el => el.addEventListener('click', () => editLesson(el.dataset.lid)));
+  }
+
+  function lessonCardMobile(l) {
+    const s = DB.student(l.studentId) || { parentName: '已删除' };
+    const isImp = !!l.importedCommission;
+    const bd = DB.lessonBreakdown(l);
+    const sub = currentSub(l);
+    const c = isImp ? '#b0b0b0' : U.subColor(sub.subject);
+    const pub = App.isPublic();
+    return `<div class="sch-lesson-card ${l.status} ${isImp ? 'imported' : ''}" data-lid="${l.id}"
+        style="border-left-color:${c};background:${isImp ? '#f5f5f5' : c + '14'}">
+      <div class="slc-top"><span class="slc-time">${l.start}-${U.m2t(endMin(l))}</span>${isImp ? '<span class="bill-imp-tag">导入</span>' : ''}</div>
+      <div class="slc-name">${U.esc(s.parentName)} · ${U.esc(sub.subject || '未设科目')}</div>
+      <div class="slc-meta">${U.money(l.tuition)}${pub ? '' : ' ｜ 到手 ' + U.money(bd.takeHome)}${l.status === 'done' ? ' · 已完成' : ''}</div>
+    </div>`;
+  }
+
   function dayLessonsHTML(date) {
     const ls = DB.data.lessons.filter(l => l.date === date && includeLesson(l));
     const lay = layout(ls);
@@ -179,17 +217,16 @@ const Schedule = (() => {
       const top = U.t2m(l.start) - DAY_START;
       const h = Math.max(24, +l.duration || 60);
       const bd = DB.lessonBreakdown(l);
-      const take = `<div class="lm take">到手 ${U.money(bd.takeHome)}${bd.note ? ' · ' + U.esc(bd.note) : ''}</div>`;
-      // 重叠时：列仍占满整列，仅纵向错开并用色块/标识提示，不再横向压窄
+      const take = `<div class="lm take">到手 ${U.money(bd.takeHome)}${l.incomeNote ? ' · 批注：' + U.esc(l.incomeNote) : ''}</div>`;
+      // 重叠时：列宽按 cols 等分，每节占一段（并列 / side-by-side），文字不再相互压住
       const conflict = info.cols > 1;
-      const stackOffset = conflict ? info.idx * 16 : 0;
-      const left = '2px';
-      const width = 'calc(100% - 4px)';
+      const left = conflict ? `calc(2px + (100% - 4px) * ${info.idx} / ${info.cols})` : '2px';
+      const width = conflict ? `calc((100% - 4px) / ${info.cols} - 2px)` : 'calc(100% - 4px)';
       const z = 2 + info.idx;
       const badge = conflict ? '<span class="conflict-tag">重叠</span>' : '';
       if (isImp) {
         return `<div class="lesson imported ${conflict ? 'conflict' : ''}" draggable="false" data-lid="${l.id}"
-          style="top:${top + stackOffset}px;height:${h}px;left:${left};width:${width};z-index:${z};
+          style="top:${top}px;height:${h}px;left:${left};width:${width};z-index:${z};
           border-left-color:#b0b0b0;background:#f5f5f5;color:#666">
           <b>${U.esc(s.parentName)}</b>
           ${take}
@@ -198,7 +235,7 @@ const Schedule = (() => {
       const sub = currentSub(l);
       const c = U.subColor(sub.subject);
       return `<div class="lesson ${l.status} ${conflict ? 'conflict' : ''}" draggable="${isM ? 'false' : 'true'}" data-lid="${l.id}"
-        style="top:${top + stackOffset}px;height:${h}px;left:${left};width:${width};z-index:${z};
+        style="top:${top}px;height:${h}px;left:${left};width:${width};z-index:${z};
         border-left-color:${c};background:${c}14">
         <b>${U.esc(s.parentName)}</b>
         ${badge}
@@ -260,7 +297,7 @@ const Schedule = (() => {
       const gross = ls.reduce((s, l) => s + (+l.tuition || 0), 0);
       return `<div class="mg-cell ${day.slice(0, 7) !== mm ? 'out' : ''} ${day === t ? 'today' : ''}" data-day="${day}">
           <div class="mg-date">${+day.slice(8)}</div>
-          ${ls.slice(0, 3).map(l => {
+          ${ls.slice(0, U.isMobile() ? 2 : 3).map(l => {
         const s = DB.student(l.studentId) || { parentName: '?' };
         const isImp = !!l.importedCommission;
         const sub = currentSub(l);
@@ -270,7 +307,7 @@ const Schedule = (() => {
         return `<div class="mg-item ${isImp ? 'imported' : ''}" data-lid="${l.id}" title="${tip}" style="border-left-color:${c};background:${isImp ? '#f5f5f5' : c + '14'}">
             ${isImp ? '· ' : l.start + ' '}${U.esc(s.parentName)}</div>`;
       }).join('')}
-          ${ls.length > 3 ? `<div class="mg-item" style="border-left-color:#ccc;background:#f6f2f4">+${ls.length - 3} 节</div>` : ''}
+          ${ls.length > (U.isMobile() ? 2 : 3) ? `<div class="mg-item" style="border-left-color:#ccc;background:#f6f2f4">+${ls.length - (U.isMobile() ? 2 : 3)} 节</div>` : ''}
           ${ls.length ? `<div class="mg-sum ${pub ? '' : 'secret'}">${pub ? U.money(gross) : U.money(profit)}</div>` : ''}
         </div>`;
     }).join('')}

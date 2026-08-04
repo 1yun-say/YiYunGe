@@ -80,8 +80,7 @@ const More = (() => {
     if (!connected) {
       return `<div class="card only-mobile" style="background:linear-gradient(120deg,#fff,#fff4f8);border-color:var(--pink-200)">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-          <div><b style="font-size:14px">☁ 云同步</b>
-            <div class="muted" style="font-size:12px">手机 / 平板 / 电脑数据自动统一，无需导入导出文件</div></div>
+          <div><b style="font-size:14px">☁ 云同步</b></div>
           <button class="btn btn-primary btn-sm" data-go="settings">去连接</button>
         </div></div>`;
     }
@@ -129,7 +128,6 @@ const More = (() => {
       </div>
       <div class="card only-mobile" style="margin:16px 0">
         <div class="card-h"><h3>导入数据</h3></div>
-        <p class="muted" style="font-size:12.5px;margin-bottom:10px">选电脑端导出的 JSON 备份即可导入，会整体覆盖当前数据（导入前自动保留快照，可在电脑端「数据管理」撤销）。</p>
         <button class="btn btn-primary btn-sm" data-act="m-import">选择备份文件导入</button>
         <input type="file" id="mFileIn" accept="application/json" style="display:none">
       </div>
@@ -370,6 +368,11 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.8.1</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>v1.8.0 遗留项补全整改</b>：① 三端日历 / 课表「今天」按钮与日期标题严格同一行；② 手机端月视图课程右下角金额不再与课程重叠（改为正常文档流 + 移动端单格最多 2 条课程）；③ 财务列表无批注的项不再显示「批注：导入抽成」，且去除头像列；④ 三端周视图重叠课程改为并列错开、互不压字；⑤ 手机端周视图按 iOS 风格重做为按天议程清单。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.8.0</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>手机端主页精简美化</b>：2×2 快捷入口缩小、卡片间距收紧，确保 iPhone 14 Pro Max 一屏可见无需滚动；「今日待办」上移到「今日课程」之上，「每日模板库」紧跟待办。</li>

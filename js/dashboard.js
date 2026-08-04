@@ -299,10 +299,15 @@ const Dashboard = (() => {
     };
     const todoRow = x => {
       const p = Todo.pInfo(x.priority);
-      return `<div class="todo-item" data-tid="${x.id}" style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line-2);min-height:34px">
-        <div class="chk" data-act="toggleTodo" style="width:18px;height:18px;border:2px solid ${p.color};border-radius:5px;flex:none;cursor:pointer;display:grid;place-items:center"></div>
-        <div style="flex:1;min-width:0;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(x.title)}</div>
-        <span class="tag" style="font-size:9px;padding:1px 5px;background:${p.color}1f;color:${p.color};flex:none">${p.short}</span>
+      const chkIcon = x.status === 'done'
+        ? '<svg viewBox="0 0 24 24" style="width:12px;height:12px" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17 19 7"/></svg>'
+        : x.status === 'blocked'
+          ? '<svg viewBox="0 0 24 24" style="width:12px;height:12px" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"><path d="M6 12h12"/></svg>'
+          : '';
+      return `<div class="todo-item ${x.status === 'done' ? 'done' : ''} ${x.status === 'blocked' ? 'blocked' : ''}" data-tid="${x.id}" style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line-2);min-height:40px">
+        <div class="chk" data-act="toggleTodo" style="width:20px;height:20px;border:2px solid ${p.color};border-radius:6px;flex:none;cursor:pointer;display:grid;place-items:center;background:${x.status !== 'pending' ? p.color : 'transparent'}">${chkIcon}</div>
+        <div style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${x.status === 'done' ? 'text-decoration:line-through;color:var(--ink-3)' : ''}">${U.esc(x.title)}</div>
+        <span class="tag" style="font-size:9px;padding:1px 6px;background:${p.color}1f;color:${p.color};flex:none">${p.short}</span>
       </div>`;
     };
     return `
@@ -325,9 +330,7 @@ const Dashboard = (() => {
         <h4>今日待办</h4>
         ${undone.length ? undone.slice(0, 3).map(todoRow).join('') : '<div class="muted" style="font-size:12px;padding:6px 0">今日待办已清空</div>'}
         ${undone.length > 3 ? `<div class="muted" style="font-size:11px;text-align:center;padding-top:6px">还有 ${undone.length - 3} 件</div>` : ''}
-      </div>
-      <div class="dash-mobile-card">
-        <h4>每日模板库</h4>
+        <div class="muted" style="font-size:11px;margin:12px 0 4px;font-weight:600">模板库</div>
         ${DB.data.templates.length ? DB.data.templates.slice(0, 3).map(tpl => `
           <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line-2)">
             <span class="pdot" style="background:${Todo.pInfo(tpl.priority).color}"></span>

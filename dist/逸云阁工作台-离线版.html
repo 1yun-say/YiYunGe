@@ -264,6 +264,9 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .sch-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
 .sch-nav{display:flex;align-items:center;gap:8px}
 .sch-title{font-size:15px;font-weight:700;min-width:170px;text-align:center}
+.sch-title-wrap{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.sch-title-wrap .sch-title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sch-title-wrap [data-act="today"]{flex:none;white-space:nowrap}
 .week-wrap{background:#fff;border:1px solid var(--line);border-radius:var(--r-m);overflow:hidden;box-shadow:var(--shadow-s)}
 .week-head{display:grid;grid-template-columns:56px repeat(7,1fr);border-bottom:1px solid var(--line);background:var(--pink-75)}
 .wh-cell{padding:7px 2px 8px;text-align:center;font-size:10.5px;color:var(--ink-3);border-left:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
@@ -290,6 +293,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .lesson.done{opacity:.66}
 .lesson.cancelled{opacity:.45;text-decoration:line-through}
 .lesson.conflict{box-shadow:inset 0 0 0 2px var(--alert);border-left-color:var(--alert)!important}
+.conflict-tag{display:inline-block;margin-left:6px;padding:0 5px;font-size:9px;line-height:14px;border-radius:7px;background:var(--alert);color:#fff;vertical-align:middle;font-style:normal}
 .lesson.imported{cursor:default;font-style:italic}
 .lesson.imported b{font-size:10.5px;color:#666}
 .conf-dot{position:absolute;right:3px;top:3px;width:6px;height:6px;border-radius:50%;background:var(--alert)}
@@ -302,7 +306,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .mg-date{font-size:12px;color:var(--ink-2);font-weight:600;margin-bottom:4px}
 .mg-item{font-size:10.5px;padding:2px 5px;border-radius:5px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;border-left:3px solid}
 .mg-item.imported{font-style:italic;color:#666}
-.mg-sum{position:absolute;right:6px;bottom:5px;font-size:10px;color:var(--pink-600);font-weight:700}
+.mg-sum{margin-top:4px;text-align:right;font-size:10px;color:var(--pink-600);font-weight:700;line-height:1.3}
 
 .year-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
 @media(max-width:1000px){.year-grid{grid-template-columns:repeat(2,1fr)}}
@@ -483,8 +487,8 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .cal-nav{display:inline-flex;align-items:center;gap:4px}
 .cal-navbtn{width:30px;height:30px;border-radius:9px;border:1px solid var(--line-2);background:#fff;color:var(--ink-2);cursor:pointer;font-size:18px;display:grid;place-items:center;line-height:1}
 .cal-navbtn:hover{border-color:var(--pink-300);color:var(--pink-600)}
-.cal-today{font-size:12px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 11px;cursor:pointer;color:var(--ink-2)}
-.cal-title-wrap{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.cal-today{font-size:12px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 11px;cursor:pointer;color:var(--ink-2);flex:none;white-space:nowrap}
+.cal-title-wrap{display:flex;align-items:center;gap:10px;flex:1;min-width:0;flex-wrap:nowrap}
 .cal-title-wrap .cal-title{font-size:16px;font-weight:700;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cal-today:hover{border-color:var(--pink-300);color:var(--pink-600)}
 .cal-title{font-size:16px;font-weight:700;min-width:120px;text-align:center}
@@ -532,6 +536,16 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .cal-week-col .cal-check{width:18px;height:18px;border-width:1.5px}
 .cal-week-col .cal-ev-title{font-size:11.5px;line-height:1.3}
 .cal-week-col .cal-ev-meta{display:none}
+/* 课表手机端周视图：按天议程卡片（iOS 风格） */
+.sch-lesson-card{background:#fff;border:1px solid var(--line);border-left:3px solid;border-radius:10px;padding:8px 10px;margin-bottom:6px;cursor:pointer;transition:box-shadow .15s}
+.sch-lesson-card:last-child{margin-bottom:0}
+.sch-lesson-card.imported{background:#f5f5f5;font-style:italic}
+.sch-lesson-card.done{opacity:.66}
+.sch-lesson-card.cancelled{opacity:.45;text-decoration:line-through}
+.sch-lesson-card .slc-top{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+.sch-lesson-card .slc-time{font-size:12px;font-weight:700;color:var(--ink-2)}
+.sch-lesson-card .slc-name{font-size:13.5px;font-weight:600;color:var(--ink-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sch-lesson-card .slc-meta{font-size:11.5px;color:var(--ink-3);margin-top:2px}
 .cal-add-mini{align-self:center;margin-top:auto;color:var(--pink-500);font-size:18px;background:transparent;border:none;cursor:pointer;width:28px;height:28px;border-radius:50%;display:grid;place-items:center}
 .cal-add-mini:hover{background:var(--pink-50)}
 
@@ -674,7 +688,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   .slot:nth-child(2n){border-bottom-color:var(--line-2)}
   .day-col{border-left:1px solid var(--line-2)}
   .day-col.today{background:rgba(255,232,241,.35)}
-  .lesson{font-size:10px;padding:4px 5px;border-radius:9px;min-height:32px;line-height:1.35;left:2px!important;width:calc(100% - 4px)!important}
+  .lesson{font-size:10px;padding:4px 5px;border-radius:9px;min-height:32px;line-height:1.35}
   .lesson b{font-size:11px}
   .lesson .lm{font-size:9px}
   .lesson .lm.take{font-size:8.5px}
@@ -1110,7 +1124,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T04:23:47.915Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T05:11:51.245Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -3530,16 +3544,18 @@ const Schedule = (() => {
             <button class="tab ${mode === 'week' ? 'active' : ''}" data-m="week">周视图</button>
           </div>
           <button class="btn btn-ghost btn-sm" data-act="prev">&#8249;</button>
-          <div class="sch-title">${titleText()}</div>
+          <div class="sch-title-wrap">
+            <div class="sch-title">${titleText()}</div>
+            <button class="btn btn-ghost btn-sm" data-act="today">回到今天</button>
+          </div>
           <button class="btn btn-ghost btn-sm" data-act="next">&#8250;</button>
-          <button class="btn btn-ghost btn-sm" data-act="today">回到今天</button>
         </div>
         <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">
           <span class="muted" style="font-size:12px">${summaryText()}</span>
           <label class="switch-row" style="margin:0;cursor:pointer;font-size:12px;color:var(--ink-2)">
             <input type="checkbox" id="schShowImp" ${showImported ? 'checked' : ''}> 显示导入抽成
           </label>
-          ${mode === 'year' ? '' : `<button class="btn btn-primary" data-act="book"><svg class="ico"><use href="#i-plus"/></svg>排课</button>`}
+          ${(mode === 'year' || (U.isMobile() && mode !== 'week')) ? '' : `<button class="btn btn-primary" data-act="book"><svg class="ico"><use href="#i-plus"/></svg>排课</button>`}
         </div>
       </div>
       <div id="schBody"></div>`;
@@ -3591,6 +3607,7 @@ const Schedule = (() => {
 
   /* ---------- 周视图 ---------- */
   function renderWeek(box) {
+    if (U.isMobile()) { renderWeekMobile(box); return; }
     const days = U.weekDays(anchor), t = U.today();
     const slots = [];
     for (let m = DAY_START; m < DAY_END; m += 30) slots.push(m);
@@ -3616,6 +3633,41 @@ const Schedule = (() => {
     bindWeek(box);
   }
 
+  /* 手机端周视图：iOS 风格「按天议程清单」，避免 7 列时间轴在窄屏挤压、重叠 */
+  function renderWeekMobile(box) {
+    const days = U.weekDays(anchor), t = U.today();
+    box.innerHTML = `<div class="cal-week-list">
+      ${days.map(d => {
+        const ls = DB.data.lessons.filter(l => l.date === d && includeLesson(l))
+          .sort((a, b) => U.t2m(a.start) - U.t2m(b.start));
+        const isToday = d === t, isSel = d === anchor;
+        return `<div class="cal-week-row">
+          <div class="cal-week-dayhead ${isToday ? 'today' : ''} ${isSel ? 'sel' : ''}" style="cursor:default">
+            <span class="wd">${U.wdName(d)}</span><span class="dn">${+d.slice(8)}</span>
+            <span class="cnt">${ls.length ? ls.length + ' 节' : '无'}</span>
+          </div>
+          ${ls.length ? ls.map(l => lessonCardMobile(l)).join('') : '<div class="cal-empty-mini">这天没课</div>'}
+        </div>`;
+      }).join('')}
+    </div>`;
+    box.querySelectorAll('.sch-lesson-card').forEach(el => el.addEventListener('click', () => editLesson(el.dataset.lid)));
+  }
+
+  function lessonCardMobile(l) {
+    const s = DB.student(l.studentId) || { parentName: '已删除' };
+    const isImp = !!l.importedCommission;
+    const bd = DB.lessonBreakdown(l);
+    const sub = currentSub(l);
+    const c = isImp ? '#b0b0b0' : U.subColor(sub.subject);
+    const pub = App.isPublic();
+    return `<div class="sch-lesson-card ${l.status} ${isImp ? 'imported' : ''}" data-lid="${l.id}"
+        style="border-left-color:${c};background:${isImp ? '#f5f5f5' : c + '14'}">
+      <div class="slc-top"><span class="slc-time">${l.start}-${U.m2t(endMin(l))}</span>${isImp ? '<span class="bill-imp-tag">导入</span>' : ''}</div>
+      <div class="slc-name">${U.esc(s.parentName)} · ${U.esc(sub.subject || '未设科目')}</div>
+      <div class="slc-meta">${U.money(l.tuition)}${pub ? '' : ' ｜ 到手 ' + U.money(bd.takeHome)}${l.status === 'done' ? ' · 已完成' : ''}</div>
+    </div>`;
+  }
+
   function dayLessonsHTML(date) {
     const ls = DB.data.lessons.filter(l => l.date === date && includeLesson(l));
     const lay = layout(ls);
@@ -3628,17 +3680,16 @@ const Schedule = (() => {
       const top = U.t2m(l.start) - DAY_START;
       const h = Math.max(24, +l.duration || 60);
       const bd = DB.lessonBreakdown(l);
-      const take = `<div class="lm take">到手 ${U.money(bd.takeHome)}${bd.note ? ' · ' + U.esc(bd.note) : ''}</div>`;
-      // 重叠时：列仍占满整列，仅纵向错开并用色块/标识提示，不再横向压窄
+      const take = `<div class="lm take">到手 ${U.money(bd.takeHome)}${l.incomeNote ? ' · 批注：' + U.esc(l.incomeNote) : ''}</div>`;
+      // 重叠时：列宽按 cols 等分，每节占一段（并列 / side-by-side），文字不再相互压住
       const conflict = info.cols > 1;
-      const stackOffset = conflict ? info.idx * 16 : 0;
-      const left = '2px';
-      const width = 'calc(100% - 4px)';
+      const left = conflict ? `calc(2px + (100% - 4px) * ${info.idx} / ${info.cols})` : '2px';
+      const width = conflict ? `calc((100% - 4px) / ${info.cols} - 2px)` : 'calc(100% - 4px)';
       const z = 2 + info.idx;
       const badge = conflict ? '<span class="conflict-tag">重叠</span>' : '';
       if (isImp) {
         return `<div class="lesson imported ${conflict ? 'conflict' : ''}" draggable="false" data-lid="${l.id}"
-          style="top:${top + stackOffset}px;height:${h}px;left:${left};width:${width};z-index:${z};
+          style="top:${top}px;height:${h}px;left:${left};width:${width};z-index:${z};
           border-left-color:#b0b0b0;background:#f5f5f5;color:#666">
           <b>${U.esc(s.parentName)}</b>
           ${take}
@@ -3647,7 +3698,7 @@ const Schedule = (() => {
       const sub = currentSub(l);
       const c = U.subColor(sub.subject);
       return `<div class="lesson ${l.status} ${conflict ? 'conflict' : ''}" draggable="${isM ? 'false' : 'true'}" data-lid="${l.id}"
-        style="top:${top + stackOffset}px;height:${h}px;left:${left};width:${width};z-index:${z};
+        style="top:${top}px;height:${h}px;left:${left};width:${width};z-index:${z};
         border-left-color:${c};background:${c}14">
         <b>${U.esc(s.parentName)}</b>
         ${badge}
@@ -3709,7 +3760,7 @@ const Schedule = (() => {
       const gross = ls.reduce((s, l) => s + (+l.tuition || 0), 0);
       return `<div class="mg-cell ${day.slice(0, 7) !== mm ? 'out' : ''} ${day === t ? 'today' : ''}" data-day="${day}">
           <div class="mg-date">${+day.slice(8)}</div>
-          ${ls.slice(0, 3).map(l => {
+          ${ls.slice(0, U.isMobile() ? 2 : 3).map(l => {
         const s = DB.student(l.studentId) || { parentName: '?' };
         const isImp = !!l.importedCommission;
         const sub = currentSub(l);
@@ -3719,7 +3770,7 @@ const Schedule = (() => {
         return `<div class="mg-item ${isImp ? 'imported' : ''}" data-lid="${l.id}" title="${tip}" style="border-left-color:${c};background:${isImp ? '#f5f5f5' : c + '14'}">
             ${isImp ? '· ' : l.start + ' '}${U.esc(s.parentName)}</div>`;
       }).join('')}
-          ${ls.length > 3 ? `<div class="mg-item" style="border-left-color:#ccc;background:#f6f2f4">+${ls.length - 3} 节</div>` : ''}
+          ${ls.length > (U.isMobile() ? 2 : 3) ? `<div class="mg-item" style="border-left-color:#ccc;background:#f6f2f4">+${ls.length - (U.isMobile() ? 2 : 3)} 节</div>` : ''}
           ${ls.length ? `<div class="mg-sum ${pub ? '' : 'secret'}">${pub ? U.money(gross) : U.money(profit)}</div>` : ''}
         </div>`;
     }).join('')}
@@ -4247,15 +4298,14 @@ const Finance = (() => {
         // 导入抽成：直接清爽显示「名字 + 实际收入」，不再用「家教 - 抽成（导入）」标题与「抽」图标
         const label = isImp ? (s ? s.parentName : '已删除学员') : `家教 - ${sub || '抽成'}`;
         const sublabel = s ? s.parentName : '已删除学员';
-        const icon = isImp ? '' : (sub ? sub.slice(0, 1) : '家');
-        const hasNote = !!(bd.note && bd.note.trim());
-        const iconHTML = icon ? `<span>${U.esc(icon)}</span>` : `<span class="bill-imp-dot"></span>`;
+        // 批注只认真正的报销说明 incomeNote（导入记录的 note='[抽成表导入]' 是系统标记，不该当批注显示）
+        const realNote = (l.incomeNote || '').trim();
+        const hasNote = !!realNote;
         return `<tr class="bill-item" data-lid="${l.id}">
-          <td class="bill-icon">${iconHTML}</td>
           <td>
             <div class="bill-main">${U.esc(label)}</div>
             <div class="bill-sub">${isImp ? '<span class="bill-imp-tag">导入</span>' : U.esc(sublabel)}${hasNote ? ' · <span class="bill-note-toggle">有批注 ▾</span>' : ''}</div>
-            <div class="bill-note">实际到手 ${U.money(bd.takeHome)} ｜ 批注：${U.esc(bd.note)}</div>
+            <div class="bill-note">实际到手 ${U.money(bd.takeHome)}${realNote ? ' ｜ 批注：' + U.esc(realNote) : ''}</div>
           </td>
           <td class="bill-amt money in">
             <div>${U.money(bd.takeHome)}</div>
@@ -4280,7 +4330,7 @@ const Finance = (() => {
         </div>
       </div>
       <table class="tbl bill-table">
-        <thead><tr><th style="width:44px"></th><th>来源</th><th class="num">实际到手</th></tr></thead>
+        <thead><tr><th>来源</th><th class="num">实际到手</th></tr></thead>
         ${rows || '<tbody><tr><td colspan="3" class="muted" style="text-align:center;padding:26px">该周期还没有收入记录</td></tr></tbody>'}
       </table>
       <p class="muted" style="font-size:11.5px;margin-top:10px">按日期倒序，仅显示有实际到手收入的记录。点任意一行可展开查看「批注」（钱花哪了）；导入的抽成表记录会标注「导入」。勾选「含导入数据」可把导入抽成也纳入本账单，此时明细统计不再显示抽成率。</p>
@@ -4390,7 +4440,7 @@ const Finance = (() => {
           <td style="text-align:right">${U.money(bd.commission)}</td>
           <td style="text-align:right">${U.money(bd.reimb)}</td>
           <td style="text-align:right;font-weight:700">${U.money(bd.takeHome)}</td>
-          <td>${U.esc(bd.note)}</td>
+          <td class="note">${U.esc(l.incomeNote || '')}</td>
         </tr>`;
       }).join('');
       const html = `<!DOCTYPE html>
@@ -4484,9 +4534,9 @@ const Finance = (() => {
           </label>
           <span style="display:flex;gap:8px;margin-left:auto">
           <button class="btn btn-ghost btn-sm" data-act="importCommission">导入抽成表</button>
-          <button class="btn btn-ghost btn-sm" data-act="editHist">历史收入</button>
+          ${U.isMobile() ? '' : '<button class="btn btn-ghost btn-sm" data-act="editHist">历史收入</button>'}
           <button class="btn btn-ghost btn-sm" data-act="exportPng">导出图片</button>
-          <button class="btn btn-ghost btn-sm" data-act="exportPdf">导出PDF</button>
+          ${U.isMobile() ? '' : '<button class="btn btn-ghost btn-sm" data-act="exportPdf">导出PDF</button>'}
           <button class="btn ${editMode ? 'btn-primary' : 'btn-ghost'} btn-sm" data-act="toggleEdit">
               <svg class="ico"><use href="#${editMode ? 'i-check' : 'i-gear'}"/></svg>
               ${editMode ? '完成编辑' : '编辑模块'}
@@ -5724,10 +5774,15 @@ const Dashboard = (() => {
     };
     const todoRow = x => {
       const p = Todo.pInfo(x.priority);
-      return `<div class="todo-item" data-tid="${x.id}" style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line-2);min-height:34px">
-        <div class="chk" data-act="toggleTodo" style="width:18px;height:18px;border:2px solid ${p.color};border-radius:5px;flex:none;cursor:pointer;display:grid;place-items:center"></div>
-        <div style="flex:1;min-width:0;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(x.title)}</div>
-        <span class="tag" style="font-size:9px;padding:1px 5px;background:${p.color}1f;color:${p.color};flex:none">${p.short}</span>
+      const chkIcon = x.status === 'done'
+        ? '<svg viewBox="0 0 24 24" style="width:12px;height:12px" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17 19 7"/></svg>'
+        : x.status === 'blocked'
+          ? '<svg viewBox="0 0 24 24" style="width:12px;height:12px" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"><path d="M6 12h12"/></svg>'
+          : '';
+      return `<div class="todo-item ${x.status === 'done' ? 'done' : ''} ${x.status === 'blocked' ? 'blocked' : ''}" data-tid="${x.id}" style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line-2);min-height:40px">
+        <div class="chk" data-act="toggleTodo" style="width:20px;height:20px;border:2px solid ${p.color};border-radius:6px;flex:none;cursor:pointer;display:grid;place-items:center;background:${x.status !== 'pending' ? p.color : 'transparent'}">${chkIcon}</div>
+        <div style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${x.status === 'done' ? 'text-decoration:line-through;color:var(--ink-3)' : ''}">${U.esc(x.title)}</div>
+        <span class="tag" style="font-size:9px;padding:1px 6px;background:${p.color}1f;color:${p.color};flex:none">${p.short}</span>
       </div>`;
     };
     return `
@@ -5750,9 +5805,7 @@ const Dashboard = (() => {
         <h4>今日待办</h4>
         ${undone.length ? undone.slice(0, 3).map(todoRow).join('') : '<div class="muted" style="font-size:12px;padding:6px 0">今日待办已清空</div>'}
         ${undone.length > 3 ? `<div class="muted" style="font-size:11px;text-align:center;padding-top:6px">还有 ${undone.length - 3} 件</div>` : ''}
-      </div>
-      <div class="dash-mobile-card">
-        <h4>每日模板库</h4>
+        <div class="muted" style="font-size:11px;margin:12px 0 4px;font-weight:600">模板库</div>
         ${DB.data.templates.length ? DB.data.templates.slice(0, 3).map(tpl => `
           <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line-2)">
             <span class="pdot" style="background:${Todo.pInfo(tpl.priority).color}"></span>
@@ -6109,7 +6162,7 @@ const Settings = (() => {
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" style="display:flex;flex-direction:column">
         <div class="card-h"><h3>应用图标（逸云阁头像）</h3></div>
         <p class="muted" style="font-size:12.5px;margin-bottom:12px">上传一张图片替换侧边栏的逸云阁图标，仅保存在本机与加密云同步中，不上传服务器。</p>
         <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
@@ -6123,11 +6176,9 @@ const Settings = (() => {
             <span class="muted" style="font-size:11px">建议正方形图片，自动缩放至 256×256</span>
           </div>
         </div>
-      </div>
-
-      <div class="card">
-        <div class="card-h"><h3>外观（夜览模式）</h3></div>
-        <p class="muted" style="font-size:12.5px;margin-bottom:14px">开启后整体切换为深色背景，夜晚或弱光下更护眼。设置仅保存在本机与加密云同步中。</p>
+        <div class="divider"></div>
+        <div class="card-h" style="margin-bottom:6px"><h3 style="font-size:14px">外观（夜览模式）</h3></div>
+        <p class="muted" style="font-size:12.5px;margin-bottom:14px">开启后整体切换为深色背景，夜晚或弱光下更护眼。</p>
         <div style="display:flex;align-items:center;gap:12px;cursor:pointer" data-act="nightToggle">
           <div class="switch ${DB.data.settings.night ? 'on' : ''}"></div>
           <span style="font-size:13.5px">${DB.data.settings.night ? '夜览模式：已开启' : '夜览模式：未开启'}</span>
@@ -6496,8 +6547,7 @@ const More = (() => {
     if (!connected) {
       return `<div class="card only-mobile" style="background:linear-gradient(120deg,#fff,#fff4f8);border-color:var(--pink-200)">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-          <div><b style="font-size:14px">☁ 云同步</b>
-            <div class="muted" style="font-size:12px">手机 / 平板 / 电脑数据自动统一，无需导入导出文件</div></div>
+          <div><b style="font-size:14px">☁ 云同步</b></div>
           <button class="btn btn-primary btn-sm" data-go="settings">去连接</button>
         </div></div>`;
     }
@@ -6545,7 +6595,6 @@ const More = (() => {
       </div>
       <div class="card only-mobile" style="margin:16px 0">
         <div class="card-h"><h3>导入数据</h3></div>
-        <p class="muted" style="font-size:12.5px;margin-bottom:10px">选电脑端导出的 JSON 备份即可导入，会整体覆盖当前数据（导入前自动保留快照，可在电脑端「数据管理」撤销）。</p>
         <button class="btn btn-primary btn-sm" data-act="m-import">选择备份文件导入</button>
         <input type="file" id="mFileIn" accept="application/json" style="display:none">
       </div>
@@ -6786,6 +6835,11 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.8.1</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>v1.8.0 遗留项补全整改</b>：① 三端日历 / 课表「今天」按钮与日期标题严格同一行；② 手机端月视图课程右下角金额不再与课程重叠（改为正常文档流 + 移动端单格最多 2 条课程）；③ 财务列表无批注的项不再显示「批注：导入抽成」，且去除头像列；④ 三端周视图重叠课程改为并列错开、互不压字；⑤ 手机端周视图按 iOS 风格重做为按天议程清单。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.8.0</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>手机端主页精简美化</b>：2×2 快捷入口缩小、卡片间距收紧，确保 iPhone 14 Pro Max 一屏可见无需滚动；「今日待办」上移到「今日课程」之上，「每日模板库」紧跟待办。</li>

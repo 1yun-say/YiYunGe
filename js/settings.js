@@ -86,7 +86,7 @@ const Settings = (() => {
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" style="display:flex;flex-direction:column">
         <div class="card-h"><h3>应用图标（逸云阁头像）</h3></div>
         <p class="muted" style="font-size:12.5px;margin-bottom:12px">上传一张图片替换侧边栏的逸云阁图标，仅保存在本机与加密云同步中，不上传服务器。</p>
         <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
@@ -100,11 +100,9 @@ const Settings = (() => {
             <span class="muted" style="font-size:11px">建议正方形图片，自动缩放至 256×256</span>
           </div>
         </div>
-      </div>
-
-      <div class="card">
-        <div class="card-h"><h3>外观（夜览模式）</h3></div>
-        <p class="muted" style="font-size:12.5px;margin-bottom:14px">开启后整体切换为深色背景，夜晚或弱光下更护眼。设置仅保存在本机与加密云同步中。</p>
+        <div class="divider"></div>
+        <div class="card-h" style="margin-bottom:6px"><h3 style="font-size:14px">外观（夜览模式）</h3></div>
+        <p class="muted" style="font-size:12.5px;margin-bottom:14px">开启后整体切换为深色背景，夜晚或弱光下更护眼。</p>
         <div style="display:flex;align-items:center;gap:12px;cursor:pointer" data-act="nightToggle">
           <div class="switch ${DB.data.settings.night ? 'on' : ''}"></div>
           <span style="font-size:13.5px">${DB.data.settings.night ? '夜览模式：已开启' : '夜览模式：未开启'}</span>

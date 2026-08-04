@@ -240,15 +240,14 @@ const Finance = (() => {
         // 导入抽成：直接清爽显示「名字 + 实际收入」，不再用「家教 - 抽成（导入）」标题与「抽」图标
         const label = isImp ? (s ? s.parentName : '已删除学员') : `家教 - ${sub || '抽成'}`;
         const sublabel = s ? s.parentName : '已删除学员';
-        const icon = isImp ? '' : (sub ? sub.slice(0, 1) : '家');
-        const hasNote = !!(bd.note && bd.note.trim());
-        const iconHTML = icon ? `<span>${U.esc(icon)}</span>` : `<span class="bill-imp-dot"></span>`;
+        // 批注只认真正的报销说明 incomeNote（导入记录的 note='[抽成表导入]' 是系统标记，不该当批注显示）
+        const realNote = (l.incomeNote || '').trim();
+        const hasNote = !!realNote;
         return `<tr class="bill-item" data-lid="${l.id}">
-          <td class="bill-icon">${iconHTML}</td>
           <td>
             <div class="bill-main">${U.esc(label)}</div>
             <div class="bill-sub">${isImp ? '<span class="bill-imp-tag">导入</span>' : U.esc(sublabel)}${hasNote ? ' · <span class="bill-note-toggle">有批注 ▾</span>' : ''}</div>
-            <div class="bill-note">实际到手 ${U.money(bd.takeHome)} ｜ 批注：${U.esc(bd.note)}</div>
+            <div class="bill-note">实际到手 ${U.money(bd.takeHome)}${realNote ? ' ｜ 批注：' + U.esc(realNote) : ''}</div>
           </td>
           <td class="bill-amt money in">
             <div>${U.money(bd.takeHome)}</div>
@@ -273,7 +272,7 @@ const Finance = (() => {
         </div>
       </div>
       <table class="tbl bill-table">
-        <thead><tr><th style="width:44px"></th><th>来源</th><th class="num">实际到手</th></tr></thead>
+        <thead><tr><th>来源</th><th class="num">实际到手</th></tr></thead>
         ${rows || '<tbody><tr><td colspan="3" class="muted" style="text-align:center;padding:26px">该周期还没有收入记录</td></tr></tbody>'}
       </table>
       <p class="muted" style="font-size:11.5px;margin-top:10px">按日期倒序，仅显示有实际到手收入的记录。点任意一行可展开查看「批注」（钱花哪了）；导入的抽成表记录会标注「导入」。勾选「含导入数据」可把导入抽成也纳入本账单，此时明细统计不再显示抽成率。</p>
@@ -383,7 +382,7 @@ const Finance = (() => {
           <td style="text-align:right">${U.money(bd.commission)}</td>
           <td style="text-align:right">${U.money(bd.reimb)}</td>
           <td style="text-align:right;font-weight:700">${U.money(bd.takeHome)}</td>
-          <td>${U.esc(bd.note)}</td>
+          <td class="note">${U.esc(l.incomeNote || '')}</td>
         </tr>`;
       }).join('');
       const html = `<!DOCTYPE html>
@@ -477,9 +476,9 @@ const Finance = (() => {
           </label>
           <span style="display:flex;gap:8px;margin-left:auto">
           <button class="btn btn-ghost btn-sm" data-act="importCommission">导入抽成表</button>
-          <button class="btn btn-ghost btn-sm" data-act="editHist">历史收入</button>
+          ${U.isMobile() ? '' : '<button class="btn btn-ghost btn-sm" data-act="editHist">历史收入</button>'}
           <button class="btn btn-ghost btn-sm" data-act="exportPng">导出图片</button>
-          <button class="btn btn-ghost btn-sm" data-act="exportPdf">导出PDF</button>
+          ${U.isMobile() ? '' : '<button class="btn btn-ghost btn-sm" data-act="exportPdf">导出PDF</button>'}
           <button class="btn ${editMode ? 'btn-primary' : 'btn-ghost'} btn-sm" data-act="toggleEdit">
               <svg class="ico"><use href="#${editMode ? 'i-check' : 'i-gear'}"/></svg>
               ${editMode ? '完成编辑' : '编辑模块'}
