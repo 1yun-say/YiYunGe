@@ -198,7 +198,7 @@ const Schedule = (() => {
     const c = isImp ? '#b0b0b0' : U.subColor(sub.subject);
     const pub = App.isPublic();
     return `<div class="sch-lesson-card ${l.status} ${isImp ? 'imported' : ''}" data-lid="${l.id}"
-        style="border-left-color:${c};background:${isImp ? '#f5f5f5' : c + '14'}">
+        style="border-left-color:${c};background:${isImp ? '#f5f5f5' : rgba(c, .12)}">
       <div class="slc-top"><span class="slc-time">${l.start}-${U.m2t(endMin(l))}</span>${isImp ? '<span class="bill-imp-tag">导入</span>' : ''}</div>
       <div class="slc-name">${U.esc(s.parentName)} · ${U.esc(sub.subject || '未设科目')}</div>
       <div class="slc-meta">${U.money(l.tuition)}${pub ? '' : ' ｜ 到手 ' + U.money(bd.takeHome)}${l.status === 'done' ? ' · 已完成' : ''}</div>
@@ -222,6 +222,13 @@ const Schedule = (() => {
     if(l.importedCommission) return '#b0b0b0';
     const sub=currentSub(l);
     return U.WEEK_MUTED[sub.subject] || U.WEEK_MUTED['其它'];
+  }
+
+  /* 把 #RRGGBB 转成 rgba，避免 #RRGGBBAA 在老 Safari / 部分浏览器上失效导致背景变纯白看不见 */
+  function rgba(hex, a){
+    const v = hex.replace('#', '');
+    const r = parseInt(v.slice(0,2), 16), g = parseInt(v.slice(2,4), 16), b = parseInt(v.slice(4,6), 16);
+    return `rgba(${r},${g},${b},${a})`;
   }
 
   function nameOf(l) {
@@ -248,7 +255,7 @@ const Schedule = (() => {
       </div>`;
     }
     const c = morandiColor(l);
-    const bg = conflict ? c + '78' : c + '40';
+    const bg = conflict ? rgba(c, .55) : rgba(c, .32);
     return `<div class="lesson ${l.status} ${conflict ? 'conflict' : ''}" draggable="${isM ? 'false' : 'true'}" data-lid="${l.id}"
       style="top:${top}px;height:${h}px;left:2px;width:calc(100% - 4px);z-index:${conflict ? 3 : 2};
       border-left-color:${c};background:${bg}">
@@ -274,7 +281,7 @@ const Schedule = (() => {
         const e = Math.min(endMin(a), endMin(b));
         if (e > s) {
           const ca = morandiColor(a), cb = morandiColor(b);
-          html += `<div class="lesson-overlap" style="top:${s - DAY_START}px;height:${e - s}px;left:2px;width:calc(100% - 4px);background:linear-gradient(to bottom, ${ca}b3, ${cb}b3)"></div>`;
+          html += `<div class="lesson-overlap" style="top:${s - DAY_START}px;height:${e - s}px;left:2px;width:calc(100% - 4px);background:linear-gradient(to bottom, ${rgba(ca, .7)}, ${rgba(cb, .7)})"></div>`;
         }
       }
       // 课程名写到各自「非重叠」区域
@@ -361,7 +368,7 @@ const Schedule = (() => {
         const c = isImp ? '#b0b0b0' : U.subColor(sub.subject);
         const bd = DB.lessonBreakdown(l);
         const tip = `实际到手 ${U.money(bd.takeHome)} · ${U.esc(bd.note)}`;
-        return `<div class="mg-item ${isImp ? 'imported' : ''}" data-lid="${l.id}" title="${tip}" style="border-left-color:${c};background:${isImp ? '#f5f5f5' : c + '14'}">
+        return `<div class="mg-item ${isImp ? 'imported' : ''}" data-lid="${l.id}" title="${tip}" style="border-left-color:${c};background:${isImp ? '#f5f5f5' : rgba(c, .12)}">
             ${isImp ? '· ' : l.start + ' '}${U.esc(s.parentName)}</div>`;
       }).join('')}
           ${ls.length > (U.isMobile() ? 2 : 3) ? `<div class="mg-item" style="border-left-color:#ccc;background:#f6f2f4">+${ls.length - (U.isMobile() ? 2 : 3)} 节</div>` : ''}

@@ -370,6 +370,11 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.8.4</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>修复可视化课表周视图课块「隐身」</b>：课块背景由 #RRGGBBAA 8 位十六进制透明度改为 rgba() 写法，兼容 iPad / 旧版 Safari 及各类浏览器；同时把周视图课块不透明度从 25% 提升到 32%、重叠区 55%、月视图/手机端课卡 12%，让课程在桌面 / 平板端清晰可见，不再和白色背景融为一体。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.8.3</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>用户反馈 3 项修复</b>：① 手机端课表 / 日历头部——标签独占一行，日期标题与「今天 / 回到今天」按钮严格同一行完整显示，不再截断、不再折行；② 手机端「今日待办」复选框由 22px 缩至 17px 并加左内边距，不再过大、不再贴卡片边缘被裁切；③ 主页 / 财务的柱状走势图补上「暂无数据」兜底（此前无数据时退化为看不见的小桩，桌面 / 平板端看着像空白）。</li>
