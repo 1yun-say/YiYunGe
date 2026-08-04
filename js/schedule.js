@@ -128,7 +128,9 @@ const Schedule = (() => {
   function titleText() {
     if (mode === 'week') {
       const d = U.weekDays(anchor);
-      return `${d[0].replace(/-/g, '.')} — ${d[6].slice(5).replace('-', '.')}`;
+      const fmt = x => x.slice(5).replace('-', '.');
+      const head = d[0].slice(0, 4) === d[6].slice(0, 4) ? fmt(d[0]) : d[0].slice(0, 4) + '.' + fmt(d[0]);
+      return `${head} — ${fmt(d[6])}`;
     }
     if (mode === 'month') return `${anchor.slice(0, 4)} 年 ${+anchor.slice(5, 7)} 月`;
     return `${anchor.slice(0, 4)} 年`;
@@ -218,7 +220,7 @@ const Schedule = (() => {
     const isImp = !!l.importedCommission;
     const bd = DB.lessonBreakdown(l);
     const sub = currentSub(l);
-    const c = isImp ? '#b0b0b0' : U.subColor(sub.subject);
+    const c = isImp ? '#b0b0b0' : lessonColorHex(l);
     const pub = App.isPublic();
     return `<div class="sch-lesson-card ${l.status} ${isImp ? 'imported' : ''}" data-lid="${l.id}"
         style="border-left-color:${c};background:${isImp ? '#f5f5f5' : rgba(c, .12)}">
@@ -254,36 +256,73 @@ const Schedule = (() => {
     return `rgba(${r},${g},${b},${a})`;
   }
 
+  /* 课程颜色自定义：每节课可单独选颜色 + 透明度；重叠区单独选第 3 色 + 透明度 */
+  function lessonColorHex(l) {
+    if (l.color && /^#[0-9a-fA-F]{6}$/.test(l.color)) return l.color;
+    return morandiColor(l);
+  }
+  function lessonAlpha(l, conflict) {
+    if (typeof l.alpha === 'number' && l.alpha >= 0 && l.alpha <= 1) return l.alpha;
+    return conflict ? 0.55 : 0.32;
+  }
+  function overlapCfg() {
+    const s = DB.data.settings;
+    return {
+      color: (s.overlapColor && /^#[0-9a-fA-F]{6}$/.test(s.overlapColor)) ? s.overlapColor : '#9b8cff',
+      alpha: (typeof s.overlapAlpha === 'number') ? s.overlapAlpha : 0.5
+    };
+  }
+  /* 计算某节课在「同组重叠」中的非重叠时间段（把文字放到不被遮挡处） */
+  function freeSegments(l, group) {
+    const s = safeT2m(l), e = endMin(l);
+    let segs = [[s, e]];
+    group.forEach(o => {
+      if (o.id === l.id) return;
+      const os = Math.max(s, safeT2m(o)), oe = Math.min(e, endMin(o));
+      if (oe > os) {
+        const ns = [];
+        segs.forEach(([a, b]) => {
+          if (oe <= a || os >= b) ns.push([a, b]);
+          else { if (os > a) ns.push([a, os]); if (oe < b) ns.push([oe, b]); }
+        });
+        segs = ns;
+      }
+    });
+    return segs;
+  }
+
   function nameOf(l) {
     const s = DB.student(l.studentId) || { parentName: '已删除' };
     const sub = currentSub(l);
     return `${U.esc(s.parentName)} · ${U.esc(sub.subject || '未设科目')}`;
   }
 
-  function lessonBar(l, conflict, isM, pub) {
+  function lessonBlock(l, conflict, isM, pub, group) {
     const s = DB.student(l.studentId) || { parentName: '已删除' };
     const isImp = !!l.importedCommission;
     const bd = DB.lessonBreakdown(l);
-    const top = safeT2m(l) - DAY_START;
-    const h = Math.max(24, +l.duration || 60);
-    const sub = currentSub(l);
-    const timeLine = `<div class="lm">${l.start}-${U.m2t(endMin(l))} · ${U.money(l.tuition)}${pub ? '' : ` <span style="color:var(--pink-600)">到手${U.money(bd.takeHome)}</span>`}</div>`;
-    if (isImp) {
-      return `<div class="lesson imported ${conflict ? 'conflict' : ''} ${l.status}" draggable="false" data-lid="${l.id}"
-        style="top:${top}px;height:${h}px;left:2px;width:calc(100% - 4px);z-index:${conflict ? 3 : 2};
-        border-left-color:#b9b2a8;background:${conflict ? 'rgba(185,178,168,.62)' : 'rgba(245,245,245,.85)'};color:#666">
-        ${conflict ? '' : `<b>${U.esc(s.parentName)}</b>`}
-        ${timeLine}
-        ${conflict ? '' : `<div class="lm take">到手 ${U.money(bd.takeHome)}${l.incomeNote ? ' · 批注：' + U.esc(l.incomeNote) : ''}</div>`}
-      </div>`;
+    const st = safeT2m(l), h = Math.max(24, +l.duration || 60);
+    const top = st - DAY_START;
+    const c = isImp ? '#b0b0b0' : lessonColorHex(l);
+    const alpha = isImp ? (conflict ? 0.62 : 0.85) : lessonAlpha(l, conflict);
+    // 标签放在「非重叠」区段，避免被同组另一节课盖住；无空档则贴顶
+    let labelTop = 3, tight = false;
+    if (conflict && group) {
+      const segs = freeSegments(l, group).sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]));
+      const seg = segs[0];
+      if (seg) { labelTop = seg[0] - st + 3; tight = (seg[1] - seg[0]) < 46; }
+      else { tight = true; }
     }
-    const c = morandiColor(l);
-    const bg = conflict ? rgba(c, .55) : rgba(c, .32);
-    return `<div class="lesson ${l.status} ${conflict ? 'conflict' : ''}" draggable="${isM ? 'false' : 'true'}" data-lid="${l.id}"
+    const timeLine = `<div class="lm">${l.start}-${U.m2t(st + h)} · ${U.money(l.tuition)}${pub ? '' : ` <span style="color:var(--pink-600)">到手${U.money(bd.takeHome)}</span>`}</div>`;
+    const label = `<div class="lesson-label ${tight ? 'tight' : ''}" style="top:${labelTop}px;left:6px;right:6px">
+      <b>${nameOf(l)}</b>${timeLine}
+      ${conflict ? '' : (h > 62 ? `<div class="lm">${U.esc(DB.teacherName(l.teacherId))}${l.status === 'done' ? ' · 已完成' : ''}</div>` : '')}
+      ${conflict ? '' : `<div class="lm take">到手 ${U.money(bd.takeHome)}${l.incomeNote ? ' · 批注：' + U.esc(l.incomeNote) : ''}</div>`}
+    </div>`;
+    return `<div class="lesson ${l.status} ${conflict ? 'conflict' : ''} ${isImp ? 'imported' : ''}" draggable="${isM ? 'false' : 'true'}" data-lid="${l.id}"
       style="top:${top}px;height:${h}px;left:2px;width:calc(100% - 4px);z-index:${conflict ? 3 : 2};
-      border-left-color:${c};background:${bg}">
-      ${conflict ? '' : `<b>${U.esc(s.parentName)}</b>`}
-      ${conflict ? '' : timeLine + (h > 62 ? `<div class="lm">${U.esc(DB.teacherName(l.teacherId))}${l.status === 'done' ? ' · 已完成' : ''}</div>` : '') + `<div class="lm take">到手 ${U.money(bd.takeHome)}${l.incomeNote ? ' · 批注：' + U.esc(l.incomeNote) : ''}</div>`}
+      border-left-color:${c};background:${rgba(c, alpha)}">
+      ${label}
     </div>`;
   }
 
@@ -294,41 +333,19 @@ const Schedule = (() => {
     const groups = overlapGroups(ls);
     let html = '';
     groups.forEach(g => {
-      if (g.length === 1) { html += lessonBar(g[0], false, isM, pub); return; }
-      // 每节课占满整列（莫兰迪色，半透明）
-      g.forEach(l => { html += lessonBar(l, true, isM, pub); });
-      // 重叠区：两两之间画竖直渐变（上方课色 → 下方课色），形成三色过渡
+      if (g.length === 1) { html += lessonBlock(g[0], false, isM, pub, null); return; }
+      // 每节课整列满宽渲染（不缩窄），用户可各自选颜色 + 透明度
+      g.forEach(l => { html += lessonBlock(l, true, isM, pub, g); });
+      // 重叠区：用用户自选的第 3 色（纯色）覆盖，z-index 高于课块
+      const oc = overlapCfg();
       for (let i = 0; i < g.length; i++) for (let j = i + 1; j < g.length; j++) {
         const a = g[i], b = g[j];
         const s = Math.max(safeT2m(a), safeT2m(b));
         const e = Math.min(endMin(a), endMin(b));
         if (e > s) {
-          const ca = morandiColor(a), cb = morandiColor(b);
-          html += `<div class="lesson-overlap" style="top:${s - DAY_START}px;height:${e - s}px;left:2px;width:calc(100% - 4px);background:linear-gradient(to bottom, ${rgba(ca, .7)}, ${rgba(cb, .7)})"></div>`;
+          html += `<div class="lesson-overlap" style="top:${s - DAY_START}px;height:${e - s}px;left:2px;width:calc(100% - 4px);background:${rgba(oc.color, oc.alpha)}"></div>`;
         }
       }
-      // 课程名写到各自「非重叠」区域
-      g.forEach(l => {
-        const s = safeT2m(l), e = endMin(l);
-        let ovs = [];
-        g.forEach(o => { if (o.id === l.id) return; const os = Math.max(s, safeT2m(o)), oe = Math.min(e, endMin(o)); if (oe > os) ovs.push([os, oe]); });
-        ovs.sort((x, y) => x[0] - y[0]);
-        let ex = [[s, e]];
-        ovs.forEach(([a, b]) => {
-          const n = [];
-          ex.forEach(([x0, x1]) => {
-            if (b <= x0 || a >= x1) n.push([x0, x1]);
-            else { if (a > x0) n.push([x0, a]); if (b < x1) n.push([b, x1]); }
-          });
-          ex = n;
-        });
-        ex.sort((x, y) => (y[1] - y[0]) - (x[1] - x[0]));
-        let placed = false;
-        for (const [a, b] of ex) {
-          if (b - a >= 18) { html += `<div class="lesson-namechip" style="top:${a - DAY_START + 1}px;left:5px;right:5px">${nameOf(l)}</div>`; placed = true; break; }
-        }
-        if (!placed) html += `<div class="lesson-namechip solid" style="top:${s - DAY_START + 1}px;left:5px;right:5px">${nameOf(l)}</div>`;
-      });
     });
     return html;
   }
@@ -388,7 +405,7 @@ const Schedule = (() => {
         const s = DB.student(l.studentId) || { parentName: '?' };
         const isImp = !!l.importedCommission;
         const sub = currentSub(l);
-        const c = isImp ? '#b0b0b0' : U.subColor(sub.subject);
+        const c = isImp ? '#b0b0b0' : lessonColorHex(l);
         const bd = DB.lessonBreakdown(l);
         const tip = `实际到手 ${U.money(bd.takeHome)} · ${U.esc(bd.note)}`;
         return `<div class="mg-item ${isImp ? 'imported' : ''}" data-lid="${l.id}" title="${tip}" style="border-left-color:${c};background:${isImp ? '#f5f5f5' : rgba(c, .12)}">
@@ -489,6 +506,8 @@ const Schedule = (() => {
     const cur = DB.student(sid);
     const subs = DB.studentSubjects(cur);
     const fixed0 = (subs[0] || {}).fixed || [];
+    const defSubj = (subs[0] || {}).subject || '其它';
+    const defColor = U.WEEK_MUTED[defSubj] || '#c98b94';
     const presetWds = fixed0.map(f => f.wd);
     const initMode = fixed0.length ? 'week' : 'none';
     const initStart = preset.start || (fixed0.length ? fixed0[0].start : (lastStartFor(sid) || '19:00'));
@@ -525,6 +544,12 @@ const Schedule = (() => {
           <select class="input" id="f_st"><option value="scheduled">待上课</option><option value="done">已完成</option></select></div>
         <div class="field"><label>课堂备注 / 反馈</label><input class="input" id="f_n" placeholder="选填，如：本次讲解期中卷"></div>
       </div>
+      <div class="field"><label>课程颜色</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="color" class="input" id="f_color" value="${defColor}" style="width:46px;height:32px;padding:2px;border:1px solid var(--line-2);border-radius:8px;background:#fff;cursor:pointer">
+          <input type="range" min="0.1" max="0.95" step="0.05" id="f_alpha" value="0.32" style="flex:1;max-width:220px">
+          <span id="f_alpha_v" style="font-size:12px;color:var(--ink-2);min-width:44px;text-align:right">32%</span>
+        </div></div>
       <div id="conf"></div>`,
       onOk: b => {
         const stu = DB.student(U.$('#f_s', b).value);
@@ -546,6 +571,7 @@ const Schedule = (() => {
         const seriesId = (mode !== 'none' && dates.length > 1) ? U.uid('ser') : null;
         const incomeNote = U.$('#f_inote', b).value.trim();
         let conf = 0;
+        const bcolor = U.$('#f_color', b).value, balpha = +U.$('#f_alpha', b).value || 0.32;
         dates.forEach(date => {
           const l = {
             id: U.uid('les'), studentId: stu.id, subjectId: sub.id,
@@ -553,7 +579,7 @@ const Schedule = (() => {
             date, start: t0, duration: len,
             tuition: sub.tuition, commission: sub.commission, teacherId: stu.teacherId,
             status: U.$('#f_st', b).value, note: U.$('#f_n', b).value.trim(), seriesId,
-            incomeNote
+            incomeNote, color: bcolor, alpha: balpha
           };
           if (overlaps(l).length) conf++;
           DB.data.lessons.push(l);
@@ -626,6 +652,18 @@ const Schedule = (() => {
         </select></div>
       </div>
       <div class="field secret"><label>批注（报销支出）</label><input class="input" id="f_inote" placeholder="如：买资料50、交通30（数字自动算作报销支出）" value="${U.esc(l.incomeNote || '')}"></div>
+      <div class="field"><label>课程颜色</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="color" class="input" id="f_color" value="${lessonColorHex(l)}" style="width:46px;height:32px;padding:2px;border:1px solid var(--line-2);border-radius:8px;background:#fff;cursor:pointer">
+          <input type="range" min="0.1" max="0.95" step="0.05" id="f_alpha" value="${lessonAlpha(l, false)}" style="flex:1;max-width:220px">
+          <span id="f_alpha_v" style="font-size:12px;color:var(--ink-2);min-width:44px;text-align:right">${Math.round(lessonAlpha(l, false) * 100)}%</span>
+        </div></div>
+      ${ov.length ? `<div class="field"><label>重叠区颜色（本课时与 ${ov.length} 节课时间重叠时显示）</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="color" class="input" id="f_oc" value="${overlapCfg().color}" style="width:46px;height:32px;padding:2px;border:1px solid var(--line-2);border-radius:8px;background:#fff;cursor:pointer">
+          <input type="range" min="0.1" max="0.95" step="0.05" id="f_oa" value="${overlapCfg().alpha}" style="flex:1;max-width:220px">
+          <span id="f_oa_v" style="font-size:12px;color:var(--ink-2);min-width:44px;text-align:right">${Math.round(overlapCfg().alpha * 100)}%</span>
+        </div></div>` : ''}
       <div class="field"><label>授课老师</label><select class="input" id="f_tid">
         ${DB.data.teachers.map(t => `<option value="${t.id}" ${t.id === l.teacherId ? 'selected' : ''}>${U.esc(t.name)}</option>`).join('')}
         <option value="" ${!l.teacherId ? 'selected' : ''}>未指派</option></select></div>
@@ -643,11 +681,14 @@ const Schedule = (() => {
         const com = +U.$('#f_com', b).value || 0;
         const incomeNote = U.$('#f_inote', b).value.trim();
         const st = U.$('#f_st', b).value, tid = U.$('#f_tid', b).value, note = U.$('#f_n', b).value.trim();
+        const color = U.$('#f_color', b).value, alpha = +U.$('#f_alpha', b).value;
         set.forEach(x => {
           x.start = start; x.duration = dur; x.tuition = fee; x.commission = com; x.status = st; x.teacherId = tid; x.note = note;
-          x.incomeNote = incomeNote;
+          x.incomeNote = incomeNote; x.color = color; x.alpha = alpha;
           if (scope === 'once') { x.date = date; x.seriesId = null; }  // 仅此一次：日期也改，并脱离系列
         });
+        const ocEl = U.$('#f_oc', b), oaEl = U.$('#f_oa', b);
+        if (ocEl && oaEl) { DB.data.settings.overlapColor = ocEl.value; DB.data.settings.overlapAlpha = +oaEl.value; }
         DB.save(); DB.touch('lesson'); render(); U.toast(scope === 'future' ? '已应用到此后所有同一重复课程' : '已保存');
       }
     });
@@ -657,6 +698,10 @@ const Schedule = (() => {
         DB.data.lessons = DB.data.lessons.filter(x => x.id !== l.id); DB.save(); DB.touch('lesson'); render();
         U.toast('已删除'); e.target.closest('.mask').remove();
       }
+    });
+    mm.body.addEventListener('input', e => {
+      if (e.target.id === 'f_alpha') { const v = U.$('#f_alpha_v', mm.body); if (v) v.textContent = Math.round(+e.target.value * 100) + '%'; }
+      if (e.target.id === 'f_oa') { const v = U.$('#f_oa_v', mm.body); if (v) v.textContent = Math.round(+e.target.value * 100) + '%'; }
     });
     // 选「从此以后」时禁用日期（保持各节原日期），仅改时间/费用
     if (future.length) mm.body.addEventListener('change', e => {

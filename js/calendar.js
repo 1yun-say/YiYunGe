@@ -21,21 +21,15 @@ const Calendar = (() => {
   }
 
   /* ---------- 标题 / 当天 ---------- */
-  function titleText() {
-    if (view === 'day') return `${+anchor.slice(5, 7)}月${+anchor.slice(8)}日 ${U.wdName(anchor)}`;
-    if (view === 'week') {
-      const d = U.weekDays(anchor);
-      return `${d[0].replace(/-/g, '.')} — ${d[6].slice(5).replace('-', '.')}`;
-    }
-    if (view === 'month') return `${anchor.slice(0, 4)} 年 ${+anchor.slice(5, 7)} 月`;
-    return `${anchor.slice(0, 4)} 年`;
-  }
   function titleBig() {
     if (view === 'day') return `${anchor.slice(0, 4)}年${+anchor.slice(5, 7)}月${+anchor.slice(8)}日`;
     if (view === 'month') return `${anchor.slice(0, 4)}年${+anchor.slice(5, 7)}月`;
     if (view === 'year') return `${anchor.slice(0, 4)}年`;
+    // 周视图：省略年份，保证一行完整显示（如 08.03 — 08.09）
     const d = U.weekDays(anchor);
-    return `${d[0]} — ${d[6]}`;
+    const fmt = x => x.slice(5).replace('-', '.');
+    const head = d[0].slice(0, 4) === d[6].slice(0, 4) ? fmt(d[0]) : d[0].slice(0, 4) + '.' + fmt(d[0]);
+    return `${head} — ${fmt(d[6])}`;
   }
 
   /* ---------- 工具：按日期聚合待办 ---------- */
@@ -83,9 +77,9 @@ const Calendar = (() => {
           <button class="cal-navbtn" data-act="prev" aria-label="上一段">&#8249;</button>
           <div class="cal-title-wrap">
             <div class="cal-title">${titleBig()}</div>
-            <button class="cal-today" data-act="today">今天</button>
           </div>
           <button class="cal-navbtn" data-act="next" aria-label="下一段">&#8250;</button>
+          <button class="cal-today" data-act="today">今天</button>
         </div>
         <button class="btn btn-primary btn-sm" data-act="add" data-day="${anchor}">
           <svg class="ico"><use href="#i-plus"/></svg>添加待办</button>
