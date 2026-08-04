@@ -1216,7 +1216,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T14:23:04.103Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T14:38:35.947Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -7084,6 +7084,7 @@ const Search = (() => {
   }
   return { open };
 })();
+window.Search = Search;
 
 /* ---------- 更多 / 我的 ---------- */
 const More = (() => {
@@ -7410,6 +7411,12 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.9.3</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>全站「零错误」体检通过</b>：新建一套真正加载全部 19 个脚本（含两个第三方库）、启动 App、逐一渲染全部 17 个视图（仪表盘 / 提醒事项 / 学员 / 老师 / 课表 / 财务 / 日历 / 话术 / 设置 / 我的 / AI / 帮助 / 关联 / 更新日志等）、并触发各视图主要交互（打开新建弹窗、切换日历日 / 周 / 月 / 年、打开搜索、夜间模式切换等）的无头浏览器冒烟测试，全程捕获 <code>console.error</code> / 未捕获异常 / <code>unhandledrejection</code>。结果：<b>运行时错误总数 = 0</b>，并与原有 79 项全流程断言、7 项云同步 ID 断言一同全部通过。</li>
+        <li><b>一致性微修</b>：<code>Search</code>（全局搜索）补挂到 <code>window</code>（与 <code>CommissionImport</code> / <code>Brand</code> / <code>Sync</code> 等工具模块一致），避免任何通过 <code>window.Search</code> 调用的路径在未来出错。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.9.2</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>云同步「正确 ID 也被新建」彻底修复（核心 bug，正是你反馈的现象）</b>：之前 GitHub 的 ID 校验正则错误地写成「固定 20 位十六进制」，而 GitHub 真实 Gist ID 是 <b>32 位</b>。于是你从一端复制出来的正确 32 位 ID，在另一端被判定为「格式非法」→ 自动清空 → 重新生成新空间，于是三端连不到同一份数据（尽管网络 / Token / ID 本身都没问题）。现已改正为「20~40 位均可」，并新增「粘贴完整链接也能自动识别 ID」的容错（如 <code>https://gist.github.com/用户名/32位ID</code>）。随附回归测试用真实 32 位 ID 覆盖 断网 / 404 / 成功 / 空 / 格式非法 / 完整链接 共 7 项，全部通过：<b>格式合法的 ID 在任何情况下都不会被丢弃新建</b>。</li>
