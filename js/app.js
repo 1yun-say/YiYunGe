@@ -111,6 +111,7 @@ const App = (() => {
     refreshBadge();
     const r = DB.data.settings.route || 'dashboard';
     go(Views[r] ? r : 'dashboard');
+    if (window.Sync) window.Sync.startAutoPull();   // 已连接云同步则开启后台自动下载
   }
 
   function init() {

@@ -1203,7 +1203,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T11:59:31.810Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T12:19:32.123Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -2462,13 +2462,13 @@ window.Sync = (() => {
     } finally { busy = false; }
   }
 
-  async function pull() {
+  async function doPull(quiet) {
     const s = cfg();
-    if (!s.token || !s.gistId) { status('请先连接 / 初始化', 'warn'); throw new Error('no gist'); }
-    if (!secureCtx()) { status('加密同步需在 https 或本机打开，请用公网地址访问', 'warn'); throw new Error('insecure'); }
+    if (!s.token || !s.gistId) { if (!quiet) status('请先连接 / 初始化', 'warn'); throw new Error('no gist'); }
+    if (!secureCtx()) { if (!quiet) status('加密同步需在 https 或本机打开，请用公网地址访问', 'warn'); throw new Error('insecure'); }
     busy = true;
     try {
-      status('正在下载…');
+      if (!quiet) status('正在下载…');
       const res = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
       if (!res.ok) {
         const t = await res.text().catch(() => '');
@@ -2488,8 +2488,62 @@ window.Sync = (() => {
       s.lastSync = Date.now();
       DB.save();
       if (App && App.boot) App.boot();
-      status('已下载同步 · ' + U.fmtTime(s.lastSync));
+      status((quiet ? '已自动同步' : '已下载同步') + ' · ' + U.fmtTime(s.lastSync));
     } finally { busy = false; }
+  }
+  function pull() { return doPull(false); }
+
+  /* ---------- 后台自动下载（准实时多端同步） ----------
+     机制：每隔 PULL_INTERVAL 检查云端是否有比本机新的版本（比较 baseSavedAt）。
+     - 无更新：直接跳过，不打扰界面、不重渲染；
+     - 有更新且本机无未上传改动：静默拉取并刷新当前视图（"平板输、电脑随即变"）；
+     - 有更新且本机也有未上传改动：先尝试上传，若撞车（conflict）则暂停自动同步并提示手动处理，绝不偷偷覆盖。
+     用户正在输入框打字时跳过本周期，避免重渲染清空输入。
+  */
+  const PULL_INTERVAL = 20000;
+  let pullTimer = null;
+
+  function startAutoPull() {
+    const s = cfg();
+    if (!s.token || !s.gistId || s.auto === false) return;
+    if (!secureCtx()) return;
+    if (pullTimer) return;                          // 已在跑，不重复
+    pullTimer = setInterval(autoPullTick, PULL_INTERVAL);
+    setTimeout(autoPullTick, 3000);                 // 启动后稍等再拉一次，快速拿到别人已上传的改动
+  }
+  function stopAutoPull() {
+    if (pullTimer) { clearInterval(pullTimer); pullTimer = null; }
+  }
+
+  async function autoPullTick() {
+    const s = cfg();
+    if (busy) return;                               // 有上传/下载进行中，跳过本周期
+    if (!s.token || !s.gistId) { stopAutoPull(); return; }
+    if (!secureCtx()) return;
+    // 用户正在输入时不打断（避免重渲染清空输入框）
+    const ae = (typeof document !== 'undefined') && document.activeElement;
+    if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
+    try {
+      const res = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
+      if (!res.ok) { if (res.status === 404) stopAutoPull(); return; }
+      const j = await res.json();
+      const rc = j.files && j.files[FNAME] && j.files[FNAME].content;
+      if (!rc) return;
+      const remote = await readRemote(rc, s.token);
+      const remoteBase = remote && (remote.__savedAt || 0);
+      if (!remoteBase) return;
+      if (remoteBase === s.baseSavedAt) return;     // 没有新版本，直接跳过，不打扰
+      // 有更新：本机若有尚未上传的改动，先上传；若撞车则提示手动处理，本轮不覆盖
+      const localDirty = (DB.data.__savedAt || 0) > (s.baseSavedAt || 0);
+      if (localDirty) {
+        try { await push(); return; }               // 上传成功会同步 baseSavedAt
+        catch (e) {
+          if (e.message === 'conflict') status('云端和本机都有改动，已暂停自动同步，请手动「下载同步」处理', 'warn');
+          return;
+        }
+      }
+      await doPull(true);                           // 本机干净 → 静默拉取
+    } catch (e) { /* 网络抖动忽略，下个周期再试 */ }
   }
 
   function refreshStatus() {
@@ -2501,6 +2555,7 @@ window.Sync = (() => {
   }
 
   return { cfg, schedulePush, push, pull, ensureGist, status, refreshStatus,
+           startAutoPull, stopAutoPull,
            _crypto: { seal, open, sealWithKey, openWithKey, secureCtx } };
 })();
 
@@ -6478,7 +6533,7 @@ const Settings = (() => {
           </p>
         </div>
         <label class="switch-row" style="margin:12px 0">
-          <input type="checkbox" id="syncAuto" ${sc.auto !== false ? 'checked' : ''}> 自动同步（改动后自动上传云端）
+          <input type="checkbox" id="syncAuto" ${sc.auto !== false ? 'checked' : ''}> 自动同步（改动后自动上传，并每 20 秒自动拉取其他端的更新）
         </label>
         <div style="display:flex;flex-wrap:wrap;gap:9px">
           <button class="btn btn-primary" data-act="connect">连接 / 初始化</button>
@@ -6571,6 +6626,7 @@ const Settings = (() => {
             if (_tip) { const _shown = U.$('#syncIdShown', root); if (_shown) _shown.textContent = Sync.cfg().gistId || ''; _tip.style.display = 'block'; }
             U.toast('已连接！已生成真实空间 ID，请复制它到其他设备共用（不要自己起名）', 'ok');
             Sync.refreshStatus();
+            Sync.startAutoPull();
           }).catch(err => U.toast('连接失败：' + syncErrHint(err), 'warn'));
           break;
         case 'push':
@@ -6606,7 +6662,10 @@ const Settings = (() => {
           break;
       }
     });
-    U.$('#syncAuto', root).onchange = e => { Sync.cfg().auto = e.target.checked; DB.save(); };
+    U.$('#syncAuto', root).onchange = e => {
+      Sync.cfg().auto = e.target.checked; DB.save();
+      if (Sync.cfg().auto) Sync.startAutoPull(); else Sync.stopAutoPull();
+    };
     const provSel = U.$('#syncProvider', root);
     if (provSel) provSel.onchange = e => {
       Sync.cfg().provider = e.target.value;
@@ -7122,6 +7181,11 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.8.11</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>云同步「后台自动下载」（准实时多端同步）</b>：① 之前同步只有「改动后自动上传」，另一端需手动点「下载同步」才能看到；现在连接后程序会每 20 秒自动检查云端，一旦发现其他端有更新且本机无未上传改动，就静默拉取并刷新当前页面——实现「平板输入、电脑约 20 秒内自动变好」。② 已连设备重新打开页面也会自动开始后台同步。③ 安全兜底：当本机和云端都有各自改动（撞车）时，自动同步会暂停并提示手动「下载同步」处理，绝不偷偷覆盖任一方数据；你正在输入框打字时也会跳过本周期，避免重渲染清空输入。④「自动同步」开关现同时控制上传与自动下载，取消勾选即停止后台轮询。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.8.10</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>云同步引导修复</b>：① 修正设置页误导文案——此前提示「多设备填同一个自定义 ID（如 20260802）即可同步」，但 GitHub 的同步空间 ID 由服务器自动分配、不支持自定义名，导致三端各自新建空间无法同步；现改为「留空自动创建，多端共用请复制一端生成的真实空间 ID」。② 连接成功后醒目显示完整真实空间 ID 并提供「复制此 ID」按钮，已连接设备进入设置页也会显示。③ 在 <code>Sync.ensureGist</code> 增加格式校验：手动填写的 ID 若不符合 GitHub(20位hex)/Gitee(32位hex) 格式，直接当无效自动新建，从根上避免再踩坑。</li>
@@ -7581,6 +7645,7 @@ const App = (() => {
     refreshBadge();
     const r = DB.data.settings.route || 'dashboard';
     go(Views[r] ? r : 'dashboard');
+    if (window.Sync) window.Sync.startAutoPull();   // 已连接云同步则开启后台自动下载
   }
 
   function init() {

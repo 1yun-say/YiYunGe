@@ -213,13 +213,13 @@ window.Sync = (() => {
     } finally { busy = false; }
   }
 
-  async function pull() {
+  async function doPull(quiet) {
     const s = cfg();
-    if (!s.token || !s.gistId) { status('请先连接 / 初始化', 'warn'); throw new Error('no gist'); }
-    if (!secureCtx()) { status('加密同步需在 https 或本机打开，请用公网地址访问', 'warn'); throw new Error('insecure'); }
+    if (!s.token || !s.gistId) { if (!quiet) status('请先连接 / 初始化', 'warn'); throw new Error('no gist'); }
+    if (!secureCtx()) { if (!quiet) status('加密同步需在 https 或本机打开，请用公网地址访问', 'warn'); throw new Error('insecure'); }
     busy = true;
     try {
-      status('正在下载…');
+      if (!quiet) status('正在下载…');
       const res = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
       if (!res.ok) {
         const t = await res.text().catch(() => '');
@@ -239,8 +239,62 @@ window.Sync = (() => {
       s.lastSync = Date.now();
       DB.save();
       if (App && App.boot) App.boot();
-      status('已下载同步 · ' + U.fmtTime(s.lastSync));
+      status((quiet ? '已自动同步' : '已下载同步') + ' · ' + U.fmtTime(s.lastSync));
     } finally { busy = false; }
+  }
+  function pull() { return doPull(false); }
+
+  /* ---------- 后台自动下载（准实时多端同步） ----------
+     机制：每隔 PULL_INTERVAL 检查云端是否有比本机新的版本（比较 baseSavedAt）。
+     - 无更新：直接跳过，不打扰界面、不重渲染；
+     - 有更新且本机无未上传改动：静默拉取并刷新当前视图（"平板输、电脑随即变"）；
+     - 有更新且本机也有未上传改动：先尝试上传，若撞车（conflict）则暂停自动同步并提示手动处理，绝不偷偷覆盖。
+     用户正在输入框打字时跳过本周期，避免重渲染清空输入。
+  */
+  const PULL_INTERVAL = 20000;
+  let pullTimer = null;
+
+  function startAutoPull() {
+    const s = cfg();
+    if (!s.token || !s.gistId || s.auto === false) return;
+    if (!secureCtx()) return;
+    if (pullTimer) return;                          // 已在跑，不重复
+    pullTimer = setInterval(autoPullTick, PULL_INTERVAL);
+    setTimeout(autoPullTick, 3000);                 // 启动后稍等再拉一次，快速拿到别人已上传的改动
+  }
+  function stopAutoPull() {
+    if (pullTimer) { clearInterval(pullTimer); pullTimer = null; }
+  }
+
+  async function autoPullTick() {
+    const s = cfg();
+    if (busy) return;                               // 有上传/下载进行中，跳过本周期
+    if (!s.token || !s.gistId) { stopAutoPull(); return; }
+    if (!secureCtx()) return;
+    // 用户正在输入时不打断（避免重渲染清空输入框）
+    const ae = (typeof document !== 'undefined') && document.activeElement;
+    if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
+    try {
+      const res = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
+      if (!res.ok) { if (res.status === 404) stopAutoPull(); return; }
+      const j = await res.json();
+      const rc = j.files && j.files[FNAME] && j.files[FNAME].content;
+      if (!rc) return;
+      const remote = await readRemote(rc, s.token);
+      const remoteBase = remote && (remote.__savedAt || 0);
+      if (!remoteBase) return;
+      if (remoteBase === s.baseSavedAt) return;     // 没有新版本，直接跳过，不打扰
+      // 有更新：本机若有尚未上传的改动，先上传；若撞车则提示手动处理，本轮不覆盖
+      const localDirty = (DB.data.__savedAt || 0) > (s.baseSavedAt || 0);
+      if (localDirty) {
+        try { await push(); return; }               // 上传成功会同步 baseSavedAt
+        catch (e) {
+          if (e.message === 'conflict') status('云端和本机都有改动，已暂停自动同步，请手动「下载同步」处理', 'warn');
+          return;
+        }
+      }
+      await doPull(true);                           // 本机干净 → 静默拉取
+    } catch (e) { /* 网络抖动忽略，下个周期再试 */ }
   }
 
   function refreshStatus() {
@@ -252,5 +306,6 @@ window.Sync = (() => {
   }
 
   return { cfg, schedulePush, push, pull, ensureGist, status, refreshStatus,
+           startAutoPull, stopAutoPull,
            _crypto: { seal, open, sealWithKey, openWithKey, secureCtx } };
 })();

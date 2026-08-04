@@ -137,7 +137,7 @@ const Settings = (() => {
           </p>
         </div>
         <label class="switch-row" style="margin:12px 0">
-          <input type="checkbox" id="syncAuto" ${sc.auto !== false ? 'checked' : ''}> 自动同步（改动后自动上传云端）
+          <input type="checkbox" id="syncAuto" ${sc.auto !== false ? 'checked' : ''}> 自动同步（改动后自动上传，并每 20 秒自动拉取其他端的更新）
         </label>
         <div style="display:flex;flex-wrap:wrap;gap:9px">
           <button class="btn btn-primary" data-act="connect">连接 / 初始化</button>
@@ -230,6 +230,7 @@ const Settings = (() => {
             if (_tip) { const _shown = U.$('#syncIdShown', root); if (_shown) _shown.textContent = Sync.cfg().gistId || ''; _tip.style.display = 'block'; }
             U.toast('已连接！已生成真实空间 ID，请复制它到其他设备共用（不要自己起名）', 'ok');
             Sync.refreshStatus();
+            Sync.startAutoPull();
           }).catch(err => U.toast('连接失败：' + syncErrHint(err), 'warn'));
           break;
         case 'push':
@@ -265,7 +266,10 @@ const Settings = (() => {
           break;
       }
     });
-    U.$('#syncAuto', root).onchange = e => { Sync.cfg().auto = e.target.checked; DB.save(); };
+    U.$('#syncAuto', root).onchange = e => {
+      Sync.cfg().auto = e.target.checked; DB.save();
+      if (Sync.cfg().auto) Sync.startAutoPull(); else Sync.stopAutoPull();
+    };
     const provSel = U.$('#syncProvider', root);
     if (provSel) provSel.onchange = e => {
       Sync.cfg().provider = e.target.value;
