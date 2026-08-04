@@ -445,7 +445,7 @@ const Students = (() => {
   function getSubject(stu, r) {
     const grade = r.grade || '未分级', subject = r.subject || '其它';
     let sub = (stu.subjects || []).find(s => s.grade === grade && s.subject === subject);
-    if (!sub) { sub = { id: U.uid('sbj'), grade, subject, tuition: r.tuition || r.commission || 0, commission: r.commission || 0, duration: r.duration || 60, fixed: [] }; stu.subjects.push(sub); }
+    if (!sub) { sub = { id: U.uid('sbj'), grade, subject, tuition: r.tuition || 0, commission: r.commission || 0, duration: r.duration || 60, fixed: [] }; stu.subjects.push(sub); }
     else { if (r.tuition) sub.tuition = r.tuition; if (r.commission) sub.commission = r.commission; if (r.duration) sub.duration = r.duration; }
     return sub;
   }
