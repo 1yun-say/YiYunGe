@@ -129,7 +129,7 @@ const App = (() => {
     U.$$('.bn-item').forEach(n => n.onclick = () => go(n.dataset.route));
     U.$('#quickAdd').onclick = quickAddMenu;
     const sb = U.$('#searchBtn'); if (sb) sb.onclick = () => Search.open();
-    const fab = U.$('#fab'); if (fab) fab.onclick = () => App.route === 'todo' ? Todo.addNew() : quickAddMenu();
+    const fab = U.$('#fab'); if (fab) fab.onclick = () => (App.route === 'todo' ? Todo.addNew() : (App.route === 'calendar' ? Calendar.showAddChoice(U.today()) : quickAddMenu()));
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') { const m = U.$$('.mask').pop(); if (m) m.remove(); }
       if (e.key === 'n' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); quickAddMenu(); }

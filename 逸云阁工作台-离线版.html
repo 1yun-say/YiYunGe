@@ -1216,7 +1216,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T14:06:07.728Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T14:23:04.103Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -1324,7 +1324,12 @@ const U = (() => {
   /* --- 日期 --- */
   const today = () => fmt(new Date());
   const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const parse = s => {
+    if (s == null || s === '') return new Date(NaN);   // 空值守卫：避免 s.split 崩溃拖垮整页
+    const [y, m, d] = String(s).split('-').map(Number);
+    if (!y || !m) return new Date(NaN);
+    return new Date(y, m - 1, d);
+  };
   const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return fmt(d); };
   const addMonths = (s, n) => { const d = parse(s); d.setMonth(d.getMonth() + n); return fmt(d); };
   const dow = s => parse(s).getDay();                    // 0=周日
@@ -2386,12 +2391,32 @@ window.Sync = (() => {
     if (el) { el.textContent = msg; el.className = 'sync-status' + (kind ? ' ' + kind : ''); }
   }
 
+  // 从用户输入中规整出真实空间 ID：
+  // - 允许直接粘贴完整链接（如 https://gist.github.com/用户名/32位ID），自动截取路径里的 ID 段；
+  // - 纯 ID 原样返回；其余（自定义名/乱填）原样返回，交给下方格式校验处理。
+  // 注意：GitHub 真实 Gist ID 是 32 位十六进制（旧示例偶见 20 位），故合法区间为 20~40 位。
+  function normalizeGistId(raw) {
+    if (!raw) return '';
+    const r = String(raw).trim();
+    if (/^https?:\/\//i.test(r) || r.indexOf('/') >= 0) {
+      const m = r.match(/\/([0-9a-f]{20,40})(?:[/?#]|$)/i);
+      if (m) return m[1];
+    }
+    if (/^[0-9a-f]{20,40}$/i.test(r)) return r;
+    return r;
+  }
+
   async function ensureGist() {
     const s = cfg();
-    const idRe = providerType() === 'gitee' ? /^[0-9a-f]{32}$/i : /^[0-9a-f]{20}$/i;
+    const idRe = providerType() === 'gitee' ? /^[0-9a-f]{32}$/i : /^[0-9a-f]{20,40}$/i;
+
+    // 0) 容错：把粘贴的链接 / 多余空格规整成纯 ID（仅当确实能提取时才改写）
+    const norm = normalizeGistId(s.gistId);
+    if (norm && norm !== s.gistId) { s.gistId = norm; DB.save(); }
 
     // 1) 格式校验：手动填的 ID 必须符合服务商格式，否则视为「留空」，自动新建。
     // 这是为了防止用户填自定义名（如 20260802）导致各端各自新建、无法同步同一份数据。
+    // 关键修复：此前 GitHub 误用 20 位固定长度正则，会把正确的 32 位 ID 判为「格式非法」而清空新建。
     if (s.gistId && !idRe.test(s.gistId)) {
       s.gistId = '';
       DB.save();
@@ -5995,7 +6020,7 @@ const Calendar = (() => {
       render();
     }
   };
-  return { render, setView, editEvent };
+  return { render, setView, editEvent, showAddChoice };
 })();
 
 </script>
@@ -7385,6 +7410,13 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.9.2</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>云同步「正确 ID 也被新建」彻底修复（核心 bug，正是你反馈的现象）</b>：之前 GitHub 的 ID 校验正则错误地写成「固定 20 位十六进制」，而 GitHub 真实 Gist ID 是 <b>32 位</b>。于是你从一端复制出来的正确 32 位 ID，在另一端被判定为「格式非法」→ 自动清空 → 重新生成新空间，于是三端连不到同一份数据（尽管网络 / Token / ID 本身都没问题）。现已改正为「20~40 位均可」，并新增「粘贴完整链接也能自动识别 ID」的容错（如 <code>https://gist.github.com/用户名/32位ID</code>）。随附回归测试用真实 32 位 ID 覆盖 断网 / 404 / 成功 / 空 / 格式非法 / 完整链接 共 7 项，全部通过：<b>格式合法的 ID 在任何情况下都不会被丢弃新建</b>。</li>
+        <li><b>健壮性</b>：日期解析 <code>U.parse</code> 增加空值 / 非法值守卫，避免任何空日期调用导致整页崩溃（防未来隐患）。</li>
+        <li><b>体验一致性</b>：日历页右下「+」按钮现在走日历自己的「新建（日程 / 提醒事项）」弹窗，与其它页面行为统一；之前日历页 FAB 走的是通用快捷菜单。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.9.1</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>修复「遗留提醒」误把已完成项算进去（核心 bug）</b>：v1.7.9 把提醒事项从「完成 / 未完成」两态升级为「未完成 / 已完成 / 今日无法完成」三态后，主页「遗留未完成」计数、AI 助手「未完成提醒数」、关联中心「可关联列表」、以及「全部拉到今天」动作这 4 处仍沿用旧的两态 <code>.done</code> 布尔字段判断。迁移后的新数据已不含 <code>.done</code> 字段（恒为 undefined），导致「是否完成」永远判定为假——<b>已完成的提醒也会被当成遗留项、被一键拉到今天</b>，且主页遗留计数虚高。现 4 处统一改为按三态 <code>status !== 'done'</code> 判断，并已加自动化回归测试（含已完成 / 未完成 / 今日无法完成三种迁移数据）覆盖。</li>
@@ -7882,7 +7914,7 @@ const App = (() => {
     U.$$('.bn-item').forEach(n => n.onclick = () => go(n.dataset.route));
     U.$('#quickAdd').onclick = quickAddMenu;
     const sb = U.$('#searchBtn'); if (sb) sb.onclick = () => Search.open();
-    const fab = U.$('#fab'); if (fab) fab.onclick = () => App.route === 'todo' ? Todo.addNew() : quickAddMenu();
+    const fab = U.$('#fab'); if (fab) fab.onclick = () => (App.route === 'todo' ? Todo.addNew() : (App.route === 'calendar' ? Calendar.showAddChoice(U.today()) : quickAddMenu()));
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') { const m = U.$$('.mask').pop(); if (m) m.remove(); }
       if (e.key === 'n' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); quickAddMenu(); }

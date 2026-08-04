@@ -439,5 +439,5 @@ const Calendar = (() => {
       render();
     }
   };
-  return { render, setView, editEvent };
+  return { render, setView, editEvent, showAddChoice };
 })();

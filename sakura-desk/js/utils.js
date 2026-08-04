@@ -5,7 +5,12 @@ const U = (() => {
   /* --- 日期 --- */
   const today = () => fmt(new Date());
   const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const parse = s => {
+    if (s == null || s === '') return new Date(NaN);   // 空值守卫：避免 s.split 崩溃拖垮整页
+    const [y, m, d] = String(s).split('-').map(Number);
+    if (!y || !m) return new Date(NaN);
+    return new Date(y, m - 1, d);
+  };
   const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return fmt(d); };
   const addMonths = (s, n) => { const d = parse(s); d.setMonth(d.getMonth() + n); return fmt(d); };
   const dow = s => parse(s).getDay();                    // 0=周日
