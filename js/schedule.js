@@ -306,18 +306,21 @@ const Schedule = (() => {
     const c = isImp ? '#b0b0b0' : lessonColorHex(l);
     const alpha = isImp ? (conflict ? 0.62 : 0.85) : lessonAlpha(l, conflict);
     // 标签放在「非重叠」区段，避免被同组另一节课盖住；无空档则贴顶
-    let labelTop = 3, tight = false;
+    let labelTop = 3, tight = false, segs = [];
     if (conflict && group) {
-      const segs = freeSegments(l, group).sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]));
+      segs = freeSegments(l, group).sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]));
       const seg = segs[0];
       if (seg) { labelTop = seg[0] - st + 3; tight = (seg[1] - seg[0]) < 46; }
       else { tight = true; }
     }
-    const timeLine = `<div class="lm">${l.start}-${U.m2t(st + h)} · ${U.money(l.tuition)}${pub ? '' : ` <span style="color:var(--pink-600)">到手${U.money(bd.takeHome)}</span>`}</div>`;
-    const label = `<div class="lesson-label ${tight ? 'tight' : ''}" style="top:${labelTop}px;left:6px;right:6px">
-      <b>${nameOf(l)}</b>${timeLine}
-      ${conflict ? '' : (h > 62 ? `<div class="lm">${U.esc(DB.teacherName(l.teacherId))}${l.status === 'done' ? ' · 已完成' : ''}</div>` : '')}
-      ${conflict ? '' : `<div class="lm take">到手 ${U.money(bd.takeHome)}${l.incomeNote ? ' · 批注：' + U.esc(l.incomeNote) : ''}</div>`}
+    // 空间不足时只显示名字（重叠课小课块常见）
+    const availH = conflict && group ? (segs[0] ? (segs[0][1] - segs[0][0]) : h) : h;
+    const minimal = availH < 52;
+    const timeLine = minimal ? '' : `<div class="lm">${l.start}-${U.m2t(st + h)} · ${U.money(l.tuition)}${pub ? '' : ` <span style="color:var(--pink-600)">到手${U.money(bd.takeHome)}</span>`}</div>`;
+    const teacherLine = minimal ? '' : (h > 62 ? `<div class="lm">${U.esc(DB.teacherName(l.teacherId))}${l.status === 'done' ? ' · 已完成' : ''}</div>` : '');
+    const takeLine = minimal ? '' : `<div class="lm take">到手 ${U.money(bd.takeHome)}${l.incomeNote ? ' · 批注：' + U.esc(l.incomeNote) : ''}</div>`;
+    const label = `<div class="lesson-label ${tight ? 'tight' : ''} ${minimal ? 'minimal' : ''}" style="top:${labelTop}px;left:6px;right:6px">
+      <b>${nameOf(l)}</b>${timeLine}${conflict ? '' : teacherLine}${conflict ? '' : takeLine}
     </div>`;
     return `<div class="lesson ${l.status} ${conflict ? 'conflict' : ''} ${isImp ? 'imported' : ''}" draggable="${isM ? 'false' : 'true'}" data-lid="${l.id}"
       style="top:${top}px;height:${h}px;left:2px;width:calc(100% - 4px);z-index:${conflict ? 3 : 2};

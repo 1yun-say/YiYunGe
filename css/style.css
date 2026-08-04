@@ -315,6 +315,8 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .lesson-namechip.solid{background:#fff;border:1px solid var(--line-2)}
 .lesson-label{position:absolute;font-size:11px;line-height:1.3;pointer-events:none;color:var(--ink-1);z-index:1}
 .lesson-label.tight{font-size:10px;opacity:.92}
+.lesson-label.minimal{font-size:12px}
+.lesson-label.minimal b{margin-bottom:0}
 .lesson-label b{display:block;font-size:12px;font-weight:700;margin-bottom:1px}
 
 .month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-m);overflow:hidden}
@@ -507,7 +509,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .cal-nav{display:inline-flex;align-items:center;gap:4px}
 .cal-navbtn{width:30px;height:30px;border-radius:9px;border:1px solid var(--line-2);background:#fff;color:var(--ink-2);cursor:pointer;font-size:18px;display:grid;place-items:center;line-height:1}
 .cal-navbtn:hover{border-color:var(--pink-300);color:var(--pink-600)}
-.cal-today{font-size:12px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 11px;cursor:pointer;color:var(--ink-2);flex:none;white-space:nowrap}
+.cal-today{font-size:12px;border:1px solid var(--line-2);background:#fff;border-radius:8px;padding:0 11px;cursor:pointer;color:var(--ink-2);flex:none;white-space:nowrap;height:30px;display:inline-flex;align-items:center;justify-content:center}
 .cal-title-wrap{display:flex;align-items:center;gap:10px;flex:1;min-width:0;flex-wrap:nowrap}
 .cal-title-wrap .cal-title{font-size:16px;font-weight:700;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cal-today:hover{border-color:var(--pink-300);color:var(--pink-600)}
