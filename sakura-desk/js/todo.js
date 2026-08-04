@@ -51,8 +51,18 @@ const Todo = (() => {
     return added;
   }
 
-  const ofDate = d => DB.data.todos.filter(t => t.date === d);
-  const pendingCount = () => DB.data.todos.filter(t => t.status === 'pending' && t.date <= U.today()).length;
+  /* 某条待办在某天是否出现（含重复展开 + 单次完成裁剪） */
+  function occursOnDate(t, d) {
+    const rule = U.recurRuleOf(t.repeat, t.date);
+    if (!U.recurOccursOn(d, rule)) return false;
+    if (Array.isArray(t.completedDates) && t.completedDates.includes(d)) return false;
+    return true;
+  }
+  const ofDate = d => DB.data.todos.filter(t => occursOnDate(t, d));
+  const pendingCount = () => {
+    const t = U.today();
+    return DB.data.todos.filter(x => occursOnDate(x, t) && x.status !== 'done').length;
+  };
 
   function add(t) {
     DB.data.todos.push(Object.assign({
@@ -79,7 +89,11 @@ const Todo = (() => {
     const root = U.$('#view');
     if (!root || App.route !== 'todo') return;
     const list = ofDate(curDate);
-    const undone = list.filter(t => t.status !== 'done').sort((a, b) => (a.time || '99:59').localeCompare(b.time || '99:59') || a.priority - b.priority || a.createdAt - b.createdAt);
+    const sortFn = (a, b) => (b.flag ? 1 : 0) - (a.flag ? 1 : 0)   // 旗标置顶
+      || a.priority - b.priority
+      || (a.time || '99:59').localeCompare(b.time || '99:59')
+      || a.createdAt - b.createdAt;
+    const undone = list.filter(t => t.status !== 'done').sort(sortFn);
     const done = list.filter(t => t.status === 'done').sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
     const shown = filter < 0 ? undone : undone.filter(t => t.priority === filter);
     const overdue = DB.data.todos.filter(t => t.status === 'pending' && t.date < U.today());
@@ -218,8 +232,10 @@ const Todo = (() => {
           <span class="tag" style="background:${p.color}1f;color:${p.color}">${p.name}</span>
           ${t.status !== 'pending' ? `<span class="tag" style="background:${st.color}1f;color:${st.color}">${st.name}</span>` : ''}
           ${t.tag ? `<span class="tag gray">${U.esc(t.tag)}</span>` : ''}
+          ${t.flag ? `<span class="tag" style="background:#ffd9d9;color:#cf5252">🚩 标记</span>` : ''}
           ${t.autoKey ? `<span class="tag gold">自动生成</span>` : ''}
           ${stu ? `<span class="tag sky">${U.esc(DB.studentLabel(stu))}</span>` : ''}
+          ${(() => { const r = U.recurRuleOf(t.repeat, t.date); const d = U.recurDescribe(r); return d && d !== '不重复' ? `<span class="tag" style="background:#e8f1ff;color:#3a6ea5">🔁 ${U.esc(d)}</span>` : ''; })()}
           ${showDate ? `<span class="tag alert">${U.cnDate(t.date)}</span>` : ''}
           ${t.status === 'done' && t.doneAt ? `<span class="muted" style="font-size:11px">完成于 ${new Date(t.doneAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>` : ''}
         </div>
@@ -248,12 +264,22 @@ const Todo = (() => {
         case 'prevDay': curDate = U.addDays(curDate, -1); render(); break;
         case 'nextDay': curDate = U.addDays(curDate, 1); render(); break;
         case 'quickAdd': doQuickAdd(root); break;
-        case 'toggle':
-          t.status = cycle(t.status);
-          t.doneAt = t.status === 'done' ? Date.now() : (t.status === 'pending' ? null : t.doneAt);
+        case 'toggle': {
+          const rule = U.recurRuleOf(t.repeat, t.date);
+          if (U.recurOccursOn(curDate, rule)) {
+            // 重复任务：按当前展示日单独勾选完成
+            t.completedDates = Array.isArray(t.completedDates) ? t.completedDates : [];
+            const i = t.completedDates.indexOf(curDate);
+            if (i >= 0) { t.completedDates.splice(i, 1); t.doneAt = null; U.toast('已恢复为未完成'); }
+            else { t.completedDates.push(curDate); t.doneAt = Date.now(); U.toast('完成一件，很好'); }
+          } else {
+            t.status = cycle(t.status);
+            t.doneAt = t.status === 'done' ? Date.now() : (t.status === 'pending' ? null : t.doneAt);
+            if (t.status === 'done') U.toast('完成一件，很好');
+          }
           DB.save(); render(); App.refreshBadge();
-          if (t.status === 'done') U.toast('完成一件，很好');
           break;
+        }
         case 'edit': editTodo(t); break;
         case 'del': DB.data.todos = DB.data.todos.filter(x => x.id !== tid); DB.save(); render(); App.refreshBadge(); break;
         case 'pullOverdue':
@@ -292,6 +318,7 @@ const Todo = (() => {
 
   function editTodo(t, after) {
     const st = sInfo(t.status);
+    const flagOn = t.flag ? 'on' : '';
     const mm = U.modal({
       title: '编辑任务',
       body: `<div class="field"><label>任务内容</label><input class="input" id="f_t" value="${U.esc(t.title)}"></div>
@@ -306,6 +333,12 @@ const Todo = (() => {
           <div class="field"><label>时间（可选）</label><input type="time" class="input" id="f_m" value="${t.time || ''}"></div>
           <div class="field"><label>标签</label><input class="input" id="f_g" value="${U.esc(t.tag || '')}" placeholder="如 家长沟通"></div>
         </div>
+        ${U.buildRepeatControl(t.repeat && typeof t.repeat === 'string' ? t.repeat : (t.repeat && t.repeat.type === 'custom' ? 'custom' : (t.repeat && t.repeat.type) || 'never'))}
+        <div class="field" style="display:flex;align-items:center;justify-content:space-between">
+          <label>标记（旗标，置顶高亮）</label>
+          <div class="switch ${flagOn}" id="f_flag_sw"></div>
+          <input type="checkbox" id="f_flag" ${t.flag ? 'checked' : ''} style="display:none">
+        </div>
         <div class="field"><label>日期</label><input type="date" class="input" id="f_d" value="${t.date}"></div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-ghost btn-sm" id="btnToggleDone">${t.status === 'done' ? '标记为未完成' : '标记为完成'}</button>
@@ -318,11 +351,21 @@ const Todo = (() => {
         t.priority = +U.$('#f_p', b).value;
         t.time = U.$('#f_m', b).value || '';
         t.tag = U.$('#f_g', b).value.trim();
+        t.repeat = U.readRepeatControl(b);
+        t.flag = U.$('#f_flag', b).checked;
         t.date = U.$('#f_d', b).value || t.date;
         DB.save();
         if (after) after(); else { render(); App.refreshBadge(); }
       }
     });
+    U.wireRepeatControl(mm.body, (typeof t.repeat === 'string' || (t.repeat && t.repeat.type === 'custom'))
+      ? t.repeat : (t.repeat && t.repeat.type) || 'never');
+    const flagSw = U.$('#f_flag_sw', mm.body);
+    flagSw.onclick = () => {
+      const cb = U.$('#f_flag', mm.body);
+      cb.checked = !cb.checked;
+      flagSw.classList.toggle('on', cb.checked);
+    };
     mm.body.addEventListener('click', e => {
       if (e.target.id === 'btnToggleDone') {
         t.status = t.status === 'done' ? 'pending' : 'done';
@@ -335,17 +378,36 @@ const Todo = (() => {
   }
 
   function addNew() {
-    U.modal({
+    const mm = U.modal({
       title: '新建提醒事项',
       body: `<div class="field"><label>任务内容</label><input class="input" id="f_t" placeholder="例如：给王妈妈发本周课表" autofocus></div>
-        <div class="field"><label>时间（可选）</label><input type="time" class="input" id="f_m"></div>`,
+        <div class="row">
+          <div class="field"><label>时间（可选）</label><input type="time" class="input" id="f_m"></div>
+          <div class="field"><label>优先级</label><select class="input" id="f_p">
+            ${P.map(p => `<option value="${p.v}" ${p.v === 1 ? 'selected' : ''}>${p.name}</option>`).join('')}</select></div>
+        </div>
+        ${U.buildRepeatControl('never')}
+        <div class="field" style="display:flex;align-items:center;justify-content:space-between">
+          <label>标记（旗标，置顶高亮）</label>
+          <div class="switch" id="f_flag_sw"></div>
+          <input type="checkbox" id="f_flag" style="display:none">
+        </div>`,
       onOk: b => {
         const title = U.$('#f_t', b).value.trim();
         if (!title) { U.toast('请填写内容', 'warn'); return false; }
-        add({ title, time: U.$('#f_m', b).value || '', date: curDate, status: 'pending' });
+        add({
+          title, time: U.$('#f_m', b).value || '', date: curDate, status: 'pending',
+          priority: +U.$('#f_p', b).value, repeat: U.readRepeatControl(b), flag: U.$('#f_flag', b).checked
+        });
         render(); App.refreshBadge();
       }
     });
+    U.wireRepeatControl(mm.body, 'never');
+    const flagSw = U.$('#f_flag_sw', mm.body);
+    flagSw.onclick = () => {
+      const cb = U.$('#f_flag', mm.body);
+      cb.checked = !cb.checked; flagSw.classList.toggle('on', cb.checked);
+    };
   }
 
   function editTpl(tpl, after) {

@@ -209,7 +209,7 @@ const AI = (() => {
     if (/(今天|今日|今天有|今天几|今天还有)/.test(q)) {
       const t = U.today();
       const ls = DB.data.lessons.filter(l => l.date === t && l.status !== 'cancelled');
-      const td = DB.data.todos.filter(x => x.date === t && x.status !== 'done').length;
+      const td = Todo.ofDate(t).filter(x => x.status !== 'done').length;
       return `今天排了 ${ls.length} 节课，还有 ${td} 条提醒事项未完成。` + (ls.length ? ` 第一节 ${ls[0].start} 开始。` : ' 今天没有排课，可以专心拓客～');
     }
     if (/(抽成|赚|收入|利润|多少钱)/.test(q)) {
@@ -371,6 +371,14 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.9.5</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>提醒事项 / 日程「重复」全面自定义</b>：不再只有固定的「每天/每周/每月」等预设。新增<b>自定义重复</b>——可选择每 N 天 / 周 / 个月 / 年，按星期多选（例如<b>每周一、周四、周五</b>），并设置<b>结束方式</b>：永不 / 直到某天 / 重复 N 次。旧版固定值（如 daily / weekly）自动兼容，无需重新录入。</li>
+        <li><b>重复真正展开</b>：日历的日 / 周 / 月视图、提醒事项列表、工作台首页、小助手都会按重复规则<b>逐日展开</b>显示，不再只记一条看不见。</li>
+        <li><b>单次完成</b>：重复任务可在某一天单独勾选完成（记录到该发生日），<b>不会一次勾掉全部</b>；把日历 / 列表切到其它天仍会正常显示未完成的实例。</li>
+        <li><b>提醒事项对齐 iOS 提醒页</b>：编辑 / 新建页补全<b>「重复」</b>与<b>「标记（旗标）」</b>两项——标记项会<b>置顶高亮</b>，并在列表上显示 🚩 与 🔁 重复说明。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.9.4</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>云同步体验增强（解决「两端是否连到同一空间」困扰）</b>：连接成功后，下方以<b>醒目绿色卡片</b>展示本机的<b>真实空间 ID</b> 与一键「复制此 ID」；并新增<b>空间指纹</b>（取 ID 首尾各 4 位，如 <code>5a9c-191b</code>）。两端连到<b>同一份</b>数据时指纹必然相同，用户只要对比指纹即可确认两端是否同步到同一份，不再靠肉眼比对一长串 ID。</li>

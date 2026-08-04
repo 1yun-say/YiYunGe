@@ -1223,7 +1223,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T14:49:38.111Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T15:42:00.606Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -1594,11 +1594,242 @@ function editableSub(node, viewKey, fallback) {
     });
   }
 
+  /* ============ 通用重复规则引擎 ============
+   * 兼容两种存储形态：
+   *  - 旧版预设字符串：'never'|'daily'|'weekdays'|'weekly'|'biweekly'|'monthly'|'yearly'
+   *  - 新版自定义对象：{ type:'custom', unit:'day|week|month|year', every:N,
+   *                      weekdays:[0..6]|null, end:'never|until|count', until:'YYYY-MM-DD', count:N }
+   * 规则统一规整为带 start（起始日期）的对象，便于计算「某天是否发生」。
+   */
+  function monthDay(y, m, day) {
+    const last = new Date(y, m, 0).getDate();   // m 为自然月(1-12)，0 日为上月最后一天
+    const d = Math.min(day, last);
+    return `${y}-${pad(m)}-${pad(d)}`;
+  }
+
+  function recurRuleOf(v, start) {
+    const base = { start: start || null };
+    if (typeof v === 'string') {
+      const map = {
+        never: { type: 'never' }, daily: { type: 'daily' }, weekdays: { type: 'weekdays' },
+        weekly: { type: 'weekly' }, biweekly: { type: 'biweekly' },
+        monthly: { type: 'monthly' }, yearly: { type: 'yearly' }
+      };
+      return Object.assign({}, base, map[v] || { type: 'never' });
+    }
+    if (v && typeof v === 'object') {
+      if (v.type === 'custom') {
+        return Object.assign({}, base, {
+          type: 'custom',
+          unit: v.unit || 'week',
+          every: Math.max(1, +v.every || 1),
+          weekdays: Array.isArray(v.weekdays) ? v.weekdays.map(Number) : null,
+          end: v.end || 'never',
+          until: v.until || '',
+          count: Math.max(1, +v.count || 1)
+        });
+      }
+      return Object.assign({}, base, {
+        type: v.type || 'never', unit: v.unit, every: v.every,
+        weekdays: Array.isArray(v.weekdays) ? v.weekdays.map(Number) : null,
+        end: v.end, until: v.until, count: v.count
+      });
+    }
+    return Object.assign({}, base, { type: 'never' });
+  }
+
+  /* 枚举 [from,to] 区间内所有「发生日」(anchor 日期)，含 end 条件裁剪。
+   * 起始日恒为 rule.start；所有发生日都 >= start。 */
+  function recurOccurrencesBetween(rule, from, to) {
+    const S = rule.start;
+    if (!S) return [];
+    const r = rule;
+    if (r.type === 'never') return (S >= from && S <= to) ? [S] : [];
+
+    const out = [];
+    const LIMIT = 4000;
+    let idx = 0;                 // 从 start 起算的发生序号（含被 from 裁掉的）
+    const pushIf = d => {
+      if (r.end === 'count' && idx >= r.count) return false;   // 已达次数上限
+      if (r.end === 'until' && r.until && d > r.until) return false; // 已超过截止日
+      if (d >= from && d <= to) out.push(d);
+      idx++;
+      return true;
+    };
+
+    if (r.type === 'daily' || r.type === 'weekdays' || (r.type === 'custom' && r.unit === 'day')) {
+      const step = (r.type === 'custom') ? r.every : 1;
+      const wdOnly = r.type === 'weekdays';
+      let d = S, i = 0;
+      while (d <= to && i < LIMIT) {
+        if (!wdOnly || [1, 2, 3, 4, 5].includes(dow(d))) { if (!pushIf(d)) break; }
+        d = addDays(d, step); i++;
+      }
+    } else if (r.type === 'weekly' || r.type === 'biweekly') {
+      const step = (r.type === 'weekly') ? 7 : 14;
+      let d = S, i = 0;
+      while (d <= to && i < LIMIT) { if (!pushIf(d)) break; d = addDays(d, step); i++; }
+    } else if (r.type === 'custom' && r.unit === 'week') {
+      if (r.weekdays && r.weekdays.length) {
+        // 每 N 周、且只在该周指定的星期几发生（可多选，如周一/周四/周五）
+        const day = +S.slice(8);
+        let d = S, i = 0;
+        while (d <= to && i < LIMIT) {
+          const wk = Math.round(daysDiff(S, d) / 7);
+          if (wk >= 0 && wk % r.every === 0 && r.weekdays.includes(dow(d))) { if (!pushIf(d)) break; }
+          d = addDays(d, 1); i++;
+        }
+      } else {
+        // 每 N 周、同一星期几（start 的星期）
+        let d = S, i = 0;
+        while (d <= to && i < LIMIT) { if (!pushIf(d)) break; d = addDays(d, r.every * 7); i++; }
+      }
+    } else if (r.type === 'monthly') {
+      const day = +S.slice(8);
+      let cur = S, i = 0;
+      while (cur <= to && i < LIMIT) {
+        if (!pushIf(cur)) break;
+        cur = addMonths(cur, 1); cur = monthDay(+cur.slice(0, 4), +cur.slice(5, 7), day); i++;
+      }
+    } else if (r.type === 'yearly') {
+      let y = +S.slice(0, 4); const md = S.slice(5); let i = 0;
+      while (i < LIMIT) { const cur = `${y}-${md}`; if (cur > to) break; if (!pushIf(cur)) break; y++; i++; }
+    } else if (r.type === 'custom' && r.unit === 'month') {
+      const day = +S.slice(8);
+      let cur = S, i = 0;
+      while (cur <= to && i < LIMIT) {
+        if (!pushIf(cur)) break;
+        cur = addMonths(cur, r.every); cur = monthDay(+cur.slice(0, 4), +cur.slice(5, 7), day); i++;
+      }
+    } else if (r.type === 'custom' && r.unit === 'year') {
+      let y = +S.slice(0, 4); const md = S.slice(5); let i = 0;
+      while (i < LIMIT) { const cur = `${y}-${md}`; if (cur > to) break; if (!pushIf(cur)) break; y += r.every; i++; }
+    }
+    return out;
+  }
+
+  /* 指定日期是否发生（已含 end 裁剪）。 */
+  function recurOccursOn(d, rule) {
+    if (!d || !rule || !rule.start) return false;
+    if (d < rule.start) return false;
+    return recurOccurrencesBetween(rule, d, d).length > 0;
+  }
+
+  /* 人类可读描述。 */
+  function recurDescribe(rule) {
+    const r = rule || { type: 'never' };
+    const wn = ['日', '一', '二', '三', '四', '五', '六'];
+    switch (r.type) {
+      case 'daily': return '每天';
+      case 'weekdays': return '每个工作日';
+      case 'weekly': return '每周（同一星期几）';
+      case 'biweekly': return '每两周';
+      case 'monthly': return '每月（同日期）';
+      case 'yearly': return '每年（同月日）';
+      case 'custom': {
+        let s = '';
+        if (r.unit === 'day') s = `每 ${r.every} 天`;
+        else if (r.unit === 'week') s = `每 ${r.every} 周` + ((r.weekdays && r.weekdays.length) ? (' ' + r.weekdays.map(w => '周' + wn[w]).join('、')) : '');
+        else if (r.unit === 'month') s = `每 ${r.every} 个月`;
+        else if (r.unit === 'year') s = `每 ${r.every} 年`;
+        if (r.end === 'until' && r.until) s += `，至 ${r.until}`;
+        if (r.end === 'count') s += `，共 ${r.count} 次`;
+        return s;
+      }
+      default: return '不重复';
+    }
+  }
+
+  /* ============ 重复控件（日程 / 提醒事项共用） ============ */
+  // 返回一段 HTML：预设下拉 + 自定义面板。value 可为旧字符串或新对象。
+  function buildRepeatControl(value) {
+    const presetKey = (typeof value === 'string') ? value
+      : (value && value.type === 'custom') ? 'custom'
+        : (value && value.type) || 'never';
+    const opt = (k, n) => `<option value="${k}" ${presetKey === k ? 'selected' : ''}>${n}</option>`;
+    const wdChips = [1, 2, 3, 4, 5, 6, 0].map(w =>
+      `<button type="button" class="wd-chip" data-w="${w}">${WD[w].slice(1)}</button>`).join('');
+    return `<div class="field"><label>重复</label>
+        <select class="input" id="repPreset">
+          ${opt('never', '永不')}${opt('daily', '每天')}${opt('weekdays', '工作日')}
+          ${opt('weekly', '每周')}${opt('biweekly', '每两周')}${opt('monthly', '每月')}${opt('yearly', '每年')}
+          ${opt('custom', '自定义…')}
+        </select></div>
+      <div id="repCustom" style="display:${presetKey === 'custom' ? 'block' : 'none'};border-left:3px solid var(--pink-200);padding-left:12px;margin:4px 0 10px">
+        <div class="row">
+          <div class="field"><label>每</label><input type="number" class="input" id="repEvery" min="1" value="1" style="width:78px"></div>
+          <div class="field"><label>单位</label><select class="input" id="repUnit">
+            <option value="day">天</option><option value="week">周</option>
+            <option value="month">个月</option><option value="year">年</option></select></div>
+        </div>
+        <div class="field" id="repWeekdaysWrap" style="display:none"><label>在星期（可多选）</label>
+          <div class="wd-pick">${wdChips}</div></div>
+        <div class="row">
+          <div class="field"><label>结束</label><select class="input" id="repEnd">
+            <option value="never">永不</option><option value="until">直到某天</option><option value="count">重复次数</option></select></div>
+          <div class="field" id="repUntilWrap" style="display:none"><label>结束日期</label><input type="date" class="input" id="repUntil"></div>
+          <div class="field" id="repCountWrap" style="display:none"><label>次数</label><input type="number" class="input" id="repCount" min="1" value="10" style="width:88px"></div>
+        </div>
+      </div>`;
+  }
+
+  // 把已存值回填到控件并绑定联动。
+  function wireRepeatControl(b, value) {
+    const preset = $('#repPreset', b);
+    const custom = $('#repCustom', b);
+    const every = $('#repEvery', b), unit = $('#repUnit', b);
+    const wdWrap = $('#repWeekdaysWrap', b), untilWrap = $('#repUntilWrap', b), countWrap = $('#repCountWrap', b);
+    const endSel = $('#repEnd', b), until = $('#repUntil', b), count = $('#repCount', b);
+
+    const sync = () => {
+      const isCustom = preset.value === 'custom';
+      custom.style.display = isCustom ? 'block' : 'none';
+      wdWrap.style.display = (isCustom && unit.value === 'week') ? 'block' : 'none';
+      untilWrap.style.display = (endSel.value === 'until') ? 'block' : 'none';
+      countWrap.style.display = (endSel.value === 'count') ? 'block' : 'none';
+    };
+    preset.onchange = sync;
+    unit.onchange = sync;
+    endSel.onchange = sync;
+
+    if (value && typeof value === 'object' && value.type === 'custom') {
+      every.value = value.every || 1;
+      unit.value = value.unit || 'week';
+      if (Array.isArray(value.weekdays)) {
+        custom.querySelectorAll('.wd-chip').forEach(c => c.classList.toggle('on', value.weekdays.map(Number).includes(+c.dataset.w)));
+      }
+      endSel.value = value.end || 'never';
+      if (value.until) until.value = value.until;
+      if (value.count) count.value = value.count;
+    } else {
+      every.value = 1; unit.value = 'week'; endSel.value = 'never'; count.value = 10;
+    }
+    custom.querySelectorAll('.wd-chip').forEach(c => c.onclick = () => c.classList.toggle('on'));
+    sync();
+  }
+
+  // 读取控件当前值，返回字符串(预设)或对象(自定义)。
+  function readRepeatControl(b) {
+    const preset = $('#repPreset', b).value;
+    if (preset !== 'custom') return preset;
+    const every = Math.max(1, +$('#repEvery', b).value || 1);
+    const unit = $('#repUnit', b).value;
+    const weekdays = (unit === 'week')
+      ? Array.from(b.querySelectorAll('#repWeekdaysWrap .wd-chip.on')).map(x => +x.dataset.w)
+      : null;
+    const end = $('#repEnd', b).value;
+    const until = (end === 'until') ? ($('#repUntil', b).value || '') : '';
+    const count = (end === 'count') ? Math.max(1, +$('#repCount', b).value || 1) : 1;
+    return { type: 'custom', unit, every, weekdays, end, until, count };
+  }
+
   return {
     pad, today, fmt, parse, addDays, addMonths, dow, mondayOf, weekDays, monthFirst, monthLast,
     yearFirst, yearLast, wdName, cnDate, between, daysDiff, t2m, m2t, uid, money, esc, el, $, $$,
     toast, modal, confirm, copy, pie, bars, columns, subColor, SUBJECT_COLORS, WEEK_MUTED, WD, rebind, unbindNode, pct, fmtTime, isMobile,
-    editableSub, draggableSortable
+    editableSub, draggableSortable,
+    monthDay, recurRuleOf, recurOccurrencesBetween, recurOccursOn, recurDescribe,
+    buildRepeatControl, wireRepeatControl, readRepeatControl
   };
 })();
 
@@ -1963,6 +2194,7 @@ const DB = (() => {
         migrateSubjects(d);
         migrateHistIncome(d);
         migrateLessonTeacher(d);
+        migrateRecurrence(d);
         return d;
       }
     } catch (e) { console.warn('数据读取失败', e); }
@@ -2077,6 +2309,22 @@ const DB = (() => {
     const map = {};
     d.students.forEach(s => { map[s.id] = s.teacherId || ''; });
     d.lessons.forEach(l => { if (!l.teacherId && l.studentId && map[l.studentId]) l.teacherId = map[l.studentId]; });
+    return d;
+  }
+
+  // 数据迁移：提醒事项 / 日程补「重复规则 + 已完成实例 + 标记(flag)」字段；
+  // 旧版 repeat 可能是字符串('daily'等)或缺失，统一兜底为 'never'（引擎兼容字符串/对象）。
+  function migrateRecurrence(d) {
+    if (!d) return d;
+    if (Array.isArray(d.todos)) d.todos.forEach(t => {
+      if (t.repeat === undefined || t.repeat === null) t.repeat = 'never';
+      if (!Array.isArray(t.completedDates)) t.completedDates = [];
+      if (typeof t.flag !== 'boolean') t.flag = false;
+    });
+    if (Array.isArray(d.events)) d.events.forEach(e => {
+      if (e.repeat === undefined || e.repeat === null) e.repeat = 'never';
+      if (!Array.isArray(e.completedDates)) e.completedDates = [];
+    });
     return d;
   }
 
@@ -2205,6 +2453,7 @@ const DB = (() => {
     migrateSubjects(d);
     migrateHistIncome(d);
     migrateLessonTeacher(d);
+    migrateRecurrence(d);
     return d;
   }
 
@@ -2686,8 +2935,18 @@ const Todo = (() => {
     return added;
   }
 
-  const ofDate = d => DB.data.todos.filter(t => t.date === d);
-  const pendingCount = () => DB.data.todos.filter(t => t.status === 'pending' && t.date <= U.today()).length;
+  /* 某条待办在某天是否出现（含重复展开 + 单次完成裁剪） */
+  function occursOnDate(t, d) {
+    const rule = U.recurRuleOf(t.repeat, t.date);
+    if (!U.recurOccursOn(d, rule)) return false;
+    if (Array.isArray(t.completedDates) && t.completedDates.includes(d)) return false;
+    return true;
+  }
+  const ofDate = d => DB.data.todos.filter(t => occursOnDate(t, d));
+  const pendingCount = () => {
+    const t = U.today();
+    return DB.data.todos.filter(x => occursOnDate(x, t) && x.status !== 'done').length;
+  };
 
   function add(t) {
     DB.data.todos.push(Object.assign({
@@ -2714,7 +2973,11 @@ const Todo = (() => {
     const root = U.$('#view');
     if (!root || App.route !== 'todo') return;
     const list = ofDate(curDate);
-    const undone = list.filter(t => t.status !== 'done').sort((a, b) => (a.time || '99:59').localeCompare(b.time || '99:59') || a.priority - b.priority || a.createdAt - b.createdAt);
+    const sortFn = (a, b) => (b.flag ? 1 : 0) - (a.flag ? 1 : 0)   // 旗标置顶
+      || a.priority - b.priority
+      || (a.time || '99:59').localeCompare(b.time || '99:59')
+      || a.createdAt - b.createdAt;
+    const undone = list.filter(t => t.status !== 'done').sort(sortFn);
     const done = list.filter(t => t.status === 'done').sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
     const shown = filter < 0 ? undone : undone.filter(t => t.priority === filter);
     const overdue = DB.data.todos.filter(t => t.status === 'pending' && t.date < U.today());
@@ -2853,8 +3116,10 @@ const Todo = (() => {
           <span class="tag" style="background:${p.color}1f;color:${p.color}">${p.name}</span>
           ${t.status !== 'pending' ? `<span class="tag" style="background:${st.color}1f;color:${st.color}">${st.name}</span>` : ''}
           ${t.tag ? `<span class="tag gray">${U.esc(t.tag)}</span>` : ''}
+          ${t.flag ? `<span class="tag" style="background:#ffd9d9;color:#cf5252">🚩 标记</span>` : ''}
           ${t.autoKey ? `<span class="tag gold">自动生成</span>` : ''}
           ${stu ? `<span class="tag sky">${U.esc(DB.studentLabel(stu))}</span>` : ''}
+          ${(() => { const r = U.recurRuleOf(t.repeat, t.date); const d = U.recurDescribe(r); return d && d !== '不重复' ? `<span class="tag" style="background:#e8f1ff;color:#3a6ea5">🔁 ${U.esc(d)}</span>` : ''; })()}
           ${showDate ? `<span class="tag alert">${U.cnDate(t.date)}</span>` : ''}
           ${t.status === 'done' && t.doneAt ? `<span class="muted" style="font-size:11px">完成于 ${new Date(t.doneAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>` : ''}
         </div>
@@ -2883,12 +3148,22 @@ const Todo = (() => {
         case 'prevDay': curDate = U.addDays(curDate, -1); render(); break;
         case 'nextDay': curDate = U.addDays(curDate, 1); render(); break;
         case 'quickAdd': doQuickAdd(root); break;
-        case 'toggle':
-          t.status = cycle(t.status);
-          t.doneAt = t.status === 'done' ? Date.now() : (t.status === 'pending' ? null : t.doneAt);
+        case 'toggle': {
+          const rule = U.recurRuleOf(t.repeat, t.date);
+          if (U.recurOccursOn(curDate, rule)) {
+            // 重复任务：按当前展示日单独勾选完成
+            t.completedDates = Array.isArray(t.completedDates) ? t.completedDates : [];
+            const i = t.completedDates.indexOf(curDate);
+            if (i >= 0) { t.completedDates.splice(i, 1); t.doneAt = null; U.toast('已恢复为未完成'); }
+            else { t.completedDates.push(curDate); t.doneAt = Date.now(); U.toast('完成一件，很好'); }
+          } else {
+            t.status = cycle(t.status);
+            t.doneAt = t.status === 'done' ? Date.now() : (t.status === 'pending' ? null : t.doneAt);
+            if (t.status === 'done') U.toast('完成一件，很好');
+          }
           DB.save(); render(); App.refreshBadge();
-          if (t.status === 'done') U.toast('完成一件，很好');
           break;
+        }
         case 'edit': editTodo(t); break;
         case 'del': DB.data.todos = DB.data.todos.filter(x => x.id !== tid); DB.save(); render(); App.refreshBadge(); break;
         case 'pullOverdue':
@@ -2927,6 +3202,7 @@ const Todo = (() => {
 
   function editTodo(t, after) {
     const st = sInfo(t.status);
+    const flagOn = t.flag ? 'on' : '';
     const mm = U.modal({
       title: '编辑任务',
       body: `<div class="field"><label>任务内容</label><input class="input" id="f_t" value="${U.esc(t.title)}"></div>
@@ -2941,6 +3217,12 @@ const Todo = (() => {
           <div class="field"><label>时间（可选）</label><input type="time" class="input" id="f_m" value="${t.time || ''}"></div>
           <div class="field"><label>标签</label><input class="input" id="f_g" value="${U.esc(t.tag || '')}" placeholder="如 家长沟通"></div>
         </div>
+        ${U.buildRepeatControl(t.repeat && typeof t.repeat === 'string' ? t.repeat : (t.repeat && t.repeat.type === 'custom' ? 'custom' : (t.repeat && t.repeat.type) || 'never'))}
+        <div class="field" style="display:flex;align-items:center;justify-content:space-between">
+          <label>标记（旗标，置顶高亮）</label>
+          <div class="switch ${flagOn}" id="f_flag_sw"></div>
+          <input type="checkbox" id="f_flag" ${t.flag ? 'checked' : ''} style="display:none">
+        </div>
         <div class="field"><label>日期</label><input type="date" class="input" id="f_d" value="${t.date}"></div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-ghost btn-sm" id="btnToggleDone">${t.status === 'done' ? '标记为未完成' : '标记为完成'}</button>
@@ -2953,11 +3235,21 @@ const Todo = (() => {
         t.priority = +U.$('#f_p', b).value;
         t.time = U.$('#f_m', b).value || '';
         t.tag = U.$('#f_g', b).value.trim();
+        t.repeat = U.readRepeatControl(b);
+        t.flag = U.$('#f_flag', b).checked;
         t.date = U.$('#f_d', b).value || t.date;
         DB.save();
         if (after) after(); else { render(); App.refreshBadge(); }
       }
     });
+    U.wireRepeatControl(mm.body, (typeof t.repeat === 'string' || (t.repeat && t.repeat.type === 'custom'))
+      ? t.repeat : (t.repeat && t.repeat.type) || 'never');
+    const flagSw = U.$('#f_flag_sw', mm.body);
+    flagSw.onclick = () => {
+      const cb = U.$('#f_flag', mm.body);
+      cb.checked = !cb.checked;
+      flagSw.classList.toggle('on', cb.checked);
+    };
     mm.body.addEventListener('click', e => {
       if (e.target.id === 'btnToggleDone') {
         t.status = t.status === 'done' ? 'pending' : 'done';
@@ -2970,17 +3262,36 @@ const Todo = (() => {
   }
 
   function addNew() {
-    U.modal({
+    const mm = U.modal({
       title: '新建提醒事项',
       body: `<div class="field"><label>任务内容</label><input class="input" id="f_t" placeholder="例如：给王妈妈发本周课表" autofocus></div>
-        <div class="field"><label>时间（可选）</label><input type="time" class="input" id="f_m"></div>`,
+        <div class="row">
+          <div class="field"><label>时间（可选）</label><input type="time" class="input" id="f_m"></div>
+          <div class="field"><label>优先级</label><select class="input" id="f_p">
+            ${P.map(p => `<option value="${p.v}" ${p.v === 1 ? 'selected' : ''}>${p.name}</option>`).join('')}</select></div>
+        </div>
+        ${U.buildRepeatControl('never')}
+        <div class="field" style="display:flex;align-items:center;justify-content:space-between">
+          <label>标记（旗标，置顶高亮）</label>
+          <div class="switch" id="f_flag_sw"></div>
+          <input type="checkbox" id="f_flag" style="display:none">
+        </div>`,
       onOk: b => {
         const title = U.$('#f_t', b).value.trim();
         if (!title) { U.toast('请填写内容', 'warn'); return false; }
-        add({ title, time: U.$('#f_m', b).value || '', date: curDate, status: 'pending' });
+        add({
+          title, time: U.$('#f_m', b).value || '', date: curDate, status: 'pending',
+          priority: +U.$('#f_p', b).value, repeat: U.readRepeatControl(b), flag: U.$('#f_flag', b).checked
+        });
         render(); App.refreshBadge();
       }
     });
+    U.wireRepeatControl(mm.body, 'never');
+    const flagSw = U.$('#f_flag_sw', mm.body);
+    flagSw.onclick = () => {
+      const cb = U.$('#f_flag', mm.body);
+      cb.checked = !cb.checked; flagSw.classList.toggle('on', cb.checked);
+    };
   }
 
   function editTpl(tpl, after) {
@@ -5643,17 +5954,35 @@ const Calendar = (() => {
   }
 
   /* ---------- 按日期聚合提醒事项 ---------- */
+  /* ---------- 按日期聚合提醒事项（含重复展开） ---------- */
   function todosOf(dt) {
-    return DB.data.todos.filter(x => x.date === dt)
-      .sort((a, b) => (a.status === 'done') - (b.status === 'done') || (a.time || '99:59').localeCompare(b.time || '99:59') || a.priority - b.priority || a.createdAt - b.createdAt);
+    const out = [];
+    for (const x of DB.data.todos) {
+      const rule = U.recurRuleOf(x.repeat, x.date);
+      if (!U.recurOccursOn(dt, rule)) continue;
+      out.push(x);
+    }
+    out.sort((a, b) => (a.status === 'done') - (b.status === 'done') || (a.time || '99:59').localeCompare(b.time || '99:59') || a.priority - b.priority || a.createdAt - b.createdAt);
+    return out;
   }
 
-  /* ---------- 按日期聚合日程（发生在该天的日程） ---------- */
+  /* ---------- 按日期聚合日程（发生在该天的日程，含重复展开） ---------- */
   function eventsOf(dt) {
-    return DB.data.events.filter(e => {
-      if (e.allDay) return e.startDate <= dt && e.endDate >= dt;
-      return e.startDate === dt || e.endDate === dt || (e.startDate < dt && e.endDate > dt);
-    }).sort((a, b) => (a.startTime || '00:00').localeCompare(b.startTime || '00:00') || a.createdAt - b.createdAt);
+    const out = [];
+    for (const e of DB.data.events) {
+      const rule = U.recurRuleOf(e.repeat, e.startDate);
+      if (!U.recurOccursOn(dt, rule)) continue;
+      // 复制一份并把日期偏移到该发生日，保证全天区间 / 时间块正确
+      const off = U.daysDiff(e.startDate, dt);
+      const inst = Object.assign({}, e);
+      if (off) {
+        inst.startDate = dt;
+        inst.endDate = U.addDays(e.endDate, off);
+      }
+      out.push(inst);
+    }
+    out.sort((a, b) => (a.startTime || '00:00').localeCompare(b.startTime || '00:00') || a.createdAt - b.createdAt);
+    return out;
   }
 
   function todoHTML(x) {
@@ -5730,8 +6059,8 @@ const Calendar = (() => {
     if (ev.allDay) { ev.startTime = ''; ev.endTime = ''; }
 
     const calOpts = Object.keys(EVENT_COLORS).map(k => `<option value="${k}" ${ev.calendar === k ? 'selected' : ''}>${k}</option>`).join('');
-    const repeatOpts = REPEAT_OPTIONS.map(r => `<option value="${r.v}" ${ev.repeat === r.v ? 'selected' : ''}>${r.name}</option>`).join('');
     const alertOpts = ALERT_OPTIONS.map(a => `<option value="${a.v}" ${String(ev.alert) === String(a.v) ? 'selected' : ''}>${a.name}</option>`).join('');
+    const startVal = ev.startDate || ev.sd || U.today();
 
     const mm = U.modal({
       title: isNew ? '新建日程' : '编辑日程',
@@ -5744,15 +6073,15 @@ const Calendar = (() => {
           <input type="checkbox" id="ev_allday" ${ev.allDay ? 'checked' : ''} style="display:none">
         </div>
         <div class="row">
-          <div class="field"><label>开始</label><input type="date" class="input" id="ev_sd" value="${ev.startDate}"></div>
+          <div class="field"><label>开始</label><input type="date" class="input" id="ev_sd" value="${startVal}"></div>
           <div class="field ev-time ${ev.allDay ? 'hide' : ''}"><label>&nbsp;</label><input type="time" class="input" id="ev_st" value="${ev.startTime}"></div>
         </div>
         <div class="row">
-          <div class="field"><label>结束</label><input type="date" class="input" id="ev_ed" value="${ev.endDate}"></div>
+          <div class="field"><label>结束</label><input type="date" class="input" id="ev_ed" value="${ev.endDate || startVal}"></div>
           <div class="field ev-time ${ev.allDay ? 'hide' : ''}"><label>&nbsp;</label><input type="time" class="input" id="ev_et" value="${ev.endTime}"></div>
         </div>
+        ${U.buildRepeatControl(ev.repeat && typeof ev.repeat === 'string' ? ev.repeat : (ev.repeat && ev.repeat.type === 'custom' ? 'custom' : (ev.repeat && ev.repeat.type) || 'never'))}
         <div class="row">
-          <div class="field"><label>重复</label><select class="input" id="ev_rep">${repeatOpts}</select></div>
           <div class="field"><label>提醒</label><select class="input" id="ev_alert">${alertOpts}</select></div>
           <div class="field"><label>日历</label><select class="input" id="ev_cal">${calOpts}</select></div>
         </div>
@@ -5766,7 +6095,7 @@ const Calendar = (() => {
         ev.endDate = U.$('#ev_ed', b).value || ev.endDate;
         ev.startTime = ev.allDay ? '' : (U.$('#ev_st', b).value || '00:00');
         ev.endTime = ev.allDay ? '' : (U.$('#ev_et', b).value || '00:00');
-        ev.repeat = U.$('#ev_rep', b).value;
+        ev.repeat = U.readRepeatControl(b);
         ev.alert = U.$('#ev_alert', b).value;
         ev.calendar = U.$('#ev_cal', b).value;
         ev.note = U.$('#ev_note', b).value.trim();
@@ -5786,6 +6115,8 @@ const Calendar = (() => {
       sw.classList.toggle('on', cb.checked);
       mm.body.querySelectorAll('.ev-time').forEach(el => el.classList.toggle('hide', cb.checked));
     };
+    U.wireRepeatControl(mm.body, (typeof ev.repeat === 'string' || (ev.repeat && ev.repeat.type === 'custom'))
+      ? ev.repeat : (ev.repeat && ev.repeat.type) || 'never');
   }
 
   /* ---------- 主渲染 ---------- */
@@ -5831,8 +6162,19 @@ const Calendar = (() => {
       else if (a.dataset.act === 'toggleTodo') {
         const x = DB.data.todos.find(y => y.id === a.closest('[data-tid]').dataset.tid);
         if (!x) return;
-        x.status = Todo.cycle(x.status);
-        x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
+        const rule = U.recurRuleOf(x.repeat, x.date);
+        const occursHere = U.recurOccursOn(anchor, rule);   // 是否就是这个发生日
+        if (occursHere) {
+          // 重复任务：按发生日单独勾选完成
+          x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
+          const i = x.completedDates.indexOf(anchor);
+          if (i >= 0) x.completedDates.splice(i, 1);
+          else x.completedDates.push(anchor);
+          x.doneAt = i >= 0 ? null : Date.now();
+        } else {
+          x.status = Todo.cycle(x.status);
+          x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
+        }
         DB.save(); render(); App.refreshBadge();
       }
       else if (a.dataset.act === 'openTodo') {
@@ -6410,8 +6752,15 @@ const Dashboard = (() => {
         case 'toggleTodo': {
           const x = DB.data.todos.find(y => y.id === b.closest('[data-tid]').dataset.tid);
           if (x) {
-            x.status = Todo.cycle(x.status);
-            x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
+            const rule = U.recurRuleOf(x.repeat, x.date);
+            if (U.recurOccursOn(t, rule)) {
+              x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
+              const i = x.completedDates.indexOf(t);
+              if (i >= 0) { x.completedDates.splice(i, 1); x.doneAt = null; } else { x.completedDates.push(t); x.doneAt = Date.now(); }
+            } else {
+              x.status = Todo.cycle(x.status);
+              x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
+            }
             DB.save(); render(); App.refreshBadge();
             if (x.status === 'done') U.toast('完成一件');
           }
@@ -6438,7 +6787,7 @@ const Dashboard = (() => {
       .sort((a, b) => U.t2m(a.start) - U.t2m(b.start));
     const todosAll = Todo.ofDate(t);
     const undone = todosAll.filter(x => x.status !== 'done').sort((a, b) => a.priority - b.priority);
-    const overdue = DB.data.todos.filter(x => x.status !== 'done' && x.date < t);
+    const overdue = DB.data.todos.filter(x => { const r = U.recurRuleOf(x.repeat, x.date); return U.recurOccursOn(t, r) && x.status !== 'done' && x.date < t; });
     const mFrom = U.monthFirst(t), mTo = U.monthLast(t);
     const mStat = DB.statIn(mFrom, mTo, { includeScheduled: inc });
     const mDone = DB.statIn(mFrom, mTo);
@@ -6528,10 +6877,19 @@ const Dashboard = (() => {
         }
         case 'toggleTodo': {
           const x = DB.data.todos.find(y => y.id === b.closest('[data-tid]').dataset.tid);
-          x.status = Todo.cycle(x.status);
-          x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
-          DB.save(); render(); App.refreshBadge();
-          if (x.status === 'done') U.toast('完成一件');
+          if (x) {
+            const rule = U.recurRuleOf(x.repeat, x.date);
+            if (U.recurOccursOn(t, rule)) {
+              x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
+              const i = x.completedDates.indexOf(t);
+              if (i >= 0) { x.completedDates.splice(i, 1); x.doneAt = null; } else { x.completedDates.push(t); x.doneAt = Date.now(); }
+            } else {
+              x.status = Todo.cycle(x.status);
+              x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
+            }
+            DB.save(); render(); App.refreshBadge();
+            if (x.status === 'done') U.toast('完成一件');
+          }
           break;
         }
         case 'importTpl': {
@@ -7275,7 +7633,7 @@ const AI = (() => {
     if (/(今天|今日|今天有|今天几|今天还有)/.test(q)) {
       const t = U.today();
       const ls = DB.data.lessons.filter(l => l.date === t && l.status !== 'cancelled');
-      const td = DB.data.todos.filter(x => x.date === t && x.status !== 'done').length;
+      const td = Todo.ofDate(t).filter(x => x.status !== 'done').length;
       return `今天排了 ${ls.length} 节课，还有 ${td} 条提醒事项未完成。` + (ls.length ? ` 第一节 ${ls[0].start} 开始。` : ' 今天没有排课，可以专心拓客～');
     }
     if (/(抽成|赚|收入|利润|多少钱)/.test(q)) {
@@ -7437,6 +7795,14 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.9.5</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>提醒事项 / 日程「重复」全面自定义</b>：不再只有固定的「每天/每周/每月」等预设。新增<b>自定义重复</b>——可选择每 N 天 / 周 / 个月 / 年，按星期多选（例如<b>每周一、周四、周五</b>），并设置<b>结束方式</b>：永不 / 直到某天 / 重复 N 次。旧版固定值（如 daily / weekly）自动兼容，无需重新录入。</li>
+        <li><b>重复真正展开</b>：日历的日 / 周 / 月视图、提醒事项列表、工作台首页、小助手都会按重复规则<b>逐日展开</b>显示，不再只记一条看不见。</li>
+        <li><b>单次完成</b>：重复任务可在某一天单独勾选完成（记录到该发生日），<b>不会一次勾掉全部</b>；把日历 / 列表切到其它天仍会正常显示未完成的实例。</li>
+        <li><b>提醒事项对齐 iOS 提醒页</b>：编辑 / 新建页补全<b>「重复」</b>与<b>「标记（旗标）」</b>两项——标记项会<b>置顶高亮</b>，并在列表上显示 🚩 与 🔁 重复说明。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.9.4</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>云同步体验增强（解决「两端是否连到同一空间」困扰）</b>：连接成功后，下方以<b>醒目绿色卡片</b>展示本机的<b>真实空间 ID</b> 与一键「复制此 ID」；并新增<b>空间指纹</b>（取 ID 首尾各 4 位，如 <code>5a9c-191b</code>）。两端连到<b>同一份</b>数据时指纹必然相同，用户只要对比指纹即可确认两端是否同步到同一份，不再靠肉眼比对一长串 ID。</li>
