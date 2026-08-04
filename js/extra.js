@@ -370,6 +370,11 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.8.9</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>全流程体检修复</b>：补做跨模块符号审计时发现并修复一个真 bug——<code>Todo.importTemplates</code> / <code>Todo.editTpl</code> 两个方法此前未挂到 <code>Todo</code> 导出对象，导致 dashboard「模板库」的「导入 / 编辑 / 使用模板」按钮点击即崩溃（渲染不报错，仅点击触发）。已补入导出，跨模块审计清零。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.8.8</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>可视化课表小课块标签优化 + 日历「今天」按钮对齐</b>：① 重叠课块空间不足时自动省略时间/金额/抽成，仅显示课程名字，避免文字被截断；② 电脑/平板端日历头部「今天」按钮统一为 30px 高度并垂直居中，与左右 ‹ › 按钮对齐（手机端样式不变）。</li>

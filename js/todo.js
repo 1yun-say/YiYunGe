@@ -379,5 +379,5 @@ const Todo = (() => {
     render(root) { curDate = U.today(); filter = -1; render(); }
   };
 
-  return { checkAuto, pendingCount, P, pInfo, STATUS, sInfo, cycle, add, addNew, ofDate, render, editTodo };
+  return { checkAuto, pendingCount, P, pInfo, STATUS, sInfo, cycle, add, addNew, ofDate, render, editTodo, importTemplates, editTpl };
 })();
