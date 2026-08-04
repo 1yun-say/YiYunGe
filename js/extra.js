@@ -370,7 +370,7 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
-      <div class="log-ver">v1.7.12</div><div class="log-date">2026-08-04</div>
+      <div class="log-ver">v1.8.0</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>手机端主页精简美化</b>：2×2 快捷入口缩小、卡片间距收紧，确保 iPhone 14 Pro Max 一屏可见无需滚动；「今日待办」上移到「今日课程」之上，「每日模板库」紧跟待办。</li>
         <li><b>三端主页统一</b>：删除「近半年抽成走势 / 本月年级贡献 / 高频话术 / 本月财务」四块，主页更聚焦；同时删去模板库下方的小字说明。</li>
@@ -384,12 +384,12 @@ const Changelog = (() => {
         <li><b>底部「更多」图标</b>由 3×3 点阵改为更简洁的三点样式；年视图不再显示「排课」按钮；编辑模块在 iPhone 上不再超出界面边界。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.7.11</div><div class="log-date">2026-08-04</div>
+      <div class="log-ver">v1.7.12</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li>手机端主页：底部「学员 / 老师 / 课表 / 财务」快捷入口由一行 4 个小图标改为 <b>2×2 大图标网格</b>，图标放大至 50px 并加圆角粉色底，新增「快捷入口」标题，主页不再空旷。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.7.10</div><div class="log-date">2026-08-04</div>
+      <div class="log-ver">v1.7.11</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li>收入模型重定义：实际到手 = 我的抽成 − 报销支出；报销支出 = 从「批注」里自动提取的数字之和（如批注写「买资料50、交通30」即报销 80）。排课/编辑弹窗不再手填「实际到手」，只保留「批注（报销支出）」。</li>
         <li>Excel 抽成表导入：单元格数值视为「实际到手收入」，Excel 批注同步导入为课节批注（incomeNote），点开账单即可查看；批注中的数字自动提取为「报销支出」；系统按「到手 + 报销」反推出「我的抽成」，保证三本账自洽并同步到财务统计。</li>
@@ -405,12 +405,12 @@ const Changelog = (() => {
         <li>修复 bug：财务账单「编辑」按钮此前因全局变量判定方式（window.Schedule 在浏览器顶层 const 下并不挂到 window）而点击无反应，已修复，现可正常打开编辑弹窗。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.7.9</div><div class="log-date">2026-08-04</div>
+      <div class="log-ver">v1.7.10</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
-        <li>缓存破坏：给所有 JS / CSS 资源加 <code>?v=1.7.9</code> 版本号，强制 iPad / 手机端主屏幕 PWA 与浏览器放弃旧缓存，避免设备间版本不一致、加载到旧版界面。</li>
+        <li>缓存破坏：给所有 JS / CSS 资源加 <code>?v</code> 版本号，强制 iPad / 手机端主屏幕 PWA 与浏览器放弃旧缓存，避免设备间版本不一致、加载到旧版界面。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.7.8</div><div class="log-date">2026-08-04</div>
+      <div class="log-ver">v1.7.9</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li>待办事项升级为三态：「未完成 / 已完成 / 今日无法完成」。旧版「完成/未完成」数据自动迁移；列表点击状态图标可循环切换，编辑弹窗也可直接选择。</li>
         <li>课节「批注」文案简化：排课/编辑弹窗的标签从「批注（其余钱去哪了）」改为仅「批注」，placeholder 示例保留。</li>
@@ -420,7 +420,7 @@ const Changelog = (() => {
         <li>手机端我的页：移除「老师名册」入口，剩余 8 个入口正好排成两行 4 列。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.7.7</div><div class="log-date">2026-08-03</div>
+      <div class="log-ver">v1.7.8</div><div class="log-date">2026-08-03</div>
       <ul class="log-list">
         <li>课节新增「实际到手收入」独立字段：排课/编辑弹窗都可填写，未填写时自动回退到「我的抽成」（兼容旧数据）。后续所有收入统计、财务、课表、学员档案、主页全部以「实际到手」为口径。</li>
         <li>课节新增「批注」：可填写老师课酬、资料费等说明；可视化课表周视图内联显示、月视图悬浮提示；财务日账单每一条同步显示。</li>
@@ -428,7 +428,7 @@ const Changelog = (() => {
         <li>统一口径复盘：store.statIn / finance.effectiveRate / finance.group / schedule 各视图 / dashboard / students.js 全部改为从 DB.lessonBreakdown 读取 takeHome，避免 67/70 这类不一致。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.7.6</div><div class="log-date">2026-08-03</div>
+      <div class="log-ver">v1.7.7</div><div class="log-date">2026-08-03</div>
       <ul class="log-list">
         <li>可视化课表 · 每节课新增「实际到手收入（抽成）」与「批注：其余＝老师课酬」，周视图内联显示、月视图悬浮提示，导入抽成卡片也标注实际到手。</li>
         <li>财务统计 · 日账单每一条同步显示「实际到手收入」与「批注（其余＝老师课酬）」，与课表两端一致。</li>
@@ -436,14 +436,14 @@ const Changelog = (() => {
         <li>更新日志 · 修正版本顺序（1.7.3 置于 1.7.2 之上）与最早版本日期标注。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.7.5</div><div class="log-date">2026-08-03</div>
+      <div class="log-ver">v1.7.6</div><div class="log-date">2026-08-03</div>
       <ul class="log-list">
         <li>财务统计 · 抽成率改为按「真实课时」且自 8 月 1 日起计算，导入的抽成表数据不再参与抽成率（仍计入收入流水与按学员/年级统计）。</li>
         <li>可视化课表 · 导入的抽成表记录现在会同步显示在课表年/月/周视图中（默认显示），并提供工具栏复选框「显示导入抽成」随时开关；导入记录不写具体时间，以灰色卡片/条目展示。</li>
         <li>财务统计 · 新增「日账单」模块（默认显示在底部）：按日期倒序列出每天的收入明细，提供「周账单 / 月账单 / 年账单 / 自定义」切换，参考记账 App 的账单样式，收入以绿色显示。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.7.4</div><div class="log-date">2026-08-03</div>
+      <div class="log-ver">v1.7.5</div><div class="log-date">2026-08-03</div>
       <ul class="log-list">
         <li>手机端专项美化（不影响电脑/平板）：主页改为<b>一屏精简仪表</b>，只保留今日问候、3 个关键数字、今日课程/待办各前 3 条和 4 个快捷入口，删减走势/年级/话术/模板等纯展示模块。</li>
         <li>手机端待办页：移除「全部/紧急重要/重要不紧急…」筛选芯片和右侧的「四象限说明」/「每日模板库」，标题与日期计数保持单行，列表更紧凑。</li>
@@ -451,18 +451,18 @@ const Changelog = (() => {
         <li>手机端日历：月视图改为<b>彩色圆点</b>表示有课（参考 iOS 日历，不显示完整文字），周视图改为纵向日程列表，去掉 7 列拥挤排版；整体更紧凑、一屏看完。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.7.3</div><div class="log-date">2026-08-03</div>
+      <div class="log-ver">v1.7.4</div><div class="log-date">2026-08-03</div>
       <ul class="log-list">
         <li>财务统计 · 新增「导入抽成表」：选 .xlsx 后，先弹出<b>预览</b>（日期 / 学员 / 匹配或新建 / 抽成 / 备注），确认后才写入。表头自动取纯名字（忽略前缀数字与时薪、「X/Y」括号后缀），日期去星期，批注原文搬入备注（自动去 iPad: 前缀、过滤 Excel 系统批注）。</li>
         <li>财务统计 · 导入的抽成按「每天每家长」生成课时记录（抽成 = 单元格金额，状态已完成），并自动按姓名归入现有学员、缺失则新建；抽成计入财务月度走势与按学员统计，但为不打扰课表，这些记录不在日历周视图/月历中渲染，也不计入老师「累计课时」。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.7.2</div><div class="log-date">2026-08-03</div>
+      <div class="log-ver">v1.7.3</div><div class="log-date">2026-08-03</div>
       <ul class="log-list">
         <li>老师名册 · 修复「累计课时」显示为 0 的问题：课节缺失老师时，加载/导入时自动按所属学员当前老师补上 teacherId（历史排课、Excel 导入的课也可能没带老师），老师名册与财务「按老师课时排行」现在都能正确统计已完成课时。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.7.1</div><div class="log-date">2026-08-03</div>
+      <div class="log-ver">v1.7.2</div><div class="log-date">2026-08-03</div>
       <ul class="log-list">
         <li>可视化课表 · 课程卡片标题简化为只显示<b>孩子姓名</b>，不再显示年级 + 学科前缀，解决名字被截断、显示不全的问题。</li>
         <li>可视化课表 · 课程卡片颜色/学科信息改为跟随学员档案中的最新课程设置同步，避免档案改了「新概念」后课表仍显示旧学科。</li>
@@ -470,14 +470,14 @@ const Changelog = (() => {
         <li>待办 · 编辑任务弹窗新增「标记为完成 / 标记为未完成」按钮，误勾后可一键恢复未完成状态。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.7</div><div class="log-date">2026-08-03</div>
+      <div class="log-ver">v1.7.1</div><div class="log-date">2026-08-03</div>
       <ul class="log-list">
         <li>财务统计 · 历史收入改为「按月总额」填写：不再需要按学员逐个拆分——已经不在你这上课的学员不用再管，直接在「历史收入」弹窗里填 <b>每个月的总抽成</b> 即可，每个月一行，月度走势图照样各自画成一根柱子。</li>
         <li>财务统计 · 历史收入弹窗新增「删除月份」权限：每行末尾的 🗑 可删除不想要的月份；并用「月份选择器 + 添加月份」替代原来的「+ 更早月份」按钮，避免误加重复月份（修复之前编辑时多冒出一个月的问题）。</li>
         <li>财务统计 · 明细表与 CSV 导出不再按学员拆分「历史收入」列（因历史收入已改为全局按月总额、与当前课程区间无关），历史收入总额仍在「区间总览」卡片与月度走势中体现。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.6</div><div class="log-date">2026-08-03</div>
+      <div class="log-ver">v1.6.0</div><div class="log-date">2026-08-03</div>
       <ul class="log-list">
         <li>学员档案：编辑档案时移除「家长称呼」字段，仅保留「学生姓名」并作为档案主名称（更简洁，契合只用学生姓名的习惯）。</li>
         <li>学员档案：新增「手动排序」——每位学员卡片可 ↑/↓ 移动顺序（桌面端支持拖拽），并可一键「按频率重排」恢复自动序，顺序自动保存。</li>
@@ -486,7 +486,7 @@ const Changelog = (() => {
         <li>重复校验：新建学员时若同名（忽略大小写 / 空格）已存在会提示确认；导入课时时按姓名匹配已有学员而非重复建，并跳过同一人同日期同抽成的重复课程。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.5</div><div class="log-date">2026-08-03</div>
+      <div class="log-ver">v1.5.0</div><div class="log-date">2026-08-03</div>
       <ul class="log-list">
         <li>数据管理：移除「档案编码格式」自定义模块与「中间人三本账说明」模块（编码恢复为系统默认格式，三本账逻辑保持不变）。</li>
         <li>数据管理：移除「应用锁」与「分享链接」功能，相关数据改为仅通过「云同步」加密传输，登录不再需要密码。</li>
@@ -498,7 +498,7 @@ const Changelog = (() => {
         <li>三端统一：删除四象限说明底部「试课学员」一行小字提示。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.4</div><div class="log-date">2026-08-03</div>
+      <div class="log-ver">v1.4.0</div><div class="log-date">2026-08-03</div>
       <ul class="log-list">
         <li>学员档案：固定字段（家长称呼、学生姓名等）可直接编辑 / 修改 / 删除；「学科与课时」的年级、学科改为可自填（预设项 + 自定义输入）。</li>
         <li>学员档案：授课老师可自定义填写，保存后自动归入「老师名册」，并按姓名去重——同名老师只建一条，可对应多个学生。</li>
@@ -510,13 +510,13 @@ const Changelog = (() => {
         <li>所有页面统一移除标题下的小字副标题行。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.3</div><div class="log-date">2026-08-03</div>
+      <div class="log-ver">v1.3.0</div><div class="log-date">2026-08-03</div>
       <ul class="log-list">
         <li>档案编码格式可自定义：在「数据管理 → 档案编码格式」里用 [日期][年级学科][家长][抽成][课时费][课时长] 占位、自定分隔符与顺序，支持实时试解析预览。</li>
         <li>已存档案不受影响——年级/课时费/抽成等结构化字段独立保存，仅新建/编辑时按新格式解析。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.2</div><div class="log-date">2026-08-02</div>
+      <div class="log-ver">v1.2.0</div><div class="log-date">2026-08-02</div>
       <ul class="log-list">
         <li>财务统计：板块支持拖动排序 / 隐藏 / 改名（编辑模块），并支持「恢复默认布局」。</li>
         <li>新增「自定义统计块」：可自主添加 区间总览 / 按老师 / 按年级 / 按学员 / 按月走势 等图表块，随时改名、隐藏或删除。</li>
@@ -525,7 +525,7 @@ const Changelog = (() => {
         <li>三端统一：手机 / 平板 / 电脑共用同一 GitHub Token + 同步空间 ID 即可自动同步数据，并在任意 WiFi / 手机流量下通过公网地址打开。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.1</div><div class="log-date">2026-08-02</div>
+      <div class="log-ver">v1.1.0</div><div class="log-date">2026-08-02</div>
       <ul class="log-list">
         <li>焕新命名为「逸云阁」，仪表盘更名为「主页」。</li>
         <li>主页新增可编辑/可删除的「每日模板库」模块。</li>
@@ -536,7 +536,7 @@ const Changelog = (() => {
         <li>「我的」只保留搜索、AI 助手、帮助、更新日志四个工具入口。</li>
       </ul>
       <div class="divider"></div>
-      <div class="log-ver">v1.0</div><div class="log-date">2026-08-01</div>
+      <div class="log-ver">v1.0.0</div><div class="log-date">2026-08-02</div>
       <ul class="log-list">
         <li>初始版本：待办（模板/四象限/归档）、学员档案（标准编码解析）、可视化课表（周/月/年）、财务三本账、常用话术库、设置与备份。</li>
       </ul>
