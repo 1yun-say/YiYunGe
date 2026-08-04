@@ -333,7 +333,7 @@ const DB = (() => {
     return {
       version: 1,
       settings: { route: 'dashboard', ownerName: '我', night: false, financeSections: defaultFinanceSections(), dashboardLayout: defaultDashboardLayout(), customSub: {}, codeTemplate: '[日期]-[年级学科]-[家长]-[抽成]/[课时费]|[课时长]', brandLogo: '' },
-      teachers: [], students: [], lessons: [], todos: [],
+      teachers: [], students: [], lessons: [], todos: [], events: [],
       histIncome: {},                // 历史收入：按月总额 { 'YYYY-MM': 金额 }
       templates: defaultTemplates(), phrases: defaultPhrases(),
       meta: { lastLessonEdit: null, lastStudentEdit: null }
@@ -577,6 +577,7 @@ const DB = (() => {
       students: (d.students || []).length,
       lessons: (d.lessons || []).length,
       todos: (d.todos || []).length,
+      events: (d.events || []).length,
       teachers: (d.teachers || []).length
     };
   }

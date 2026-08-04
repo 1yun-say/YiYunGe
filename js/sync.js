@@ -125,21 +125,39 @@ window.Sync = (() => {
 
   async function ensureGist() {
     const s = cfg();
-    // 手动填的 ID 必须符合服务商格式（GitHub 20位hex / Gitee 32位hex），否则视为无效并自动新建，
-    // 避免用户填自定义名（如 20260802）导致各端各自新建、无法同步同一份数据
-    if (s.gistId) {
-      const idRe = providerType() === 'gitee' ? /^[0-9a-f]{32}$/i : /^[0-9a-f]{20}$/i;
-      if (!idRe.test(s.gistId)) { s.gistId = null; DB.save(); }
-    }
-    if (s.gistId) {
-      // 先验证该空间是否仍能被当前 token 访问，避免陈旧/无权 ID 导致 404
-      try {
-        const chk = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
-        if (chk.ok) return s.gistId;
-      } catch (e) { /* 网络抖动则下面重建 */ }
-      s.gistId = null;   // 空间失效/无权 → 丢弃，下面重建
+    const idRe = providerType() === 'gitee' ? /^[0-9a-f]{32}$/i : /^[0-9a-f]{20}$/i;
+
+    // 1) 格式校验：手动填的 ID 必须符合服务商格式，否则视为「留空」，自动新建。
+    // 这是为了防止用户填自定义名（如 20260802）导致各端各自新建、无法同步同一份数据。
+    if (s.gistId && !idRe.test(s.gistId)) {
+      s.gistId = '';
       DB.save();
     }
+
+    // 2) 用户填了真实有效的 ID：尝试连接并验证，失败时报错，但绝不擅自丢弃该 ID。
+    // 之前的问题是：网络抖动 / Token 错误 / 服务商连不上时，程序把 ID 清掉并新建，
+    // 导致用户把一端 ID 复制到另一端后，点连接却生成新 ID。现在只在格式非法或用户留空时才新建。
+    if (s.gistId) {
+      try {
+        const chk = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
+        if (chk.ok) {
+          s.baseSavedAt = DB.data.__savedAt || Date.now();
+          DB.save();
+          status('已连接到现有空间');
+          return s.gistId;
+        }
+        const t = await chk.text().catch(() => '');
+        if (chk.status === 404) throw new Error('404：空间不存在或无权访问，请检查同步空间 ID / Token 是否匹配');
+        if (chk.status === 401) throw new Error('401：Token 无效或已过期');
+        if (chk.status === 403) throw new Error('403：Token 没有 gist 权限');
+        throw new Error('连接失败(' + chk.status + ')：' + t.slice(0, 140));
+      } catch (e) {
+        if (/^(404|401|403|连接失败)/.test(e.message)) throw e;
+        throw new Error('无法连接到 ' + (providerType() === 'gitee' ? '码云 Gitee' : 'GitHub') + '，请检查网络后重试');
+      }
+    }
+
+    // 3) 留空或格式无效：新建空间
     if (!secureCtx()) throw new Error('insecure');
     status('正在创建加密同步空间…');
     const body = await seal(DB.data, s.token);

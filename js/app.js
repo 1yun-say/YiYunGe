@@ -45,7 +45,7 @@ const App = (() => {
     U.modal({
       title: '快速新建', hideFoot: true,
       body: `<div class="grid g2" style="gap:10px">
-        ${[['todo', '待办任务', '记一件今天要做的事'], ['student', '学员档案', '按你的编码格式新建'],
+        ${[['todo', '提醒事项', '记一件今天要做的事'], ['student', '学员档案', '按你的编码格式新建'],
         ['lesson', '排课', '给学员安排上课时间'], ['phrase', '常用话术', '存一条标准回复']]
           .map(([k, n, d]) => `<button class="btn btn-ghost" data-q="${k}"
             style="flex-direction:column;align-items:flex-start;padding:14px;height:auto;text-align:left">
@@ -57,7 +57,7 @@ const App = (() => {
       switch (b.dataset.q) {
         case 'todo':
           U.modal({
-            title: '新建待办',
+            title: '新建提醒事项',
             body: `<div class="field"><label>任务内容</label><input class="input" id="q_t" placeholder="例如：给李妈妈发本周课表"></div>
               <div class="row"><div class="field"><label>优先级</label><select class="input" id="q_p">
                 ${Todo.P.map(p => `<option value="${p.v}" ${p.v === 1 ? 'selected' : ''}>${p.name}</option>`).join('')}</select></div>

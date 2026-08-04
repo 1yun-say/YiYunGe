@@ -50,13 +50,13 @@ const Dashboard = (() => {
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
         <div>
           <h2 style="font-size:19px">${greet()}，今天有 <span style="color:var(--pink-600)">${ctx.todayLessons.length}</span> 节课、
-            <span style="color:var(--pink-600)">${ctx.undone.length}</span> 件待办</h2>
+            <span style="color:var(--pink-600)">${ctx.undone.length}</span> 件提醒</h2>
           <p class="muted" style="font-size:12.5px;margin-top:3px">
             ${U.parse(ctx.t).getFullYear()} 年 ${+ctx.t.slice(5, 7)} 月 ${+ctx.t.slice(8)} 日 ${U.wdName(ctx.t)}
             ${ctx.todayLessons.length ? ` · 第一节 ${ctx.todayLessons[0].start} 开始` : ' · 今天没有排课'}</p>
         </div>
         <div style="display:flex;gap:9px;flex-wrap:wrap">
-          <button class="btn btn-ghost btn-sm" data-go="todo">去处理待办</button>
+          <button class="btn btn-ghost btn-sm" data-go="todo">去处理提醒</button>
           <button class="btn btn-ghost btn-sm" data-go="schedule">看本周课表</button>
           <button class="btn btn-primary btn-sm" data-act="book">快速排课</button>
         </div>
@@ -64,7 +64,7 @@ const Dashboard = (() => {
       ${(ctx.conflictDays.length || ctx.trials.length || ctx.overdue.length) ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
         ${ctx.conflictDays.length ? `<span class="tag alert">本周 ${ctx.conflictDays.length} 天存在时间重叠，注意确认</span>` : ''}
         ${ctx.trials.length ? `<span class="tag gold">${ctx.trials.length} 位学员试课中，次日自动生成回访任务</span>` : ''}
-        ${ctx.overdue.length ? `<span class="tag sky">${ctx.overdue.length} 条待办从前几天遗留下来</span>` : ''}
+        ${ctx.overdue.length ? `<span class="tag sky">${ctx.overdue.length} 条提醒事项从前几天遗留下来</span>` : ''}
       </div>` : ''}
     </div>`;
   }
@@ -224,7 +224,7 @@ const Dashboard = (() => {
     greet:        { title: '今日问候',    render: moduleGreet,        layout: 'full' },
     kpi:          { title: '关键指标',    render: moduleKpi,          layout: 'full' },
     todayLessons: { title: '今日课程',    render: moduleTodayLessons, layout: 'col' },
-    todayTodo:    { title: '今日待办',    render: moduleTodayTodo,    layout: 'col' }
+    todayTodo:    { title: '今日提醒事项',    render: moduleTodayTodo,    layout: 'col' }
   };
 
   /* ---------- 包装：单个模块外层 + 拖动 handle / 编辑按钮 / 移动端上下移 ---------- */
@@ -313,7 +313,7 @@ const Dashboard = (() => {
     <div class="dash-mobile">
       <div class="dash-mobile-toolbar">
         <div style="min-width:0">
-          <h2 style="font-size:15px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${greet()}，今天有 ${todayLessons.length} 节课、${undone.length} 件待办</h2>
+          <h2 style="font-size:15px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${greet()}，今天有 ${todayLessons.length} 节课、${undone.length} 件提醒</h2>
           <div class="muted" style="font-size:11px">${U.parse(t).getFullYear()} 年 ${+t.slice(5, 7)} 月 ${+t.slice(8)} 日 ${U.wdName(t)}</div>
         </div>
         <div style="display:flex;gap:6px;flex:none">
@@ -322,12 +322,12 @@ const Dashboard = (() => {
       </div>
       <div class="dash-mobile-stats">
         <div class="dash-mobile-stat"><div class="lab">今日课程</div><div class="val">${todayLessons.length}</div><div class="sub">${totalMin} 分钟</div></div>
-        <div class="dash-mobile-stat"><div class="lab">今日待办</div><div class="val">${undone.length}</div><div class="sub">待完成</div></div>
+        <div class="dash-mobile-stat"><div class="lab">今日提醒</div><div class="val">${undone.length}</div><div class="sub">待完成</div></div>
         <div class="dash-mobile-stat"><div class="lab">本月到手</div><div class="val">${U.money(profit).replace('¥', '')}</div><div class="sub">${profitLabel}</div></div>
       </div>
       <div class="dash-mobile-card">
-        <h4>今日待办</h4>
-        ${undone.length ? undone.slice(0, 3).map(todoRow).join('') : '<div class="muted" style="font-size:12px;padding:6px 0">今日待办已清空</div>'}
+        <h4>今日提醒事项</h4>
+        ${undone.length ? undone.slice(0, 3).map(todoRow).join('') : '<div class="muted" style="font-size:12px;padding:6px 0">今日提醒事项已清空</div>'}
         ${undone.length > 3 ? `<div class="muted" style="font-size:11px;text-align:center;padding-top:6px">还有 ${undone.length - 3} 件</div>` : ''}
       </div>
       <div class="dash-mobile-card">

@@ -542,6 +542,16 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .cal-month-ev-time{font-size:10.5px;font-weight:600;color:#c6677a;background:#fff0f3;padding:0 4px;border-radius:4px;margin-right:4px;flex:none;letter-spacing:.2px}
 .t-time{font-size:11.5px;font-weight:600;color:#c6677a;background:#fff0f3;padding:1px 6px;border-radius:6px;margin-right:6px;letter-spacing:.3px}
 
+/* 日程（事件）彩色块 */
+.cal-event-block{border-left:4px solid var(--ev-color,var(--pink-300));background:linear-gradient(90deg,var(--ev-color)08,#fff)}
+.cal-event-block .cal-ev-body{gap:8px}
+.cal-ev-dot{width:10px;height:10px;border-radius:50%;flex:none;align-self:center}
+.cal-seg-h{font-size:11px;font-weight:600;color:var(--ink-3);margin:6px 2px 2px}
+.cal-month-ev-block{background:var(--ev-color)15!important}
+.cal-month-ev-block i{width:6px;height:6px;border-radius:2px;background:var(--ev-color);flex:none}
+.cal-month-ev-block span{color:var(--ink-1);font-weight:500}
+.cal-year-sub{font-size:10px;color:var(--ink-3);margin-top:-4px}
+
 /* 周视图 */
 .cal-week-view{display:flex;flex-direction:column;gap:8px}
 .cal-week-head{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
@@ -1145,6 +1155,9 @@ body.night #pageSub:hover{ background:rgba(255,255,255,.06); }
 body.night .cal-ev-time,
 body.night .cal-month-ev-time,
 body.night .t-time{ background:rgba(255,147,182,.16); color:var(--pink-400); }
+body.night .cal-event-block{ background:linear-gradient(90deg,var(--ev-color)12,var(--card)); border-color:var(--ev-color); }
+body.night .cal-month-ev-block{ background:var(--ev-color)18!important; }
+body.night .cal-month-ev-block span{ color:var(--ink-1); }
 /* 内联白底（问候卡 / 待办逾期卡 / 排课热力零值）兜底 */
 body.night .card[style*="fff4f8"]{ background:linear-gradient(120deg,#2c2029,#241c22) !important; }
 body.night .dash-greet{ background:linear-gradient(120deg,#2c2029,#241c22) !important; }

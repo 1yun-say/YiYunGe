@@ -1,4 +1,4 @@
-/* ===== 待办 ===== */
+/* ===== 提醒事项（原「待办」） ===== */
 window.Views = window.Views || {};
 
 const Todo = (() => {
@@ -47,7 +47,7 @@ const Todo = (() => {
       });
       added++;
     });
-    if (added) { DB.save(); U.toast(`自动生成 ${added} 条试课回访任务`); }
+    if (added) { DB.save(); U.toast(`自动生成 ${added} 条试课回访提醒`); }
     return added;
   }
 
@@ -156,8 +156,8 @@ const Todo = (() => {
 
         <div class="card">
           <div class="card-h">
-            <h3>${curDate === U.today() ? '今日待办' : U.cnDate(curDate) + ' 待办'}
-              <span class="tag">${undone.length} 待办 / ${done.length} 完成</span></h3>
+            <h3>${curDate === U.today() ? '今日提醒事项' : U.cnDate(curDate) + ' 提醒事项'}
+              <span class="tag">${undone.length} 提醒 / ${done.length} 完成</span></h3>
             <div style="display:flex;gap:6px;align-items:center">
               <button class="btn btn-icon" data-act="prevDay" title="前一天">&#8249;</button>
               <input type="date" class="input" style="width:150px;padding:5px 8px" id="tdDate" value="${curDate}">
@@ -179,12 +179,12 @@ const Todo = (() => {
           <div class="todo-list">
             ${shown.length ? shown.map(t => rowHTML(t)).join('')
         : `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-flower"/></svg>
-                 <p>${isM ? '这一天很清爽，点右下角 + 新建一件吧' : '这一天很清爽，从右侧模板一键导入日常任务吧'}</p></div>`}
+                 <p>${isM ? '这一天很清爽，点右下角 + 新建一件吧' : '这一天很清爽，从右侧模板一键导入日常提醒吧'}</p></div>`}
           </div>
 
           ${done.length ? `<div class="divider"></div>
             <div class="archive-head" data-act="toggleArch">
-              <span class="caret">&#9656;</span> 已完成归档（${done.length}）
+              <span class="caret">&#9656;</span> 已完成提醒（${done.length}）
             </div>
             <div class="todo-list" id="archBox" style="display:none">${done.map(t => rowHTML(t)).join('')}</div>` : ''}
         </div>
@@ -336,7 +336,7 @@ const Todo = (() => {
 
   function addNew() {
     U.modal({
-      title: '新建待办',
+      title: '新建提醒事项',
       body: `<div class="field"><label>任务内容</label><input class="input" id="f_t" placeholder="例如：给王妈妈发本周课表" autofocus></div>
         <div class="field"><label>时间（可选）</label><input type="time" class="input" id="f_m"></div>`,
       onOk: b => {
@@ -360,7 +360,7 @@ const Todo = (() => {
             ${P.map(p => `<option value="${p.v}" ${p.v === tpl.priority ? 'selected' : ''}>${p.name}</option>`).join('')}</select></div>
           <div class="field"><label>标签</label><input class="input" id="f_g" value="${U.esc(tpl.tag)}" placeholder="日常 / 家长沟通 / 财务"></div>
         </div>
-        <p class="muted" style="font-size:11.5px">模板不会自己产生任务，需要你在待办页点「一键导入」，避免堆积。</p>`,
+        <p class="muted" style="font-size:11.5px">模板不会自己产生任务，需要你在提醒事项页点「一键导入」，避免堆积。</p>`,
       onOk: b => {
         const title = U.$('#f_t', b).value.trim();
         if (!title) { U.toast('请填写模板内容', 'warn'); return false; }
@@ -374,8 +374,8 @@ const Todo = (() => {
   }
 
   Views.todo = {
-    title: '待办',
-    sub: '模板化管理每日重复事项，别再手打第二遍',
+    title: '提醒事项',
+    sub: '模板化管理每日重复提醒，别再手打第二遍',
     render(root) { curDate = U.today(); filter = -1; render(); }
   };
 

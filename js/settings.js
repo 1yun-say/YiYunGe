@@ -6,7 +6,7 @@ function syncErrHint(err) {
   if (/insecure/.test(m)) return '当前地址不是 https，无法加密同步。请用你部署的公网 https 链接打开';
   if (/401/.test(m)) return 'Token 无效或已过期。请确认：①用的是「Tokens (classic)」而不是细粒度 token；②没有过期';
   if (/403/.test(m)) return 'Token 没有 gist 权限或被限流。请重新生成 classic token 并勾选 gist 这一项';
-  if (/404/.test(m)) return '同步空间失效或无权访问（多半是换过 token 或填了旧空间 ID）。请清空「同步空间 ID」输入框后重新点「连接/初始化」，会自动新建一个空间';
+  if (/404/.test(m)) return '空间不存在或无权访问：请检查同步空间 ID 是否复制完整、Token 是否正确。若 ID 已失效，清空「同步空间 ID」后重新点「连接/初始化」即可新建一个';
   if (/Failed to fetch|network|timeout|ERR_|net::/i.test(m)) return '连不上 GitHub（国内常见网络问题）。请检查网络后重试，或改用我帮你做的免 token 方案';
   if (/创建失败/.test(m)) return m.replace('创建失败', '创建同步空间失败');
   return m;
@@ -79,10 +79,11 @@ const Settings = (() => {
           <button class="btn btn-ghost" data-act="offlinePure">生成离线版（空白程序）</button>
         </div>
         <div class="divider"></div>
-        <div class="grid g3" style="gap:10px">
+        <div class="grid g4" style="gap:10px">
           <div class="stat"><div class="lab">学员</div><div class="val">${d.students.length}</div></div>
           <div class="stat"><div class="lab">课程</div><div class="val">${d.lessons.length}</div></div>
-          <div class="stat"><div class="lab">待办</div><div class="val">${d.todos.length}</div></div>
+          <div class="stat"><div class="lab">提醒事项</div><div class="val">${d.todos.length}</div></div>
+          <div class="stat"><div class="lab">日程</div><div class="val">${(d.events || []).length}</div></div>
         </div>
       </div>
 
@@ -224,11 +225,16 @@ const Settings = (() => {
         case 'connect':
           if (!Sync.cfg().token) { U.toast('请先填写 Token', 'warn'); break; }
           DB.save();
+          const hadGistId = !!(Sync.cfg().gistId || '').trim();
           Sync.ensureGist().then(() => {
             U.$('#syncGistId', root).value = Sync.cfg().gistId || '';
             const _tip = U.$('#syncIdTip', root);
             if (_tip) { const _shown = U.$('#syncIdShown', root); if (_shown) _shown.textContent = Sync.cfg().gistId || ''; _tip.style.display = 'block'; }
-            U.toast('已连接！已生成真实空间 ID，请复制它到其他设备共用（不要自己起名）', 'ok');
+            if (hadGistId) {
+              U.toast('已连接到现有空间！其他设备也使用同一个空间 ID 即可同步', 'ok');
+            } else {
+              U.toast('已连接！已生成真实空间 ID，请复制它到其他设备共用（不要自己起名）', 'ok');
+            }
             Sync.refreshStatus();
             Sync.startAutoPull();
           }).catch(err => U.toast('连接失败：' + syncErrHint(err), 'warn'));
@@ -297,7 +303,7 @@ const Settings = (() => {
         let info;
         try { info = DB.parseBackup(r.result); }
         catch (err) { U.toast('这个文件读不了：' + err.message + '（当前数据未改动）', 'warn'); return; }
-        const cur = { students: DB.data.students.length, lessons: DB.data.lessons.length, todos: DB.data.todos.length };
+        const cur = { students: DB.data.students.length, lessons: DB.data.lessons.length, todos: DB.data.todos.length, events: (DB.data.events || []).length };
         const when = info.exportedAt ? new Date(info.exportedAt).toLocaleString('zh-CN') : '未知时间';
         U.modal({
           title: '确认导入备份',
@@ -306,9 +312,9 @@ const Settings = (() => {
               导入会用备份文件<b style="color:var(--danger,#e5484d)">整体覆盖</b>当前全部数据（不是合并）。请核对下面两组数字：</p>
             <div class="grid g2" style="gap:10px">
               <div class="stat"><div class="lab">备份文件 · ${U.esc(when)}</div>
-                <div class="val" style="font-size:14px">学员 ${info.counts.students} · 课程 ${info.counts.lessons} · 待办 ${info.counts.todos}</div></div>
+                <div class="val" style="font-size:14px">学员 ${info.counts.students} · 课程 ${info.counts.lessons} · 提醒 ${info.counts.todos} · 日程 ${info.counts.events || 0}</div></div>
               <div class="stat"><div class="lab">当前数据（将被覆盖）</div>
-                <div class="val" style="font-size:14px">学员 ${cur.students} · 课程 ${cur.lessons} · 待办 ${cur.todos}</div></div>
+                <div class="val" style="font-size:14px">学员 ${cur.students} · 课程 ${cur.lessons} · 提醒 ${cur.todos} · 日程 ${cur.events || 0}</div></div>
             </div>
             <p class="muted" style="font-size:12.5px;line-height:1.8;margin-top:10px">
               系统会自动保留一份「导入前快照」。导入后若发现不对，回到本页点<b>「撤销上次导入」</b>即可原样还原。</p>`,

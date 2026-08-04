@@ -1,7 +1,7 @@
 {
   "name": "逸云阁 · Yiyun Ge",
   "short_name": "逸云阁",
-  "description": "一对一家教撮合中间人的个人工作台：学员档案、可视化课表、财务统计与待办。",
+  "description": "一对一家教撮合中间人的个人工作台：学员档案、可视化课表、财务统计与提醒事项。",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",

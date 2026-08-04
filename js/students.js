@@ -241,7 +241,7 @@ const Students = (() => {
           ${FREQ.map(f => `<option value="${f.v}" ${f.v === (init.freq || '') ? 'selected' : ''}>${f.name}</option>`).join('')}
         </select></div>
       <div class="field" id="trialWrap" style="display:${init.status === 'trial' ? 'flex' : 'none'}">
-        <label>试课日期 <span class="hint">次日自动生成回访待办</span></label>
+        <label>试课日期 <span class="hint">次日自动生成回访提醒</span></label>
         <input type="date" class="input" id="f_trial" value="${init.trialDate || U.today()}">
       </div>
       <div class="divider"></div>

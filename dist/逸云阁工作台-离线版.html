@@ -549,6 +549,16 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .cal-month-ev-time{font-size:10.5px;font-weight:600;color:#c6677a;background:#fff0f3;padding:0 4px;border-radius:4px;margin-right:4px;flex:none;letter-spacing:.2px}
 .t-time{font-size:11.5px;font-weight:600;color:#c6677a;background:#fff0f3;padding:1px 6px;border-radius:6px;margin-right:6px;letter-spacing:.3px}
 
+/* 日程（事件）彩色块 */
+.cal-event-block{border-left:4px solid var(--ev-color,var(--pink-300));background:linear-gradient(90deg,var(--ev-color)08,#fff)}
+.cal-event-block .cal-ev-body{gap:8px}
+.cal-ev-dot{width:10px;height:10px;border-radius:50%;flex:none;align-self:center}
+.cal-seg-h{font-size:11px;font-weight:600;color:var(--ink-3);margin:6px 2px 2px}
+.cal-month-ev-block{background:var(--ev-color)15!important}
+.cal-month-ev-block i{width:6px;height:6px;border-radius:2px;background:var(--ev-color);flex:none}
+.cal-month-ev-block span{color:var(--ink-1);font-weight:500}
+.cal-year-sub{font-size:10px;color:var(--ink-3);margin-top:-4px}
+
 /* 周视图 */
 .cal-week-view{display:flex;flex-direction:column;gap:8px}
 .cal-week-head{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
@@ -1152,6 +1162,9 @@ body.night #pageSub:hover{ background:rgba(255,255,255,.06); }
 body.night .cal-ev-time,
 body.night .cal-month-ev-time,
 body.night .t-time{ background:rgba(255,147,182,.16); color:var(--pink-400); }
+body.night .cal-event-block{ background:linear-gradient(90deg,var(--ev-color)12,var(--card)); border-color:var(--ev-color); }
+body.night .cal-month-ev-block{ background:var(--ev-color)18!important; }
+body.night .cal-month-ev-block span{ color:var(--ink-1); }
 /* 内联白底（问候卡 / 待办逾期卡 / 排课热力零值）兜底 */
 body.night .card[style*="fff4f8"]{ background:linear-gradient(120deg,#2c2029,#241c22) !important; }
 body.night .dash-greet{ background:linear-gradient(120deg,#2c2029,#241c22) !important; }
@@ -1203,7 +1216,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T12:19:32.123Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T13:27:55.851Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -1262,7 +1275,7 @@ window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T12:19:32.123Z","note":"本文�
       <div class="nav-group">日常</div>
       <a class="nav-item" data-route="dashboard"><svg class="ico"><use href="#i-home"/></svg><span>主页</span></a>
       <a class="nav-item" data-route="calendar"><svg class="ico"><use href="#i-cal"/></svg><span>日历</span></a>
-      <a class="nav-item" data-route="todo"><svg class="ico"><use href="#i-check"/></svg><span>待办</span><b class="badge" id="navTodoBadge"></b></a>
+      <a class="nav-item" data-route="todo"><svg class="ico"><use href="#i-check"/></svg><span>提醒事项</span><b class="badge" id="navTodoBadge"></b></a>
       <div class="nav-group">教务</div>
       <a class="nav-item" data-route="students"><svg class="ico"><use href="#i-user"/></svg><span>学员档案</span></a>
       <a class="nav-item" data-route="teachers"><svg class="ico"><use href="#i-user"/></svg><span>老师名册</span></a>
@@ -1295,7 +1308,7 @@ window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T12:19:32.123Z","note":"本文�
 <nav class="bottom-nav" id="bottomNav">
   <a class="bn-item" data-route="dashboard"><svg class="bn-ico"><use href="#i-home"/></svg><span>主页</span></a>
   <a class="bn-item" data-route="calendar"><svg class="bn-ico"><use href="#i-cal"/></svg><span>日历</span></a>
-  <a class="bn-item" data-route="todo"><svg class="bn-ico"><use href="#i-check"/></svg><span>待办</span><b class="badge" id="bnTodoBadge"></b></a>
+  <a class="bn-item" data-route="todo"><svg class="bn-ico"><use href="#i-check"/></svg><span>提醒事项</span><b class="badge" id="bnTodoBadge"></b></a>
   <a class="bn-item" data-route="more"><svg class="bn-ico"><use href="#i-user"/></svg><span>我的</span></a>
 </nav>
 <button class="fab" id="fab" title="快速新建"><svg class="ico"><use href="#i-plus"/></svg></button>
@@ -1914,7 +1927,7 @@ const DB = (() => {
     return {
       version: 1,
       settings: { route: 'dashboard', ownerName: '我', night: false, financeSections: defaultFinanceSections(), dashboardLayout: defaultDashboardLayout(), customSub: {}, codeTemplate: '[日期]-[年级学科]-[家长]-[抽成]/[课时费]|[课时长]', brandLogo: '' },
-      teachers: [], students: [], lessons: [], todos: [],
+      teachers: [], students: [], lessons: [], todos: [], events: [],
       histIncome: {},                // 历史收入：按月总额 { 'YYYY-MM': 金额 }
       templates: defaultTemplates(), phrases: defaultPhrases(),
       meta: { lastLessonEdit: null, lastStudentEdit: null }
@@ -2158,6 +2171,7 @@ const DB = (() => {
       students: (d.students || []).length,
       lessons: (d.lessons || []).length,
       todos: (d.todos || []).length,
+      events: (d.events || []).length,
       teachers: (d.teachers || []).length
     };
   }
@@ -2374,21 +2388,39 @@ window.Sync = (() => {
 
   async function ensureGist() {
     const s = cfg();
-    // 手动填的 ID 必须符合服务商格式（GitHub 20位hex / Gitee 32位hex），否则视为无效并自动新建，
-    // 避免用户填自定义名（如 20260802）导致各端各自新建、无法同步同一份数据
-    if (s.gistId) {
-      const idRe = providerType() === 'gitee' ? /^[0-9a-f]{32}$/i : /^[0-9a-f]{20}$/i;
-      if (!idRe.test(s.gistId)) { s.gistId = null; DB.save(); }
-    }
-    if (s.gistId) {
-      // 先验证该空间是否仍能被当前 token 访问，避免陈旧/无权 ID 导致 404
-      try {
-        const chk = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
-        if (chk.ok) return s.gistId;
-      } catch (e) { /* 网络抖动则下面重建 */ }
-      s.gistId = null;   // 空间失效/无权 → 丢弃，下面重建
+    const idRe = providerType() === 'gitee' ? /^[0-9a-f]{32}$/i : /^[0-9a-f]{20}$/i;
+
+    // 1) 格式校验：手动填的 ID 必须符合服务商格式，否则视为「留空」，自动新建。
+    // 这是为了防止用户填自定义名（如 20260802）导致各端各自新建、无法同步同一份数据。
+    if (s.gistId && !idRe.test(s.gistId)) {
+      s.gistId = '';
       DB.save();
     }
+
+    // 2) 用户填了真实有效的 ID：尝试连接并验证，失败时报错，但绝不擅自丢弃该 ID。
+    // 之前的问题是：网络抖动 / Token 错误 / 服务商连不上时，程序把 ID 清掉并新建，
+    // 导致用户把一端 ID 复制到另一端后，点连接却生成新 ID。现在只在格式非法或用户留空时才新建。
+    if (s.gistId) {
+      try {
+        const chk = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
+        if (chk.ok) {
+          s.baseSavedAt = DB.data.__savedAt || Date.now();
+          DB.save();
+          status('已连接到现有空间');
+          return s.gistId;
+        }
+        const t = await chk.text().catch(() => '');
+        if (chk.status === 404) throw new Error('404：空间不存在或无权访问，请检查同步空间 ID / Token 是否匹配');
+        if (chk.status === 401) throw new Error('401：Token 无效或已过期');
+        if (chk.status === 403) throw new Error('403：Token 没有 gist 权限');
+        throw new Error('连接失败(' + chk.status + ')：' + t.slice(0, 140));
+      } catch (e) {
+        if (/^(404|401|403|连接失败)/.test(e.message)) throw e;
+        throw new Error('无法连接到 ' + (providerType() === 'gitee' ? '码云 Gitee' : 'GitHub') + '，请检查网络后重试');
+      }
+    }
+
+    // 3) 留空或格式无效：新建空间
     if (!secureCtx()) throw new Error('insecure');
     status('正在创建加密同步空间…');
     const body = await seal(DB.data, s.token);
@@ -2561,7 +2593,7 @@ window.Sync = (() => {
 
 </script>
 <script>
-/* ===== 待办 ===== */
+/* ===== 提醒事项（原「待办」） ===== */
 window.Views = window.Views || {};
 
 const Todo = (() => {
@@ -2610,7 +2642,7 @@ const Todo = (() => {
       });
       added++;
     });
-    if (added) { DB.save(); U.toast(`自动生成 ${added} 条试课回访任务`); }
+    if (added) { DB.save(); U.toast(`自动生成 ${added} 条试课回访提醒`); }
     return added;
   }
 
@@ -2719,8 +2751,8 @@ const Todo = (() => {
 
         <div class="card">
           <div class="card-h">
-            <h3>${curDate === U.today() ? '今日待办' : U.cnDate(curDate) + ' 待办'}
-              <span class="tag">${undone.length} 待办 / ${done.length} 完成</span></h3>
+            <h3>${curDate === U.today() ? '今日提醒事项' : U.cnDate(curDate) + ' 提醒事项'}
+              <span class="tag">${undone.length} 提醒 / ${done.length} 完成</span></h3>
             <div style="display:flex;gap:6px;align-items:center">
               <button class="btn btn-icon" data-act="prevDay" title="前一天">&#8249;</button>
               <input type="date" class="input" style="width:150px;padding:5px 8px" id="tdDate" value="${curDate}">
@@ -2742,12 +2774,12 @@ const Todo = (() => {
           <div class="todo-list">
             ${shown.length ? shown.map(t => rowHTML(t)).join('')
         : `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-flower"/></svg>
-                 <p>${isM ? '这一天很清爽，点右下角 + 新建一件吧' : '这一天很清爽，从右侧模板一键导入日常任务吧'}</p></div>`}
+                 <p>${isM ? '这一天很清爽，点右下角 + 新建一件吧' : '这一天很清爽，从右侧模板一键导入日常提醒吧'}</p></div>`}
           </div>
 
           ${done.length ? `<div class="divider"></div>
             <div class="archive-head" data-act="toggleArch">
-              <span class="caret">&#9656;</span> 已完成归档（${done.length}）
+              <span class="caret">&#9656;</span> 已完成提醒（${done.length}）
             </div>
             <div class="todo-list" id="archBox" style="display:none">${done.map(t => rowHTML(t)).join('')}</div>` : ''}
         </div>
@@ -2899,7 +2931,7 @@ const Todo = (() => {
 
   function addNew() {
     U.modal({
-      title: '新建待办',
+      title: '新建提醒事项',
       body: `<div class="field"><label>任务内容</label><input class="input" id="f_t" placeholder="例如：给王妈妈发本周课表" autofocus></div>
         <div class="field"><label>时间（可选）</label><input type="time" class="input" id="f_m"></div>`,
       onOk: b => {
@@ -2923,7 +2955,7 @@ const Todo = (() => {
             ${P.map(p => `<option value="${p.v}" ${p.v === tpl.priority ? 'selected' : ''}>${p.name}</option>`).join('')}</select></div>
           <div class="field"><label>标签</label><input class="input" id="f_g" value="${U.esc(tpl.tag)}" placeholder="日常 / 家长沟通 / 财务"></div>
         </div>
-        <p class="muted" style="font-size:11.5px">模板不会自己产生任务，需要你在待办页点「一键导入」，避免堆积。</p>`,
+        <p class="muted" style="font-size:11.5px">模板不会自己产生任务，需要你在提醒事项页点「一键导入」，避免堆积。</p>`,
       onOk: b => {
         const title = U.$('#f_t', b).value.trim();
         if (!title) { U.toast('请填写模板内容', 'warn'); return false; }
@@ -2937,8 +2969,8 @@ const Todo = (() => {
   }
 
   Views.todo = {
-    title: '待办',
-    sub: '模板化管理每日重复事项，别再手打第二遍',
+    title: '提醒事项',
+    sub: '模板化管理每日重复提醒，别再手打第二遍',
     render(root) { curDate = U.today(); filter = -1; render(); }
   };
 
@@ -3190,7 +3222,7 @@ const Students = (() => {
           ${FREQ.map(f => `<option value="${f.v}" ${f.v === (init.freq || '') ? 'selected' : ''}>${f.name}</option>`).join('')}
         </select></div>
       <div class="field" id="trialWrap" style="display:${init.status === 'trial' ? 'flex' : 'none'}">
-        <label>试课日期 <span class="hint">次日自动生成回访待办</span></label>
+        <label>试课日期 <span class="hint">次日自动生成回访提醒</span></label>
         <input type="date" class="input" id="f_trial" value="${init.trialDate || U.today()}">
       </div>
       <div class="divider"></div>
@@ -5522,12 +5554,27 @@ const Phrases = (() => {
 
 </script>
 <script>
-/* ===== iOS 风格个人日历：日 / 周 / 月 / 年，事项挂在日期下，可勾选完成 ===== */
+/* ===== iOS 风格个人日历：日 / 周 / 月 / 年，同时显示「日程」与「提醒事项」 ===== */
 window.Views = window.Views || {};
 
 const Calendar = (() => {
   let view = U.isMobile() ? 'day' : 'month';   // day | week | month | year
   let anchor = U.today();                       // 当前聚焦的日期
+
+  const EVENT_COLORS = {
+    '考研课程': '#f2b544', '工作': '#f9709d', '个人': '#8fb8f0', '家庭': '#7fc8a9',
+    '健康': '#65c7c0', '社交': '#b48ce0', '其它': '#c0a3b2'
+  };
+  const REPEAT_OPTIONS = [
+    { v: 'never', name: '永不' }, { v: 'daily', name: '每天' }, { v: 'weekdays', name: '工作日' },
+    { v: 'weekly', name: '每周' }, { v: 'biweekly', name: '每两周' }, { v: 'monthly', name: '每月' }, { v: 'yearly', name: '每年' }
+  ];
+  const ALERT_OPTIONS = [
+    { v: '0', name: '事件发生时' }, { v: '5', name: '5 分钟前' }, { v: '15', name: '15 分钟前' },
+    { v: '30', name: '30 分钟前' }, { v: '60', name: '1 小时前' }, { v: 'none', name: '无' }
+  ];
+
+  function eventColor(name) { return EVENT_COLORS[name] || EVENT_COLORS['其它']; }
 
   /* ---------- 视图切换 ---------- */
   function setView(v, keepAnchor) {
@@ -5549,18 +5596,26 @@ const Calendar = (() => {
     if (view === 'day') return `${anchor.slice(0, 4)}年${+anchor.slice(5, 7)}月${+anchor.slice(8)}日`;
     if (view === 'month') return `${anchor.slice(0, 4)}年${+anchor.slice(5, 7)}月`;
     if (view === 'year') return `${anchor.slice(0, 4)}年`;
-    // 周视图：省略年份，保证一行完整显示（如 08.03 — 08.09）
     const d = U.weekDays(anchor);
     const fmt = x => x.slice(5).replace('-', '.');
     const head = d[0].slice(0, 4) === d[6].slice(0, 4) ? fmt(d[0]) : d[0].slice(0, 4) + '.' + fmt(d[0]);
     return `${head} — ${fmt(d[6])}`;
   }
 
-  /* ---------- 工具：按日期聚合待办 ---------- */
+  /* ---------- 按日期聚合提醒事项 ---------- */
   function todosOf(dt) {
     return DB.data.todos.filter(x => x.date === dt)
       .sort((a, b) => (a.status === 'done') - (b.status === 'done') || (a.time || '99:59').localeCompare(b.time || '99:59') || a.priority - b.priority || a.createdAt - b.createdAt);
   }
+
+  /* ---------- 按日期聚合日程（发生在该天的日程） ---------- */
+  function eventsOf(dt) {
+    return DB.data.events.filter(e => {
+      if (e.allDay) return e.startDate <= dt && e.endDate >= dt;
+      return e.startDate === dt || e.endDate === dt || (e.startDate < dt && e.endDate > dt);
+    }).sort((a, b) => (a.startTime || '00:00').localeCompare(b.startTime || '00:00') || a.createdAt - b.createdAt);
+  }
+
   function todoHTML(x) {
     const p = Todo.pInfo(x.priority);
     const st = Todo.sInfo(x.status);
@@ -5570,10 +5625,10 @@ const Calendar = (() => {
         ? '<svg viewBox="0 0 24 24" class="ico"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>'
         : '';
     return `<div class="cal-event ${x.status === 'done' ? 'done' : ''} ${x.status === 'blocked' ? 'blocked' : ''}" data-tid="${x.id}">
-      <button class="cal-check" data-act="toggle" aria-label="${st.name}" style="border-color:${st.color};${x.status !== 'pending' ? 'background:' + st.color : ''}">
+      <button class="cal-check" data-act="toggleTodo" aria-label="${st.name}" style="border-color:${st.color};${x.status !== 'pending' ? 'background:' + st.color : ''}">
         ${chkIcon}
       </button>
-      <div class="cal-ev-body" data-act="open">
+      <div class="cal-ev-body" data-act="openTodo">
         <div class="cal-ev-bar" style="background:${p.color}"></div>
         <div class="cal-ev-main">
           ${x.time ? `<span class="cal-ev-time">${U.esc(x.time)}</span>` : ''}
@@ -5582,6 +5637,115 @@ const Calendar = (() => {
         <div class="cal-ev-meta">${st.name}${x.status === 'pending' ? ' · ' + p.name : ''}${x.tag ? ' · ' + U.esc(x.tag) : ''}${x.autoKey ? ' · 自动生成' : ''}</div>
       </div>
     </div>`;
+  }
+
+  function eventHTML(x) {
+    const c = eventColor(x.calendar);
+    const timeText = x.allDay
+      ? '全天'
+      : `${x.startTime || '--:--'}${x.endTime ? ' — ' + x.endTime : ''}`;
+    return `<div class="cal-event cal-event-block" data-eid="${x.id}" style="--ev-color:${c}">
+      <div class="cal-ev-dot" style="background:${c}"></div>
+      <div class="cal-ev-body" data-act="openEvent">
+        <div class="cal-ev-main">
+          <span class="cal-ev-time">${U.esc(timeText)}</span>
+          <span class="cal-ev-title">${U.esc(x.title)}</span>
+        </div>
+        ${x.location ? `<div class="cal-ev-meta">📍 ${U.esc(x.location)}</div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  /* ---------- 新建选择：日程 or 提醒事项 ---------- */
+  function showAddChoice(dt) {
+    U.modal({
+      title: '新建项目',
+      hideFoot: true,
+      body: `<div class="grid g2" style="gap:12px">
+        <button class="btn btn-ghost" data-type="event" style="flex-direction:column;align-items:flex-start;padding:16px;height:auto;text-align:left">
+          <b style="font-size:14px">日程</b><span class="muted" style="font-size:12px">有开始/结束时间的安排，如上课、会议</span></button>
+        <button class="btn btn-ghost" data-type="todo" style="flex-direction:column;align-items:flex-start;padding:16px;height:auto;text-align:left">
+          <b style="font-size:14px">提醒事项</b><span class="muted" style="font-size:12px">需要打勾完成的事项，如回访、备课</span></button>
+      </div>`
+    }).body.addEventListener('click', e => {
+      const b = e.target.closest('[data-type]'); if (!b) return;
+      e.target.closest('.mask').remove();
+      if (b.dataset.type === 'event') editEvent({ startDate: dt, endDate: dt }, render);
+      else {
+        const nt = { id: U.uid('td'), title: '', note: '', priority: 1, tag: '', date: dt, status: 'pending', doneAt: null, createdAt: Date.now() };
+        DB.data.todos.push(nt); DB.save(); Todo.editTodo(nt, render); App.refreshBadge();
+      }
+    });
+  }
+
+  /* ---------- 日程编辑 ---------- */
+  function editEvent(ev, after) {
+    const isNew = !ev.id;
+    ev = Object.assign({
+      id: U.uid('ev'), title: '', location: '', allDay: false,
+      startDate: U.today(), endDate: U.today(), startTime: '09:00', endTime: '10:00',
+      repeat: 'never', alert: '15', calendar: '其它', note: '', createdAt: Date.now()
+    }, ev);
+    // 保证 allDay 时时间字段干净
+    if (ev.allDay) { ev.startTime = ''; ev.endTime = ''; }
+
+    const calOpts = Object.keys(EVENT_COLORS).map(k => `<option value="${k}" ${ev.calendar === k ? 'selected' : ''}>${k}</option>`).join('');
+    const repeatOpts = REPEAT_OPTIONS.map(r => `<option value="${r.v}" ${ev.repeat === r.v ? 'selected' : ''}>${r.name}</option>`).join('');
+    const alertOpts = ALERT_OPTIONS.map(a => `<option value="${a.v}" ${String(ev.alert) === String(a.v) ? 'selected' : ''}>${a.name}</option>`).join('');
+
+    const mm = U.modal({
+      title: isNew ? '新建日程' : '编辑日程',
+      okText: '保存',
+      body: `<div class="field"><label>标题</label><input class="input" id="ev_title" value="${U.esc(ev.title)}" placeholder="例如：考研数学课"></div>
+        <div class="field"><label>位置或视频通话</label><input class="input" id="ev_loc" value="${U.esc(ev.location)}" placeholder="例如：腾讯会议 123-456"></div>
+        <div class="field" style="display:flex;align-items:center;justify-content:space-between">
+          <label>全天</label>
+          <div class="switch ${ev.allDay ? 'on' : ''}" id="ev_allday_sw"></div>
+          <input type="checkbox" id="ev_allday" ${ev.allDay ? 'checked' : ''} style="display:none">
+        </div>
+        <div class="row">
+          <div class="field"><label>开始</label><input type="date" class="input" id="ev_sd" value="${ev.startDate}"></div>
+          <div class="field ev-time ${ev.allDay ? 'hide' : ''}"><label>&nbsp;</label><input type="time" class="input" id="ev_st" value="${ev.startTime}"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>结束</label><input type="date" class="input" id="ev_ed" value="${ev.endDate}"></div>
+          <div class="field ev-time ${ev.allDay ? 'hide' : ''}"><label>&nbsp;</label><input type="time" class="input" id="ev_et" value="${ev.endTime}"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>重复</label><select class="input" id="ev_rep">${repeatOpts}</select></div>
+          <div class="field"><label>提醒</label><select class="input" id="ev_alert">${alertOpts}</select></div>
+          <div class="field"><label>日历</label><select class="input" id="ev_cal">${calOpts}</select></div>
+        </div>
+        <div class="field"><label>备注</label><textarea class="input" id="ev_note" rows="2">${U.esc(ev.note)}</textarea></div>`,
+      onOk: b => {
+        ev.title = U.$('#ev_title', b).value.trim();
+        if (!ev.title) { U.toast('请填写日程标题', 'warn'); return false; }
+        ev.location = U.$('#ev_loc', b).value.trim();
+        ev.allDay = U.$('#ev_allday', b).checked;
+        ev.startDate = U.$('#ev_sd', b).value || ev.startDate;
+        ev.endDate = U.$('#ev_ed', b).value || ev.endDate;
+        ev.startTime = ev.allDay ? '' : (U.$('#ev_st', b).value || '00:00');
+        ev.endTime = ev.allDay ? '' : (U.$('#ev_et', b).value || '00:00');
+        ev.repeat = U.$('#ev_rep', b).value;
+        ev.alert = U.$('#ev_alert', b).value;
+        ev.calendar = U.$('#ev_cal', b).value;
+        ev.note = U.$('#ev_note', b).value.trim();
+        if (ev.endDate < ev.startDate) { U.toast('结束日期不能早于开始日期', 'warn'); return false; }
+        if (!ev.allDay && ev.endDate === ev.startDate && ev.endTime < ev.startTime) { U.toast('结束时间不能早于开始时间', 'warn'); return false; }
+        if (isNew) DB.data.events.push(ev);
+        DB.save();
+        if (after) after(); else render();
+        U.toast(isNew ? '已添加日程' : '已保存日程', 'ok');
+      }
+    });
+
+    const sw = U.$('#ev_allday_sw', mm.body);
+    sw.onclick = () => {
+      const cb = U.$('#ev_allday', mm.body);
+      cb.checked = !cb.checked;
+      sw.classList.toggle('on', cb.checked);
+      mm.body.querySelectorAll('.ev-time').forEach(el => el.classList.toggle('hide', cb.checked));
+    };
   }
 
   /* ---------- 主渲染 ---------- */
@@ -5606,7 +5770,7 @@ const Calendar = (() => {
           <button class="cal-today" data-act="today">今天</button>
         </div>
         <button class="btn btn-primary btn-sm" data-act="add" data-day="${anchor}">
-          <svg class="ico"><use href="#i-plus"/></svg>添加待办</button>
+          <svg class="ico"><use href="#i-plus"/></svg>新建</button>
       </div>
       <div class="cal-body" id="calBody"></div>
     </div>`;
@@ -5623,42 +5787,54 @@ const Calendar = (() => {
       if (a.dataset.act === 'prev') shift(-1);
       else if (a.dataset.act === 'next') shift(1);
       else if (a.dataset.act === 'today') { anchor = U.today(); render(); }
-      else if (a.dataset.act === 'add') {
-        const dt = a.dataset.day || U.today();
-        const nt = { id: U.uid('td'), title: '', note: '', priority: 1, tag: '', date: dt, status: 'pending', doneAt: null, createdAt: Date.now() };
-        DB.data.todos.push(nt); DB.save(); Todo.editTodo(nt, render); App.refreshBadge();
-      }
-      else if (a.dataset.act === 'toggle') {
+      else if (a.dataset.act === 'add') showAddChoice(a.dataset.day || U.today());
+      else if (a.dataset.act === 'toggleTodo') {
         const x = DB.data.todos.find(y => y.id === a.closest('[data-tid]').dataset.tid);
         if (!x) return;
         x.status = Todo.cycle(x.status);
         x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
         DB.save(); render(); App.refreshBadge();
       }
-      else if (a.dataset.act === 'open') {
+      else if (a.dataset.act === 'openTodo') {
         const x = DB.data.todos.find(y => y.id === a.closest('[data-tid]').dataset.tid);
         if (x) Todo.editTodo(x, render);
+      }
+      else if (a.dataset.act === 'openEvent') {
+        const x = DB.data.events.find(y => y.id === a.closest('[data-eid]').dataset.eid);
+        if (x) editEvent(x, render);
+      }
+      else if (a.dataset.act === 'delEvent') {
+        const id = a.closest('[data-eid]').dataset.eid;
+        U.confirm('删除这条日程？', () => {
+          DB.data.events = DB.data.events.filter(y => y.id !== id); DB.save(); render(); U.toast('已删除日程');
+        }, '删除');
       }
     });
   }
 
-  /* ---------- 日视图：单日事项列表（最常用，勾选友好） ---------- */
+  function dayListHTML(dt) {
+    const evs = eventsOf(dt);
+    const tds = todosOf(dt);
+    const parts = [];
+    if (evs.length) parts.push(`<div class="cal-seg-h">日程 · ${evs.length}</div>` + evs.map(eventHTML).join(''));
+    if (tds.length) parts.push(`<div class="cal-seg-h">提醒事项 · ${tds.length}</div>` + tds.map(todoHTML).join(''));
+    return parts.length ? parts.join('') : `<div class="cal-empty">这一天还没有日程和提醒事项，点上方按钮添加</div>`;
+  }
+
+  /* ---------- 日视图 ---------- */
   function renderDay(body, today) {
-    const list = todosOf(anchor);
+    const list = dayListHTML(anchor);
     body.innerHTML = `
       <div class="cal-day">
         <div class="cal-day-head ${anchor === today ? 'today' : ''}">
           <div class="cal-day-name">${U.wdName(anchor)}</div>
           <div class="cal-day-date">${+anchor.slice(8)}</div>
         </div>
-        <div class="cal-day-list">
-          ${list.length ? list.map(todoHTML).join('')
-            : `<div class="cal-empty">这一天还没有待办，点上方按钮记录一件</div>`}
-        </div>
+        <div class="cal-day-list">${list}</div>
       </div>`;
   }
 
-  /* ---------- 周视图：桌面 7 列；手机改为纵向日程列表 ---------- */
+  /* ---------- 周视图 ---------- */
   function renderWeek(body, today) {
     const days = U.weekDays(anchor);
     if (U.isMobile()) return renderWeekMobile(body, today, days);
@@ -5672,30 +5848,34 @@ const Calendar = (() => {
         </div>
         <div class="cal-week-cols">
           ${days.map(d => {
-            const ls = todosOf(d);
+            const evs = eventsOf(d), tds = todosOf(d);
             return `<div class="cal-week-col ${d===anchor?'sel':''}" data-day="${d}">
-              <div class="cal-week-col-h">${ls.length} 项</div>
-              ${ls.length ? ls.map(todoHTML).join('') : '<div class="cal-empty-mini">无</div>'}
+              <div class="cal-week-col-h">${evs.length ? evs.length + ' 个日程' : ''}${evs.length && tds.length ? ' · ' : ''}${tds.length ? tds.length + ' 个提醒' : ''}</div>
+              ${evs.map(eventHTML).join('')}
+              ${tds.map(todoHTML).join('')}
+              ${!evs.length && !tds.length ? '<div class="cal-empty-mini">无</div>' : ''}
               <button class="cal-add-mini" data-act="add" data-day="${d}" aria-label="添加">+</button>
             </div>`;
           }).join('')}
         </div>
       </div>`;
     body.querySelectorAll('.cal-week-col').forEach(c => c.addEventListener('click', e => {
-      if (e.target.closest('[data-act]')) return;
+      if (e.target.closest('[data-act]') || e.target.closest('[data-tid]') || e.target.closest('[data-eid]')) return;
       anchor = c.dataset.day; setView('day', true);
     }));
   }
   function renderWeekMobile(body, today, days) {
     body.innerHTML = `<div class="cal-week-list">${days.map(d => {
-      const ls = todosOf(d);
+      const evs = eventsOf(d), tds = todosOf(d);
       const isToday = d === today, isSel = d === anchor;
       return `<div class="cal-week-row">
         <div class="cal-week-dayhead ${isToday?'today':''} ${isSel?'sel':''}" data-day="${d}">
           <span class="wd">${U.wdName(d)}</span><span class="dn">${+d.slice(8)}</span>
-          <span class="cnt">${ls.length ? ls.length + ' 项' : '无'}</span>
+          <span class="cnt">${evs.length || tds.length ? (evs.length + tds.length) + ' 项' : '无'}</span>
         </div>
-        ${ls.length ? ls.map(todoHTML).join('') : '<div class="cal-empty-mini">这一天还没有待办</div>'}
+        ${evs.map(eventHTML).join('')}
+        ${tds.map(todoHTML).join('')}
+        ${!evs.length && !tds.length ? '<div class="cal-empty-mini">这一天还没有安排</div>' : ''}
       </div>`;
     }).join('')}</div>`;
     body.querySelectorAll('.cal-week-dayhead').forEach(h => h.addEventListener('click', e => {
@@ -5704,10 +5884,10 @@ const Calendar = (() => {
     }));
   }
 
-  /* ---------- 月视图：iOS 风格网格，事项嵌入日期格 ---------- */
+  /* ---------- 月视图 ---------- */
   function renderMonth(body, today) {
     const first = U.monthFirst(anchor);
-    const start = U.dow(first);          // 0=周日
+    const start = U.dow(first);
     const cells = [];
     for (let i = start; i > 0; i--) cells.push(U.addDays(first, -i));
     let d = first;
@@ -5717,21 +5897,31 @@ const Calendar = (() => {
     }
     const mm = first.slice(0, 7);
     const isM = U.isMobile();
-    const cellEvents = ls => {
+    const cellEvents = (evs, tds) => {
       if (isM) {
-        return `<div class="cal-month-dots">${ls.slice(0, 4).map(x => {
-        const st = Todo.sInfo(x.status);
-        return `<i style="background:${x.status==='pending'?Todo.pInfo(x.priority).color:st.color}"></i>`;
-      }).join('')}${ls.length > 4 ? `<span>+${ls.length - 4}</span>` : ''}</div>`;
+        const dots = [];
+        evs.slice(0, 3).forEach(x => dots.push(`<i style="background:${eventColor(x.calendar)}"></i>`));
+        tds.slice(0, Math.max(0, 4 - dots.length)).forEach(x => {
+          const st = Todo.sInfo(x.status);
+          dots.push(`<i style="background:${x.status==='pending'?Todo.pInfo(x.priority).color:st.color};border-radius:50%"></i>`);
+        });
+        const total = evs.length + tds.length;
+        return `<div class="cal-month-dots">${dots.join('')}${total > 4 ? `<span>+${total - 4}</span>` : ''}</div>`;
       }
-      return `${ls.slice(0, 3).map(x => {
+      let html = '';
+      html += evs.slice(0, 2).map(x => `<div class="cal-month-ev cal-month-ev-block" data-eid="${x.id}" title="${U.esc(x.title)}" style="--ev-color:${eventColor(x.calendar)}">
+        <i></i><span>${U.esc(x.title)}</span></div>`).join('');
+      html += tds.slice(0, Math.max(0, 3 - evs.length)).map(x => {
         const p = Todo.pInfo(x.priority);
         const st = Todo.sInfo(x.status);
         return `<div class="cal-month-ev ${x.status==='done'?'done':''} ${x.status==='blocked'?'blocked':''}" data-tid="${x.id}" title="${U.esc(x.title)}">
           <i style="background:${x.status==='pending'?p.color:st.color}"></i>
           <span>${x.time ? `<b class="cal-month-ev-time">${U.esc(x.time)}</b>` : ''}${U.esc(x.title)}</span>
         </div>`;
-      }).join('')}${ls.length > 3 ? `<div class="cal-month-more">+${ls.length - 3} 更多</div>` : ''}`;
+      }).join('');
+      const total = evs.length + tds.length;
+      if (total > 3) html += `<div class="cal-month-more">+${total - 3} 更多</div>`;
+      return html;
     };
     body.innerHTML = `
       <div class="cal-month">
@@ -5740,11 +5930,11 @@ const Calendar = (() => {
         </div>
         <div class="cal-month-grid">
           ${cells.map(dt => {
-            const ls = todosOf(dt);
+            const evs = eventsOf(dt), tds = todosOf(dt);
             const out = dt.slice(0, 7) !== mm;
             return `<div class="cal-month-cell ${out?'out':''} ${dt===today?'today':''} ${dt===anchor?'sel':''}" data-day="${dt}">
               <div class="cal-month-dn">${+dt.slice(8)}</div>
-              <div class="cal-month-events">${cellEvents(ls)}</div>
+              <div class="cal-month-events">${cellEvents(evs, tds)}</div>
               <button class="cal-month-add" data-act="add" data-day="${dt}" aria-label="添加">+</button>
             </div>`;
           }).join('')}
@@ -5757,28 +5947,35 @@ const Calendar = (() => {
         if (x) Todo.editTodo(x, render);
         return;
       }
+      if (e.target.closest('[data-eid]')) {
+        const x = DB.data.events.find(y => y.id === e.target.closest('[data-eid]').dataset.eid);
+        if (x) editEvent(x, render);
+        return;
+      }
       anchor = c.dataset.day; setView('day', true);
     }));
   }
 
-  /* ---------- 年视图：12 月热力（仅显示待办数） ---------- */
+  /* ---------- 年视图 ---------- */
   function renderYear(body, today) {
     const y = anchor.slice(0, 4);
     const months = Array.from({ length: 12 }, (_, i) => `${y}-${U.pad(i + 1)}-01`);
     const data = months.map(m => {
       const a = m, b = U.monthLast(m);
-      const todos = DB.data.todos.filter(x => x.date >= a && x.date <= b);
-      return { m, label: +m.slice(5, 7) + '月', todos: todos.length, a, b };
+      const tds = DB.data.todos.filter(x => x.date >= a && x.date <= b).length;
+      const evs = DB.data.events.filter(x => x.startDate <= b && x.endDate >= a).length;
+      return { m, label: +m.slice(5, 7) + '月', count: tds + evs, events: evs, reminders: tds, a, b };
     });
-    const max = Math.max(...data.map(d => d.todos), 1);
+    const max = Math.max(...data.map(d => d.count), 1);
     body.innerHTML = `
       <div class="cal-year">
         <div class="cal-year-grid">
           ${data.map(d => `
             <div class="cal-year-cell ${d.m.slice(0,7)===today.slice(0,7)?'today':''}" data-m="${d.m}">
               <div class="cal-year-h">${d.label}</div>
-              <div class="cal-year-bar" style="height:${Math.max(4, d.todos / max * 64)}px"></div>
-              <div class="cal-year-meta">${d.todos} 待办</div>
+              <div class="cal-year-bar" style="height:${Math.max(4, d.count / max * 64)}px"></div>
+              <div class="cal-year-meta">${d.count} 项</div>
+              <div class="cal-year-sub">${d.events ? d.events + ' 日程 · ' : ''}${d.reminders} 提醒</div>
             </div>`).join('')}
         </div>
       </div>`;
@@ -5790,7 +5987,7 @@ const Calendar = (() => {
   /* ---------- 启动 ---------- */
   Views.calendar = {
     title: '日历',
-    sub: '个人日程：日 / 周 / 月 / 年视图，事项挂在日期下，可勾选完成',
+    sub: '个人日程：日 / 周 / 月 / 年视图，同时管理日程与提醒事项',
     render() {
       const saved = DB.data.settings.calendarView;
       if (saved && saved !== view) view = saved;
@@ -5798,8 +5995,9 @@ const Calendar = (() => {
       render();
     }
   };
-  return { render, setView };
+  return { render, setView, editEvent };
 })();
+
 </script>
 <script>
 /* ===== 主页（仪表盘）=====
@@ -5854,13 +6052,13 @@ const Dashboard = (() => {
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
         <div>
           <h2 style="font-size:19px">${greet()}，今天有 <span style="color:var(--pink-600)">${ctx.todayLessons.length}</span> 节课、
-            <span style="color:var(--pink-600)">${ctx.undone.length}</span> 件待办</h2>
+            <span style="color:var(--pink-600)">${ctx.undone.length}</span> 件提醒</h2>
           <p class="muted" style="font-size:12.5px;margin-top:3px">
             ${U.parse(ctx.t).getFullYear()} 年 ${+ctx.t.slice(5, 7)} 月 ${+ctx.t.slice(8)} 日 ${U.wdName(ctx.t)}
             ${ctx.todayLessons.length ? ` · 第一节 ${ctx.todayLessons[0].start} 开始` : ' · 今天没有排课'}</p>
         </div>
         <div style="display:flex;gap:9px;flex-wrap:wrap">
-          <button class="btn btn-ghost btn-sm" data-go="todo">去处理待办</button>
+          <button class="btn btn-ghost btn-sm" data-go="todo">去处理提醒</button>
           <button class="btn btn-ghost btn-sm" data-go="schedule">看本周课表</button>
           <button class="btn btn-primary btn-sm" data-act="book">快速排课</button>
         </div>
@@ -5868,7 +6066,7 @@ const Dashboard = (() => {
       ${(ctx.conflictDays.length || ctx.trials.length || ctx.overdue.length) ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
         ${ctx.conflictDays.length ? `<span class="tag alert">本周 ${ctx.conflictDays.length} 天存在时间重叠，注意确认</span>` : ''}
         ${ctx.trials.length ? `<span class="tag gold">${ctx.trials.length} 位学员试课中，次日自动生成回访任务</span>` : ''}
-        ${ctx.overdue.length ? `<span class="tag sky">${ctx.overdue.length} 条待办从前几天遗留下来</span>` : ''}
+        ${ctx.overdue.length ? `<span class="tag sky">${ctx.overdue.length} 条提醒事项从前几天遗留下来</span>` : ''}
       </div>` : ''}
     </div>`;
   }
@@ -6028,7 +6226,7 @@ const Dashboard = (() => {
     greet:        { title: '今日问候',    render: moduleGreet,        layout: 'full' },
     kpi:          { title: '关键指标',    render: moduleKpi,          layout: 'full' },
     todayLessons: { title: '今日课程',    render: moduleTodayLessons, layout: 'col' },
-    todayTodo:    { title: '今日待办',    render: moduleTodayTodo,    layout: 'col' }
+    todayTodo:    { title: '今日提醒事项',    render: moduleTodayTodo,    layout: 'col' }
   };
 
   /* ---------- 包装：单个模块外层 + 拖动 handle / 编辑按钮 / 移动端上下移 ---------- */
@@ -6117,7 +6315,7 @@ const Dashboard = (() => {
     <div class="dash-mobile">
       <div class="dash-mobile-toolbar">
         <div style="min-width:0">
-          <h2 style="font-size:15px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${greet()}，今天有 ${todayLessons.length} 节课、${undone.length} 件待办</h2>
+          <h2 style="font-size:15px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${greet()}，今天有 ${todayLessons.length} 节课、${undone.length} 件提醒</h2>
           <div class="muted" style="font-size:11px">${U.parse(t).getFullYear()} 年 ${+t.slice(5, 7)} 月 ${+t.slice(8)} 日 ${U.wdName(t)}</div>
         </div>
         <div style="display:flex;gap:6px;flex:none">
@@ -6126,12 +6324,12 @@ const Dashboard = (() => {
       </div>
       <div class="dash-mobile-stats">
         <div class="dash-mobile-stat"><div class="lab">今日课程</div><div class="val">${todayLessons.length}</div><div class="sub">${totalMin} 分钟</div></div>
-        <div class="dash-mobile-stat"><div class="lab">今日待办</div><div class="val">${undone.length}</div><div class="sub">待完成</div></div>
+        <div class="dash-mobile-stat"><div class="lab">今日提醒</div><div class="val">${undone.length}</div><div class="sub">待完成</div></div>
         <div class="dash-mobile-stat"><div class="lab">本月到手</div><div class="val">${U.money(profit).replace('¥', '')}</div><div class="sub">${profitLabel}</div></div>
       </div>
       <div class="dash-mobile-card">
-        <h4>今日待办</h4>
-        ${undone.length ? undone.slice(0, 3).map(todoRow).join('') : '<div class="muted" style="font-size:12px;padding:6px 0">今日待办已清空</div>'}
+        <h4>今日提醒事项</h4>
+        ${undone.length ? undone.slice(0, 3).map(todoRow).join('') : '<div class="muted" style="font-size:12px;padding:6px 0">今日提醒事项已清空</div>'}
         ${undone.length > 3 ? `<div class="muted" style="font-size:11px;text-align:center;padding-top:6px">还有 ${undone.length - 3} 件</div>` : ''}
       </div>
       <div class="dash-mobile-card">
@@ -6402,7 +6600,7 @@ function syncErrHint(err) {
   if (/insecure/.test(m)) return '当前地址不是 https，无法加密同步。请用你部署的公网 https 链接打开';
   if (/401/.test(m)) return 'Token 无效或已过期。请确认：①用的是「Tokens (classic)」而不是细粒度 token；②没有过期';
   if (/403/.test(m)) return 'Token 没有 gist 权限或被限流。请重新生成 classic token 并勾选 gist 这一项';
-  if (/404/.test(m)) return '同步空间失效或无权访问（多半是换过 token 或填了旧空间 ID）。请清空「同步空间 ID」输入框后重新点「连接/初始化」，会自动新建一个空间';
+  if (/404/.test(m)) return '空间不存在或无权访问：请检查同步空间 ID 是否复制完整、Token 是否正确。若 ID 已失效，清空「同步空间 ID」后重新点「连接/初始化」即可新建一个';
   if (/Failed to fetch|network|timeout|ERR_|net::/i.test(m)) return '连不上 GitHub（国内常见网络问题）。请检查网络后重试，或改用我帮你做的免 token 方案';
   if (/创建失败/.test(m)) return m.replace('创建失败', '创建同步空间失败');
   return m;
@@ -6475,10 +6673,11 @@ const Settings = (() => {
           <button class="btn btn-ghost" data-act="offlinePure">生成离线版（空白程序）</button>
         </div>
         <div class="divider"></div>
-        <div class="grid g3" style="gap:10px">
+        <div class="grid g4" style="gap:10px">
           <div class="stat"><div class="lab">学员</div><div class="val">${d.students.length}</div></div>
           <div class="stat"><div class="lab">课程</div><div class="val">${d.lessons.length}</div></div>
-          <div class="stat"><div class="lab">待办</div><div class="val">${d.todos.length}</div></div>
+          <div class="stat"><div class="lab">提醒事项</div><div class="val">${d.todos.length}</div></div>
+          <div class="stat"><div class="lab">日程</div><div class="val">${(d.events || []).length}</div></div>
         </div>
       </div>
 
@@ -6620,11 +6819,16 @@ const Settings = (() => {
         case 'connect':
           if (!Sync.cfg().token) { U.toast('请先填写 Token', 'warn'); break; }
           DB.save();
+          const hadGistId = !!(Sync.cfg().gistId || '').trim();
           Sync.ensureGist().then(() => {
             U.$('#syncGistId', root).value = Sync.cfg().gistId || '';
             const _tip = U.$('#syncIdTip', root);
             if (_tip) { const _shown = U.$('#syncIdShown', root); if (_shown) _shown.textContent = Sync.cfg().gistId || ''; _tip.style.display = 'block'; }
-            U.toast('已连接！已生成真实空间 ID，请复制它到其他设备共用（不要自己起名）', 'ok');
+            if (hadGistId) {
+              U.toast('已连接到现有空间！其他设备也使用同一个空间 ID 即可同步', 'ok');
+            } else {
+              U.toast('已连接！已生成真实空间 ID，请复制它到其他设备共用（不要自己起名）', 'ok');
+            }
             Sync.refreshStatus();
             Sync.startAutoPull();
           }).catch(err => U.toast('连接失败：' + syncErrHint(err), 'warn'));
@@ -6693,7 +6897,7 @@ const Settings = (() => {
         let info;
         try { info = DB.parseBackup(r.result); }
         catch (err) { U.toast('这个文件读不了：' + err.message + '（当前数据未改动）', 'warn'); return; }
-        const cur = { students: DB.data.students.length, lessons: DB.data.lessons.length, todos: DB.data.todos.length };
+        const cur = { students: DB.data.students.length, lessons: DB.data.lessons.length, todos: DB.data.todos.length, events: (DB.data.events || []).length };
         const when = info.exportedAt ? new Date(info.exportedAt).toLocaleString('zh-CN') : '未知时间';
         U.modal({
           title: '确认导入备份',
@@ -6702,9 +6906,9 @@ const Settings = (() => {
               导入会用备份文件<b style="color:var(--danger,#e5484d)">整体覆盖</b>当前全部数据（不是合并）。请核对下面两组数字：</p>
             <div class="grid g2" style="gap:10px">
               <div class="stat"><div class="lab">备份文件 · ${U.esc(when)}</div>
-                <div class="val" style="font-size:14px">学员 ${info.counts.students} · 课程 ${info.counts.lessons} · 待办 ${info.counts.todos}</div></div>
+                <div class="val" style="font-size:14px">学员 ${info.counts.students} · 课程 ${info.counts.lessons} · 提醒 ${info.counts.todos} · 日程 ${info.counts.events || 0}</div></div>
               <div class="stat"><div class="lab">当前数据（将被覆盖）</div>
-                <div class="val" style="font-size:14px">学员 ${cur.students} · 课程 ${cur.lessons} · 待办 ${cur.todos}</div></div>
+                <div class="val" style="font-size:14px">学员 ${cur.students} · 课程 ${cur.lessons} · 提醒 ${cur.todos} · 日程 ${cur.events || 0}</div></div>
             </div>
             <p class="muted" style="font-size:12.5px;line-height:1.8;margin-top:10px">
               系统会自动保留一份「导入前快照」。导入后若发现不对，回到本页点<b>「撤销上次导入」</b>即可原样还原。</p>`,
@@ -6815,7 +7019,7 @@ window.Views = window.Views || {};
 /* ---------- 全局搜索 ---------- */
 const Search = (() => {
   function results(kw) {
-    if (!kw) return `<div class="muted" style="padding:24px;text-align:center">输入关键词，搜索学员 / 待办 / 课表 / 话术</div>`;
+    if (!kw) return `<div class="muted" style="padding:24px;text-align:center">输入关键词，搜索学员 / 提醒事项 / 课表 / 话术</div>`;
     const k = kw.toLowerCase();
     const stu = DB.data.students.filter(s => (s.code + s.parentName + s.grade + s.subject).toLowerCase().includes(k));
     const todo = DB.data.todos.filter(t => t.title.toLowerCase().includes(k));
@@ -6825,7 +7029,7 @@ const Search = (() => {
     if (stu.length) h += `<div class="search-grp">学员档案 · ${stu.length}</div>` + stu.slice(0, 8).map(s =>
       `<div class="search-row" data-go="students"><div class="si" style="background:${U.subColor(s.subject)}">${U.esc(s.parentName.slice(0, 1))}</div>
        <div><div class="st">${U.esc(s.parentName)}</div><div class="ss">${U.esc(s.grade + s.subject)} · ${U.esc(s.code)}</div></div></div>`).join('');
-    if (todo.length) h += `<div class="search-grp">待办 · ${todo.length}</div>` + todo.slice(0, 8).map(t =>
+    if (todo.length) h += `<div class="search-grp">提醒事项 · ${todo.length}</div>` + todo.slice(0, 8).map(t =>
       `<div class="search-row" data-go="todo"><div class="si" style="background:#f2b544">待</div>
        <div><div class="st">${U.esc(t.title)}</div><div class="ss">${U.cnDate(t.date)} · ${t.status === 'done' ? '已完成' : t.status === 'blocked' ? '今日无法完成' : '未完成'}</div></div></div>`).join('');
     if (les.length) h += `<div class="search-grp">课表 · ${les.length}</div>` + les.slice(0, 8).map(l => {
@@ -6842,7 +7046,7 @@ const Search = (() => {
     const m = U.modal({ title: '全局搜索', hideFoot: true, wide: true, body:
       `<div class="search-panel">
         <div class="search-bar"><svg class="ico"><use href="#i-search"/></svg>
-          <input id="sIn" placeholder="搜索学员、待办、课表、话术…" autocomplete="off"></div>
+          <input id="sIn" placeholder="搜索学员、提醒事项、课表、话术…" autocomplete="off"></div>
         <div class="search-res" id="sRes"></div>
       </div>` });
     const inp = U.$('#sIn', m.body), res = U.$('#sRes', m.body);
@@ -7020,7 +7224,7 @@ const AI = (() => {
       const t = U.today();
       const ls = DB.data.lessons.filter(l => l.date === t && l.status !== 'cancelled');
       const td = DB.data.todos.filter(x => x.date === t && !x.done).length;
-      return `今天排了 ${ls.length} 节课，还有 ${td} 条待办未完成。` + (ls.length ? ` 第一节 ${ls[0].start} 开始。` : ' 今天没有排课，可以专心拓客～');
+      return `今天排了 ${ls.length} 节课，还有 ${td} 条提醒事项未完成。` + (ls.length ? ` 第一节 ${ls[0].start} 开始。` : ' 今天没有排课，可以专心拓客～');
     }
     if (/(抽成|赚|收入|利润|多少钱)/.test(q)) {
       const a = U.monthFirst(U.today()), b = U.monthLast(U.today());
@@ -7028,9 +7232,9 @@ const AI = (() => {
       const done = DB.statIn(a, b);
       return `本月（预计）抽成收入 ${U.money(m.profit)}，已落袋 ${U.money(done.profit)}，共 ${m.count} 节课、流水 ${U.money(m.gross)}。`;
     }
-    if (/(待办|任务|还有什么|要做)/.test(q)) {
+    if (/(待办|提醒|任务|还有什么|要做)/.test(q)) {
       const n = Todo.pendingCount();
-      return `当前共有 ${n} 条未完成的待办（含历史遗留）。打开「待办」可以查看和处理，也可以一键导入每日模板。`;
+      return `当前共有 ${n} 条未完成的提醒事项（含历史遗留）。打开「提醒事项」可以查看和处理，也可以一键导入每日模板。`;
     }
     if (/(学员|学生|档案|家长)/.test(q)) {
       return `现在有 ${DB.data.students.length} 位学员档案。可直接逐项填写学生姓名、年级学科、课时费、抽成等；也支持用标准编码一键拆解（默认格式：日期-年级学科-学员名-抽成/课时费|时长），例如 240815-高二数学-李明-50/300|90。`;
@@ -7045,7 +7249,7 @@ const AI = (() => {
       return '所有数据都存在本机浏览器，不会上传。建议在「设置 - 数据管理」里定期导出 JSON 备份，换设备或清缓存前务必先备份。';
     }
     if (/(试课|回访|转换)/.test(q)) {
-      return '把学员标记为「试课中」并填试课日期后，次日系统会自动在待办生成一条「回访XX妈妈试课体验」，且不会重复生成。';
+      return '把学员标记为「试课中」并填试课日期后，次日系统会自动在提醒事项生成一条「回访XX妈妈试课体验」，且不会重复生成。';
     }
     if (/(财务|三本账|老师|成本)/.test(q)) {
       return '作为中间人，每节课记录我的抽成与报销支出（批注里的花费），实际到手 = 我的抽成 − 报销支出。财务页可按月/年统计并排序板块。';
@@ -7100,11 +7304,11 @@ const Help = (() => {
     const root = U.$('#view');
     if (!root || App.route !== 'help') return;
     const faq = [
-      ['快速上手', '左侧（手机端底部）切换模块。主页聚合今日课程、待办与模板；待办支持模板一键导入；学员按标准编码自动拆解；老师名册是独立模块，可在学员档案下方找到。'],
+      ['快速上手', '左侧（手机端底部）切换模块。主页聚合今日课程、提醒事项与模板；提醒事项支持模板一键导入；学员按标准编码自动拆解；老师名册是独立模块，可在学员档案下方找到。'],
       ['学员编码与录入', '新建学员可逐项填写，也可用标准编码一键拆解：默认 [日期]-[年级学科]-[家长]-[抽成]/[课时费]|[课时长]\n例：240815-高二数学-李妈妈-50/300|90\n系统自动拆成结构化字段（课时费、我的抽成）。'],
       ['中间人三本账', '每节课记录我的抽成与报销支出，实际到手 = 我的抽成 − 报销支出（报销支出从批注数字提取）。抽成存绝对金额、每节课冗余存价格快照，保证历史账目不被改写。'],
       ['可视化课表', '周视图时间轴可拖拽改时间，重叠自动并排+红框提示；月视图看密度；年视图看淡旺季。同一时段允许排两节课。'],
-      ['试课回访', '学员标记「试课中」+ 填试课日期，次日自动在待办生成「回访XX妈妈试课体验」，幂等只生成一次。'],
+      ['试课回访', '学员标记「试课中」+ 填试课日期，次日自动在提醒事项生成「回访XX妈妈试课体验」，幂等只生成一次。'],
       ['财务统计', '支持本月/上月/近30天/本年/自定义区间；年级饼图、老师课时排行、学员贡献、明细表；板块可排序与显隐。页面显示数据最近更新时间。'],
       ['数据备份', '数据仅存本机浏览器，不上传。设置-数据管理可导出/导入 JSON、载入演示数据、清空。换设备前务必导出备份。']
     ];
@@ -7114,14 +7318,14 @@ const Help = (() => {
       ${faq.map(([q, a]) => `<div class="link-card" style="box-shadow:none;margin-bottom:10px">
         <h4>${U.esc(q)}</h4><p class="muted" style="font-size:12.5px;line-height:1.8;white-space:pre-wrap">${U.esc(a)}</p></div>`).join('')}
       <div class="divider"></div>
-      <p class="muted" style="font-size:12px">提示：手机端底部导航固定 4 个入口（主页 / 日历 / 待办 / 我的），学员档案、老师名册、可视化课表、财务统计、常用话术都在「我的」里进入；数据在手机端通过「云同步」统一，无需导入导出文件。</p>
+      <p class="muted" style="font-size:12px">提示：手机端底部导航固定 4 个入口（主页 / 日历 / 提醒事项 / 我的），学员档案、老师名册、可视化课表、财务统计、常用话术都在「我的」里进入；数据在手机端通过「云同步」统一，无需导入导出文件。</p>
     </div>`;
   }
   Views.help = { title: '帮助', sub: '逸云阁使用指南', render() { render(); } };
   return { render };
 })();
 
-/* ---------- 关联中心（待办 ↔ 学员） ---------- */
+/* ---------- 关联中心（提醒事项 ↔ 学员） ---------- */
 const Link = (() => {
   function render() {
     const root = U.$('#view');
@@ -7138,23 +7342,23 @@ const Link = (() => {
     </div>
 
     <div class="link-card">
-      <h4>已关联待办（${linked.length}）</h4>
+      <h4>已关联提醒事项（${linked.length}）</h4>
       ${linked.length ? linked.map(t => {
         const s = DB.student(t.studentId);
         return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
           <span class="link-rel"><svg class="ico"><use href="#i-link"/></svg>${s ? U.esc(s.parentName) : '已删除'} · ${U.esc(s ? s.grade + s.subject : '')}</span>
           <span style="font-size:13px;flex:1;min-width:120px">${U.esc(t.title)}</span>
           <button class="btn btn-sm btn-ghost" data-act="unlink" data-id="${t.id}">解除</button></div>`;
-      }).join('') : `<p class="muted" style="font-size:12.5px">还没有把待办关联到学员。把下面的待办和学员关联起来，方便跟进。</p>`}
+      }).join('') : `<p class="muted" style="font-size:12.5px">还没有把提醒事项关联到学员。把下面的提醒事项和学员关联起来，方便跟进。</p>`}
     </div>
 
     <div class="link-card">
       <h4>快速关联</h4>
       ${optT ? `<div class="row">
-        <div class="field"><label>待办</label><select class="input" id="lk_t">${optT}</select></div>
+        <div class="field"><label>提醒事项</label><select class="input" id="lk_t">${optT}</select></div>
         <div class="field"><label>学员</label><select class="input" id="lk_s">${opt}</select></div>
       </div>
-      <button class="btn btn-primary" data-act="doLink">关联</button>` : `<p class="muted" style="font-size:12.5px">没有可关联的未完成待办。</p>`}
+      <button class="btn btn-primary" data-act="doLink">关联</button>` : `<p class="muted" style="font-size:12.5px">没有可关联的未完成提醒事项。</p>`}
     </div>`;
 
     U.rebind(root, 'link', e => {
@@ -7169,7 +7373,7 @@ const Link = (() => {
       }
     });
   }
-  Views.link = { title: '关联', sub: '待办与学员的关联管理', render() { render(); } };
+  Views.link = { title: '关联', sub: '提醒事项与学员的关联管理', render() { render(); } };
   return { render };
 })();
 
@@ -7181,6 +7385,14 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.9.0</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>新增「日程」模块（参考 iOS 日历 / 提醒事项分工）</b>：① 日历现同时承载两类条目——「日程」彩色时间块、<b>无需打勾</b>（如上课、会议、考试）；「提醒事项」保留原有需打勾的勾选框（如回访、待办）。两者在日 / 周 / 月 / 年视图分区展示（「日程 · N」「提醒事项 · N」），互不混淆。② 日程支持：标题、地点、全天开关、起止日期与时间、重复、提醒、颜色分类（考研课程 / 工作 / 个人 / 家庭 / 健康 / 社交 / 其它）、备注；跨天多日日程自动按天聚合显示。③ 日历右上「新建」按钮改为 iOS 风格选择弹窗，先选「日程」或「提醒事项」再进入对应编辑页。</li>
+        <li><b>全站「待办」正式更名为「提醒事项」</b>：导航、首页、日历、设置、学员试课回访提示、搜索、AI 助手、帮助与链接中心等所有出现「待办」之处统一改为「提醒事项」，与新增的「日程」形成清晰分工。</li>
+        <li><b>云同步「粘贴真实空间 ID 被重新生成」彻底修复（核心 bug）</b>：旧逻辑在点击连接时，只要遇到任何网络异常（断网 / Token 错 / GitHub 不可达）就会把用户粘贴的 ID 清空并新建空间，导致三端永远连不到同一处。现拆分为「格式校验」与「连接尝试」两步：凡是格式合法（GitHub 20 位 hex / Gitee 32 位 hex）的 ID，无论网络 / 鉴权失败一律报错并<b>保留原 ID</b>，只有「留空」或「格式非法」才会自动新建；并随附自动化回归测试覆盖 断网 / 404 / 401 / 403 / 成功 / 空 / 格式非法 共 7 种场景，全部通过。</li>
+        <li><b>全流程回归测试清零</b>：重做 jsdom 测试框架，真实加载全部脚本、经 App.go 驱动路由守卫，覆盖启动 / 全部视图渲染 / 提醒事项增删改状态流转 / 学员新建与空学科校验 / 排课与冲突检测 / 财务与抽成表解析 / 日历日程与提醒 / 云同步连接上传下载冲突保护 / 数据导入导出 / reset 共 75 项断言，全绿。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.8.11</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>云同步「后台自动下载」（准实时多端同步）</b>：① 之前同步只有「改动后自动上传」，另一端需手动点「下载同步」才能看到；现在连接后程序会每 20 秒自动检查云端，一旦发现其他端有更新且本机无未上传改动，就静默拉取并刷新当前页面——实现「平板输入、电脑约 20 秒内自动变好」。② 已连设备重新打开页面也会自动开始后台同步。③ 安全兜底：当本机和云端都有各自改动（撞车）时，自动同步会暂停并提示手动「下载同步」处理，绝不偷偷覆盖任一方数据；你正在输入框打字时也会跳过本周期，避免重渲染清空输入。④「自动同步」开关现同时控制上传与自动下载，取消勾选即停止后台轮询。</li>
@@ -7579,7 +7791,7 @@ const App = (() => {
     U.modal({
       title: '快速新建', hideFoot: true,
       body: `<div class="grid g2" style="gap:10px">
-        ${[['todo', '待办任务', '记一件今天要做的事'], ['student', '学员档案', '按你的编码格式新建'],
+        ${[['todo', '提醒事项', '记一件今天要做的事'], ['student', '学员档案', '按你的编码格式新建'],
         ['lesson', '排课', '给学员安排上课时间'], ['phrase', '常用话术', '存一条标准回复']]
           .map(([k, n, d]) => `<button class="btn btn-ghost" data-q="${k}"
             style="flex-direction:column;align-items:flex-start;padding:14px;height:auto;text-align:left">
@@ -7591,7 +7803,7 @@ const App = (() => {
       switch (b.dataset.q) {
         case 'todo':
           U.modal({
-            title: '新建待办',
+            title: '新建提醒事项',
             body: `<div class="field"><label>任务内容</label><input class="input" id="q_t" placeholder="例如：给李妈妈发本周课表"></div>
               <div class="row"><div class="field"><label>优先级</label><select class="input" id="q_p">
                 ${Todo.P.map(p => `<option value="${p.v}" ${p.v === 1 ? 'selected' : ''}>${p.name}</option>`).join('')}</select></div>

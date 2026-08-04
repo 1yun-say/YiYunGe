@@ -4,7 +4,7 @@ window.Views = window.Views || {};
 /* ---------- 全局搜索 ---------- */
 const Search = (() => {
   function results(kw) {
-    if (!kw) return `<div class="muted" style="padding:24px;text-align:center">输入关键词，搜索学员 / 待办 / 课表 / 话术</div>`;
+    if (!kw) return `<div class="muted" style="padding:24px;text-align:center">输入关键词，搜索学员 / 提醒事项 / 课表 / 话术</div>`;
     const k = kw.toLowerCase();
     const stu = DB.data.students.filter(s => (s.code + s.parentName + s.grade + s.subject).toLowerCase().includes(k));
     const todo = DB.data.todos.filter(t => t.title.toLowerCase().includes(k));
@@ -14,7 +14,7 @@ const Search = (() => {
     if (stu.length) h += `<div class="search-grp">学员档案 · ${stu.length}</div>` + stu.slice(0, 8).map(s =>
       `<div class="search-row" data-go="students"><div class="si" style="background:${U.subColor(s.subject)}">${U.esc(s.parentName.slice(0, 1))}</div>
        <div><div class="st">${U.esc(s.parentName)}</div><div class="ss">${U.esc(s.grade + s.subject)} · ${U.esc(s.code)}</div></div></div>`).join('');
-    if (todo.length) h += `<div class="search-grp">待办 · ${todo.length}</div>` + todo.slice(0, 8).map(t =>
+    if (todo.length) h += `<div class="search-grp">提醒事项 · ${todo.length}</div>` + todo.slice(0, 8).map(t =>
       `<div class="search-row" data-go="todo"><div class="si" style="background:#f2b544">待</div>
        <div><div class="st">${U.esc(t.title)}</div><div class="ss">${U.cnDate(t.date)} · ${t.status === 'done' ? '已完成' : t.status === 'blocked' ? '今日无法完成' : '未完成'}</div></div></div>`).join('');
     if (les.length) h += `<div class="search-grp">课表 · ${les.length}</div>` + les.slice(0, 8).map(l => {
@@ -31,7 +31,7 @@ const Search = (() => {
     const m = U.modal({ title: '全局搜索', hideFoot: true, wide: true, body:
       `<div class="search-panel">
         <div class="search-bar"><svg class="ico"><use href="#i-search"/></svg>
-          <input id="sIn" placeholder="搜索学员、待办、课表、话术…" autocomplete="off"></div>
+          <input id="sIn" placeholder="搜索学员、提醒事项、课表、话术…" autocomplete="off"></div>
         <div class="search-res" id="sRes"></div>
       </div>` });
     const inp = U.$('#sIn', m.body), res = U.$('#sRes', m.body);
@@ -209,7 +209,7 @@ const AI = (() => {
       const t = U.today();
       const ls = DB.data.lessons.filter(l => l.date === t && l.status !== 'cancelled');
       const td = DB.data.todos.filter(x => x.date === t && !x.done).length;
-      return `今天排了 ${ls.length} 节课，还有 ${td} 条待办未完成。` + (ls.length ? ` 第一节 ${ls[0].start} 开始。` : ' 今天没有排课，可以专心拓客～');
+      return `今天排了 ${ls.length} 节课，还有 ${td} 条提醒事项未完成。` + (ls.length ? ` 第一节 ${ls[0].start} 开始。` : ' 今天没有排课，可以专心拓客～');
     }
     if (/(抽成|赚|收入|利润|多少钱)/.test(q)) {
       const a = U.monthFirst(U.today()), b = U.monthLast(U.today());
@@ -217,9 +217,9 @@ const AI = (() => {
       const done = DB.statIn(a, b);
       return `本月（预计）抽成收入 ${U.money(m.profit)}，已落袋 ${U.money(done.profit)}，共 ${m.count} 节课、流水 ${U.money(m.gross)}。`;
     }
-    if (/(待办|任务|还有什么|要做)/.test(q)) {
+    if (/(待办|提醒|任务|还有什么|要做)/.test(q)) {
       const n = Todo.pendingCount();
-      return `当前共有 ${n} 条未完成的待办（含历史遗留）。打开「待办」可以查看和处理，也可以一键导入每日模板。`;
+      return `当前共有 ${n} 条未完成的提醒事项（含历史遗留）。打开「提醒事项」可以查看和处理，也可以一键导入每日模板。`;
     }
     if (/(学员|学生|档案|家长)/.test(q)) {
       return `现在有 ${DB.data.students.length} 位学员档案。可直接逐项填写学生姓名、年级学科、课时费、抽成等；也支持用标准编码一键拆解（默认格式：日期-年级学科-学员名-抽成/课时费|时长），例如 240815-高二数学-李明-50/300|90。`;
@@ -234,7 +234,7 @@ const AI = (() => {
       return '所有数据都存在本机浏览器，不会上传。建议在「设置 - 数据管理」里定期导出 JSON 备份，换设备或清缓存前务必先备份。';
     }
     if (/(试课|回访|转换)/.test(q)) {
-      return '把学员标记为「试课中」并填试课日期后，次日系统会自动在待办生成一条「回访XX妈妈试课体验」，且不会重复生成。';
+      return '把学员标记为「试课中」并填试课日期后，次日系统会自动在提醒事项生成一条「回访XX妈妈试课体验」，且不会重复生成。';
     }
     if (/(财务|三本账|老师|成本)/.test(q)) {
       return '作为中间人，每节课记录我的抽成与报销支出（批注里的花费），实际到手 = 我的抽成 − 报销支出。财务页可按月/年统计并排序板块。';
@@ -289,11 +289,11 @@ const Help = (() => {
     const root = U.$('#view');
     if (!root || App.route !== 'help') return;
     const faq = [
-      ['快速上手', '左侧（手机端底部）切换模块。主页聚合今日课程、待办与模板；待办支持模板一键导入；学员按标准编码自动拆解；老师名册是独立模块，可在学员档案下方找到。'],
+      ['快速上手', '左侧（手机端底部）切换模块。主页聚合今日课程、提醒事项与模板；提醒事项支持模板一键导入；学员按标准编码自动拆解；老师名册是独立模块，可在学员档案下方找到。'],
       ['学员编码与录入', '新建学员可逐项填写，也可用标准编码一键拆解：默认 [日期]-[年级学科]-[家长]-[抽成]/[课时费]|[课时长]\n例：240815-高二数学-李妈妈-50/300|90\n系统自动拆成结构化字段（课时费、我的抽成）。'],
       ['中间人三本账', '每节课记录我的抽成与报销支出，实际到手 = 我的抽成 − 报销支出（报销支出从批注数字提取）。抽成存绝对金额、每节课冗余存价格快照，保证历史账目不被改写。'],
       ['可视化课表', '周视图时间轴可拖拽改时间，重叠自动并排+红框提示；月视图看密度；年视图看淡旺季。同一时段允许排两节课。'],
-      ['试课回访', '学员标记「试课中」+ 填试课日期，次日自动在待办生成「回访XX妈妈试课体验」，幂等只生成一次。'],
+      ['试课回访', '学员标记「试课中」+ 填试课日期，次日自动在提醒事项生成「回访XX妈妈试课体验」，幂等只生成一次。'],
       ['财务统计', '支持本月/上月/近30天/本年/自定义区间；年级饼图、老师课时排行、学员贡献、明细表；板块可排序与显隐。页面显示数据最近更新时间。'],
       ['数据备份', '数据仅存本机浏览器，不上传。设置-数据管理可导出/导入 JSON、载入演示数据、清空。换设备前务必导出备份。']
     ];
@@ -303,14 +303,14 @@ const Help = (() => {
       ${faq.map(([q, a]) => `<div class="link-card" style="box-shadow:none;margin-bottom:10px">
         <h4>${U.esc(q)}</h4><p class="muted" style="font-size:12.5px;line-height:1.8;white-space:pre-wrap">${U.esc(a)}</p></div>`).join('')}
       <div class="divider"></div>
-      <p class="muted" style="font-size:12px">提示：手机端底部导航固定 4 个入口（主页 / 日历 / 待办 / 我的），学员档案、老师名册、可视化课表、财务统计、常用话术都在「我的」里进入；数据在手机端通过「云同步」统一，无需导入导出文件。</p>
+      <p class="muted" style="font-size:12px">提示：手机端底部导航固定 4 个入口（主页 / 日历 / 提醒事项 / 我的），学员档案、老师名册、可视化课表、财务统计、常用话术都在「我的」里进入；数据在手机端通过「云同步」统一，无需导入导出文件。</p>
     </div>`;
   }
   Views.help = { title: '帮助', sub: '逸云阁使用指南', render() { render(); } };
   return { render };
 })();
 
-/* ---------- 关联中心（待办 ↔ 学员） ---------- */
+/* ---------- 关联中心（提醒事项 ↔ 学员） ---------- */
 const Link = (() => {
   function render() {
     const root = U.$('#view');
@@ -327,23 +327,23 @@ const Link = (() => {
     </div>
 
     <div class="link-card">
-      <h4>已关联待办（${linked.length}）</h4>
+      <h4>已关联提醒事项（${linked.length}）</h4>
       ${linked.length ? linked.map(t => {
         const s = DB.student(t.studentId);
         return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
           <span class="link-rel"><svg class="ico"><use href="#i-link"/></svg>${s ? U.esc(s.parentName) : '已删除'} · ${U.esc(s ? s.grade + s.subject : '')}</span>
           <span style="font-size:13px;flex:1;min-width:120px">${U.esc(t.title)}</span>
           <button class="btn btn-sm btn-ghost" data-act="unlink" data-id="${t.id}">解除</button></div>`;
-      }).join('') : `<p class="muted" style="font-size:12.5px">还没有把待办关联到学员。把下面的待办和学员关联起来，方便跟进。</p>`}
+      }).join('') : `<p class="muted" style="font-size:12.5px">还没有把提醒事项关联到学员。把下面的提醒事项和学员关联起来，方便跟进。</p>`}
     </div>
 
     <div class="link-card">
       <h4>快速关联</h4>
       ${optT ? `<div class="row">
-        <div class="field"><label>待办</label><select class="input" id="lk_t">${optT}</select></div>
+        <div class="field"><label>提醒事项</label><select class="input" id="lk_t">${optT}</select></div>
         <div class="field"><label>学员</label><select class="input" id="lk_s">${opt}</select></div>
       </div>
-      <button class="btn btn-primary" data-act="doLink">关联</button>` : `<p class="muted" style="font-size:12.5px">没有可关联的未完成待办。</p>`}
+      <button class="btn btn-primary" data-act="doLink">关联</button>` : `<p class="muted" style="font-size:12.5px">没有可关联的未完成提醒事项。</p>`}
     </div>`;
 
     U.rebind(root, 'link', e => {
@@ -358,7 +358,7 @@ const Link = (() => {
       }
     });
   }
-  Views.link = { title: '关联', sub: '待办与学员的关联管理', render() { render(); } };
+  Views.link = { title: '关联', sub: '提醒事项与学员的关联管理', render() { render(); } };
   return { render };
 })();
 
@@ -370,6 +370,14 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.9.0</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>新增「日程」模块（参考 iOS 日历 / 提醒事项分工）</b>：① 日历现同时承载两类条目——「日程」彩色时间块、<b>无需打勾</b>（如上课、会议、考试）；「提醒事项」保留原有需打勾的勾选框（如回访、待办）。两者在日 / 周 / 月 / 年视图分区展示（「日程 · N」「提醒事项 · N」），互不混淆。② 日程支持：标题、地点、全天开关、起止日期与时间、重复、提醒、颜色分类（考研课程 / 工作 / 个人 / 家庭 / 健康 / 社交 / 其它）、备注；跨天多日日程自动按天聚合显示。③ 日历右上「新建」按钮改为 iOS 风格选择弹窗，先选「日程」或「提醒事项」再进入对应编辑页。</li>
+        <li><b>全站「待办」正式更名为「提醒事项」</b>：导航、首页、日历、设置、学员试课回访提示、搜索、AI 助手、帮助与链接中心等所有出现「待办」之处统一改为「提醒事项」，与新增的「日程」形成清晰分工。</li>
+        <li><b>云同步「粘贴真实空间 ID 被重新生成」彻底修复（核心 bug）</b>：旧逻辑在点击连接时，只要遇到任何网络异常（断网 / Token 错 / GitHub 不可达）就会把用户粘贴的 ID 清空并新建空间，导致三端永远连不到同一处。现拆分为「格式校验」与「连接尝试」两步：凡是格式合法（GitHub 20 位 hex / Gitee 32 位 hex）的 ID，无论网络 / 鉴权失败一律报错并<b>保留原 ID</b>，只有「留空」或「格式非法」才会自动新建；并随附自动化回归测试覆盖 断网 / 404 / 401 / 403 / 成功 / 空 / 格式非法 共 7 种场景，全部通过。</li>
+        <li><b>全流程回归测试清零</b>：重做 jsdom 测试框架，真实加载全部脚本、经 App.go 驱动路由守卫，覆盖启动 / 全部视图渲染 / 提醒事项增删改状态流转 / 学员新建与空学科校验 / 排课与冲突检测 / 财务与抽成表解析 / 日历日程与提醒 / 云同步连接上传下载冲突保护 / 数据导入导出 / reset 共 75 项断言，全绿。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.8.11</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>云同步「后台自动下载」（准实时多端同步）</b>：① 之前同步只有「改动后自动上传」，另一端需手动点「下载同步」才能看到；现在连接后程序会每 20 秒自动检查云端，一旦发现其他端有更新且本机无未上传改动，就静默拉取并刷新当前页面——实现「平板输入、电脑约 20 秒内自动变好」。② 已连设备重新打开页面也会自动开始后台同步。③ 安全兜底：当本机和云端都有各自改动（撞车）时，自动同步会暂停并提示手动「下载同步」处理，绝不偷偷覆盖任一方数据；你正在输入框打字时也会跳过本周期，避免重渲染清空输入。④「自动同步」开关现同时控制上传与自动下载，取消勾选即停止后台轮询。</li>
