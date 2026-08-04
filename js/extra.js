@@ -370,6 +370,11 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.8.10</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>云同步引导修复</b>：① 修正设置页误导文案——此前提示「多设备填同一个自定义 ID（如 20260802）即可同步」，但 GitHub 的同步空间 ID 由服务器自动分配、不支持自定义名，导致三端各自新建空间无法同步；现改为「留空自动创建，多端共用请复制一端生成的真实空间 ID」。② 连接成功后醒目显示完整真实空间 ID 并提供「复制此 ID」按钮，已连接设备进入设置页也会显示。③ 在 <code>Sync.ensureGist</code> 增加格式校验：手动填写的 ID 若不符合 GitHub(20位hex)/Gitee(32位hex) 格式，直接当无效自动新建，从根上避免再踩坑。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.8.9</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>全流程体检修复</b>：补做跨模块符号审计时发现并修复一个真 bug——<code>Todo.importTemplates</code> / <code>Todo.editTpl</code> 两个方法此前未挂到 <code>Todo</code> 导出对象，导致 dashboard「模板库」的「导入 / 编辑 / 使用模板」按钮点击即崩溃（渲染不报错，仅点击触发）。已补入导出，跨模块审计清零。</li>

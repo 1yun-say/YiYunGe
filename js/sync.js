@@ -125,6 +125,12 @@ window.Sync = (() => {
 
   async function ensureGist() {
     const s = cfg();
+    // 手动填的 ID 必须符合服务商格式（GitHub 20位hex / Gitee 32位hex），否则视为无效并自动新建，
+    // 避免用户填自定义名（如 20260802）导致各端各自新建、无法同步同一份数据
+    if (s.gistId) {
+      const idRe = providerType() === 'gitee' ? /^[0-9a-f]{32}$/i : /^[0-9a-f]{20}$/i;
+      if (!idRe.test(s.gistId)) { s.gistId = null; DB.save(); }
+    }
     if (s.gistId) {
       // 先验证该空间是否仍能被当前 token 访问，避免陈旧/无权 ID 导致 404
       try {

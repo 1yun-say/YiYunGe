@@ -127,8 +127,14 @@ const Settings = (() => {
           <input class="input" id="syncToken" type="password" placeholder="ghp_xxx（GitHub）或 gitee_xxx（Gitee）" value="${(sc.token || '').replace(/"/g, '&quot;')}">
         </div>
         <div class="field" style="max-width:440px">
-          <label>同步空间 ID（多设备共用同一份数据）<span class="hint">格式：留空则自动创建；手动填需为 <b>纯数字</b> 或 <b>数字 + 连字符</b>，例如 <span class="mono">20260802</span> 或 <span class="mono">sakura-2026</span>。手机 / 平板 / 电脑填同一个 ID 即可同步同一份数据</span></label>
-          <input class="input" id="syncGistId" placeholder="多设备请填同一个 ID" value="${(sc.gistId || '').replace(/"/g, '&quot;')}">
+          <label>同步空间 ID<span class="hint">留空则自动创建新空间。<b>多端共用同一份数据：</b>请在电脑端连接后，复制下方自动生成的<b>真实空间 ID（一长串字符）</b>填到这里。⚠️ 不要自己起名（如 20260802）——GitHub 不认自定义名，各端会各自新建、无法同步。</span></label>
+          <input class="input" id="syncGistId" placeholder="留空自动创建；多端共用请填电脑端生成的真实空间 ID" value="${(sc.gistId || '').replace(/"/g, '&quot;')}">
+          <p class="hint" id="syncIdTip" style="display:none;margin-top:6px">
+            本机当前的真实空间 ID（GitHub 自动分配，无法自定义）：<br>
+            <span class="mono" id="syncIdShown" style="word-break:break-all"></span>
+            <button class="btn btn-ghost btn-sm" data-act="copyId" style="margin-left:6px;margin-top:4px">复制此 ID</button><br>
+            <b>多端共用同一份数据：在其他设备填<b>同一个</b>真实 ID 即可，不要自己起名。</b>
+          </p>
         </div>
         <label class="switch-row" style="margin:12px 0">
           <input type="checkbox" id="syncAuto" ${sc.auto !== false ? 'checked' : ''}> 自动同步（改动后自动上传云端）
@@ -220,7 +226,9 @@ const Settings = (() => {
           DB.save();
           Sync.ensureGist().then(() => {
             U.$('#syncGistId', root).value = Sync.cfg().gistId || '';
-            U.toast('已连接，同步空间：' + (Sync.cfg().gistId || '').slice(0, 8) + '…（多设备请填同一个 ID）');
+            const _tip = U.$('#syncIdTip', root);
+            if (_tip) { const _shown = U.$('#syncIdShown', root); if (_shown) _shown.textContent = Sync.cfg().gistId || ''; _tip.style.display = 'block'; }
+            U.toast('已连接！已生成真实空间 ID，请复制它到其他设备共用（不要自己起名）', 'ok');
             Sync.refreshStatus();
           }).catch(err => U.toast('连接失败：' + syncErrHint(err), 'warn'));
           break;
@@ -234,6 +242,14 @@ const Settings = (() => {
           DB.save();
           Sync.pull().then(() => U.toast('已从云端下载')).catch(err => U.toast('下载失败：' + err.message, 'warn'));
           break;
+        case 'copyId': {
+          if (!Sync.cfg().gistId) { U.toast('当前没有可复制的空间 ID', 'warn'); break; }
+          const id = Sync.cfg().gistId;
+          const done = () => U.toast('已复制空间 ID', 'ok');
+          const fallback = () => { const ta = document.createElement('textarea'); ta.value = id; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (_) { U.toast('复制失败，请手动复制：' + id, 'warn'); } document.body.removeChild(ta); };
+          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(id).then(done).catch(fallback); else fallback();
+          break;
+        }
         case 'syncHelp':
           const h = U.$('#syncHelp', root); if (h) h.style.display = (h.style.display === 'none' ? 'block' : 'none');
           break;
@@ -261,6 +277,10 @@ const Settings = (() => {
       U.toast('已切换为 ' + (e.target.value === 'gitee' ? '码云 Gitee' : 'GitHub') + '，请重新填写令牌并点「连接 / 初始化」', 'ok');
       Sync.refreshStatus();
     };
+    if (sc.gistId) {
+      const tip = U.$('#syncIdTip', root);
+      if (tip) { const shown = U.$('#syncIdShown', root); if (shown) shown.textContent = sc.gistId; tip.style.display = 'block'; }
+    }
     Sync.refreshStatus();
 
     U.$('#fileIn', root).onchange = e => {
