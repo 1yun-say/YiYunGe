@@ -97,11 +97,11 @@ const Dashboard = (() => {
       const sub = DB.lessonSub(l);
       const c = U.subColor(sub.subject);
       const now = new Date().getHours() * 60 + new Date().getMinutes();
-      const passed = U.t2m(l.start) + l.duration < now;
+      const passed = U.safeT2m(l) + l.duration < now;
       return `<div class="todo-item plain" data-lid="${l.id}" style="cursor:pointer;${passed ? 'opacity:.6' : ''}">
               <div style="width:4px;align-self:stretch;border-radius:4px;background:${c};flex:none"></div>
               <div style="width:52px;text-align:center;flex:none">
-                <b style="font-size:14px">${l.start}</b>
+                <b style="font-size:14px">${l.start || '--'}</b>
                 <div class="muted" style="font-size:10px">${l.duration}分</div></div>
               <div class="t-body">
                 <div class="t-title"><b>${U.esc(sub.grade)}${U.esc(sub.subject)}</b> · ${U.esc(s.parentName)}</div>
@@ -403,7 +403,7 @@ const Dashboard = (() => {
     // 主页抽成口径：默认只统计「已上课」的实际抽成；开启开关后把待上课也计入
     const inc = !!DB.data.settings.dashIncScheduled;
     const todayLessons = DB.data.lessons.filter(l => l.date === t && l.status !== 'cancelled')
-      .sort((a, b) => U.t2m(a.start) - U.t2m(b.start));
+      .sort((a, b) => U.safeT2m(a) - U.safeT2m(b));
     const todosAll = Todo.ofDate(t);
     const undone = todosAll.filter(x => x.status !== 'done').sort((a, b) => a.priority - b.priority);
     // 遗留未完成：真正「过期」的任务——基准日早于今天，且今天不再发生（重复任务若今天仍要发生，

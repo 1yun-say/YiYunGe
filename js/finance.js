@@ -20,12 +20,14 @@ const Finance = (() => {
   }
 
   // 抽成率只按「真实课时」且从 2026-08-01 起算；导入的抽成表数据不参与抽成率。
+  // 抽成率口径 = 我的抽成(commission) ÷ 家长流水(gross)，与明细表「我的抽成」列一致，
+  // 不再用「实际到手(takeHome=commission-报销)」作分子，否则率值会比抽成列低、互相矛盾。
   const RATE_CUTOFF = '2026-08-01';
   function effectiveRate(lessons) {
     const ls = (lessons || []).filter(l => !l.importedCommission && l.date >= RATE_CUTOFF && l.status === 'done');
     const gross = ls.reduce((s, l) => s + (+l.tuition || 0), 0);
-    const profit = ls.reduce((s, l) => s + DB.lessonBreakdown(l).takeHome, 0);
-    return { gross, profit, rate: gross ? Math.round(profit / gross * 100) : 0 };
+    const commission = ls.reduce((s, l) => s + (+l.commission || 0), 0);
+    return { gross, commission, rate: gross ? Math.round(commission / gross * 100) : 0 };
   }
 
   const PALETTE = ['#f9709d', '#ffb6ce', '#8fb8f0', '#7fc8a9', '#f2b544', '#b48ce0', '#65c7c0', '#e2a06a', '#ef8ea4', '#79b36b'];
@@ -166,7 +168,7 @@ const Finance = (() => {
             <td class="num money" data-label="我的抽成">${U.money(g.commission)}</td>
             <td class="num money out" data-label="报销支出">${U.money(g.reimb)}</td>
             <td class="num money in" data-label="实际到手">${U.money(g.profit)}</td>
-            ${showRate ? `<td class="num" data-label="有效抽成率" title="不含导入抽成表数据，自 8 月 1 日起的真实课时抽成率">${(() => { const r = effectiveRate(g.lessons); return `${r.rate}%`; })()}</td>` : ''}
+            ${showRate ? `<td class="num" data-label="抽成率" title="自 2026-08-01 起、不含导入抽成表的课时抽成率 = 我的抽成 ÷ 家长流水">${(() => { const r = effectiveRate(g.lessons); return `${r.rate}%`; })()}</td>` : ''}
             <td data-label="占比"><div class="bt" style="height:8px;background:var(--pink-75);border-radius:6px;overflow:hidden">
               <i style="display:block;height:100%;width:${st.profit ? g.profit / st.profit * 100 : 0}%;background:linear-gradient(90deg,#ffb6ce,#f9709d)"></i></div></td>
           </tr>`).join('') || `<tr><td colspan="${showRate ? 8 : 7}" class="muted" style="text-align:center;padding:26px">该区间还没有课程记录</td></tr>`}
@@ -175,7 +177,7 @@ const Finance = (() => {
           <td>合计</td>          <td class="num">${st.count}</td><td class="num">${(st.minutes / 60).toFixed(1)} h</td>
           <td class="num money">${U.money(st.commission)}</td><td class="num money out">${U.money(st.reimb)}</td>
           <td class="num money in">${U.money(st.profit)}</td>
-          ${showRate ? `<td class="num" title="不含导入抽成表数据，自 8 月 1 日起">${(() => { const r = effectiveRate(st.lessons); return `${r.rate}%`; })()}%</td>` : ''}<td></td></tr></tfoot>` : ''}
+          ${showRate ? `<td class="num" title="自 2026-08-01 起、不含导入抽成表的课时抽成率 = 我的抽成 ÷ 家长流水">${(() => { const r = effectiveRate(st.lessons); return `${r.rate}%`; })()}</td>` : ''}<td></td></tr></tfoot>` : ''}
       </table>
       <p class="muted" style="font-size:11.5px;margin-top:10px">
         统计口径：${includeScheduled ? '已完成 + 待上课程' : '仅已完成课程'}；区间 ${from} 至 ${to}（共 ${ctx.days} 天）。
@@ -346,11 +348,11 @@ const Finance = (() => {
   }
   function exportCSV() {
     try {
-      const cur = group(DB.statIn(from, to, { includeScheduled }).lessons, dim);
+      const cur = group(DB.statIn(from, to, { includeScheduled, includeImported }).lessons, dim);
       const head = { student: '学员', grade: '年级', subject: '学科', teacher: '老师' }[dim];
       const header = [head, '课时', '总时长(h)', '我的抽成', '报销支出', '实际到手', '有效抽成率(8.1起)'];
       const rows = cur.map(g => [g.label, g.count, (g.minutes / 60).toFixed(1), g.commission, g.reimb, g.profit, includeImported ? '' : effectiveRate(g.lessons).rate]);
-      const st = DB.statIn(from, to, { includeScheduled });
+      const st = DB.statIn(from, to, { includeScheduled, includeImported });
       rows.push(['合计', st.count, (st.minutes / 60).toFixed(1), st.commission, st.reimb, st.profit, includeImported ? '' : effectiveRate(st.lessons).rate]);
       const csv = [header, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n');
       const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
@@ -367,7 +369,7 @@ const Finance = (() => {
 
   function exportPDF() {
     try {
-      const st = DB.statIn(from, to, { includeScheduled });
+      const st = DB.statIn(from, to, { includeScheduled, includeImported });
       const title = range === 'year' ? `${from.slice(0, 4)} 年度对账单` : `${from.slice(0, 7)} 月度对账单`;
       const items = st.lessons
         .filter(l => l.status === 'done' && DB.lessonBreakdown(l).takeHome > 0)
@@ -431,7 +433,7 @@ const Finance = (() => {
     const root = U.$('#view');
     if (!root || App.route !== 'finance') return;
 
-    const st = DB.statIn(from, to, { includeScheduled });
+    const st = DB.statIn(from, to, { includeScheduled, includeImported });
     const ls = st.lessons;
     const byStu = group(ls, 'student');
     const byGrade = group(ls, 'grade');
@@ -443,14 +445,14 @@ const Finance = (() => {
     const monthly = Array.from({ length: 12 }, (_, i) => {
       const mk = `${y}-${U.pad(i + 1)}`;
       const m = `${mk}-01`;
-      const s = DB.statIn(m, U.monthLast(m), { includeScheduled });
+      const s = DB.statIn(m, U.monthLast(m), { includeScheduled, includeImported });
       const hist = histMonthTotal(mk);
       return { label: (i + 1) + '月', value: s.profit + hist, hl: mk === U.today().slice(0, 7) };
     });
 
     const span = U.daysDiff(from, to);
     const pFrom = U.addDays(from, -span - 1), pTo = U.addDays(from, -1);
-    const prev = DB.statIn(pFrom, pTo, { includeScheduled });
+    const prev = DB.statIn(pFrom, pTo, { includeScheduled, includeImported });
     const delta = prev.profit ? Math.round((st.profit - prev.profit) / prev.profit * 100) : null;
 
     const lastEdit = Math.max(DB.data.meta.lastLessonEdit || 0, DB.data.meta.lastStudentEdit || 0);

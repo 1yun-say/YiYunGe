@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 <title>逸云阁 · Yiyun Ge · 离线版</title>
+<link rel="icon" href="icon-192.png">
 <style>
 /* ===== 樱花工作台 · Sakura Desk ===== */
 :root{
@@ -140,6 +141,15 @@ body.public .secret{display:none!important}
 textarea.input{resize:vertical;min-height:70px;line-height:1.6}
 .row{display:flex;gap:12px}
 .row>*{flex:1}
+
+/* 自定义重复：星期多选（此前无样式，按钮裸渲染、选中态不可见） */
+.wd-pick{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 2px}
+.wd-chip{flex:1;min-width:38px;padding:8px 0;border:1px solid var(--line-2);border-radius:10px;
+  background:var(--pink-75);color:var(--ink-2);font-size:13px;cursor:pointer;transition:.16s;
+  display:grid;place-items:center;user-select:none}
+.wd-chip:hover{border-color:var(--pink-300);background:#fff}
+.wd-chip.on{background:linear-gradient(135deg,var(--pink-400),var(--pink-600));border-color:var(--pink-500);
+  color:#fff;font-weight:600;box-shadow:0 2px 8px rgba(255,107,150,.3)}
 
 .tabs{display:inline-flex;background:var(--pink-100);border-radius:12px;padding:3px;gap:2px}
 .tab{padding:6px 14px;border-radius:9px;font-size:12.5px;color:var(--ink-2);cursor:pointer;transition:.18s;border:none;background:transparent}
@@ -1223,7 +1233,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T16:07:01.714Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T22:20:21.591Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -1355,10 +1365,13 @@ const U = (() => {
   /* --- 时间(分钟) --- */
   const t2m = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
   const m2t = m => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+  // 安全版：课时 start 缺失/格式非法时回退 8:00(480)，避免首页今日课程整页崩溃
+  const validTime = t => typeof t === 'string' && /^\d{1,2}:\d{2}$/.test(t);
+  const safeT2m = l => validTime(l && l.start) ? t2m(l.start) : 8 * 60;
 
   /* --- 通用 --- */
   const uid = p => (p || 'id') + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  const money = n => '¥' + (Math.round(n * 100) / 100).toLocaleString('zh-CN');
+  const money = n => '¥' + ((isFinite(n) ? Math.round(n * 100) / 100 : 0).toLocaleString('zh-CN'));
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
   const $ = (s, r = document) => r.querySelector(s);
@@ -1672,7 +1685,6 @@ function editableSub(node, viewKey, fallback) {
     } else if (r.type === 'custom' && r.unit === 'week') {
       if (r.weekdays && r.weekdays.length) {
         // 每 N 周、且只在该周指定的星期几发生（可多选，如周一/周四/周五）
-        const day = +S.slice(8);
         let d = S, i = 0;
         while (d <= to && i < LIMIT) {
           const wk = Math.round(daysDiff(S, d) / 7);
@@ -1686,24 +1698,30 @@ function editableSub(node, viewKey, fallback) {
       }
     } else if (r.type === 'monthly') {
       const day = +S.slice(8);
-      let cur = S, i = 0;
-      while (cur <= to && i < LIMIT) {
+      let y = +S.slice(0, 4), m = +S.slice(5, 7), i = 0;
+      while (i < LIMIT) {
+        const cur = monthDay(y, m, day);   // 锚定到目标月的 day 日，自动 clamp 到月末；避免 31 日锚点在短月被 addMonths 溢出丢失
+        if (cur > to) break;
         if (!pushIf(cur)) break;
-        cur = addMonths(cur, 1); cur = monthDay(+cur.slice(0, 4), +cur.slice(5, 7), day); i++;
+        m++; if (m > 12) { m = 1; y++; }
+        i++;
       }
     } else if (r.type === 'yearly') {
-      let y = +S.slice(0, 4); const md = S.slice(5); let i = 0;
-      while (i < LIMIT) { const cur = `${y}-${md}`; if (cur > to) break; if (!pushIf(cur)) break; y++; i++; }
+      let y = +S.slice(0, 4); const mm = +S.slice(5, 7), dd = +S.slice(8); let i = 0;
+      while (i < LIMIT) { const cur = monthDay(y, mm, dd); if (cur > to) break; if (!pushIf(cur)) break; y++; i++; }
     } else if (r.type === 'custom' && r.unit === 'month') {
       const day = +S.slice(8);
-      let cur = S, i = 0;
-      while (cur <= to && i < LIMIT) {
+      let y = +S.slice(0, 4), m = +S.slice(5, 7), i = 0;
+      while (i < LIMIT) {
+        const cur = monthDay(y, m, day);   // 同上：逐月锚定，避免 addMonths 跨短月溢出丢失
+        if (cur > to) break;
         if (!pushIf(cur)) break;
-        cur = addMonths(cur, r.every); cur = monthDay(+cur.slice(0, 4), +cur.slice(5, 7), day); i++;
+        m += r.every; while (m > 12) { m -= 12; y++; }
+        i++;
       }
     } else if (r.type === 'custom' && r.unit === 'year') {
-      let y = +S.slice(0, 4); const md = S.slice(5); let i = 0;
-      while (i < LIMIT) { const cur = `${y}-${md}`; if (cur > to) break; if (!pushIf(cur)) break; y += r.every; i++; }
+      let y = +S.slice(0, 4); const mm = +S.slice(5, 7), dd = +S.slice(8); let i = 0;
+      while (i < LIMIT) { const cur = monthDay(y, mm, dd); if (cur > to) break; if (!pushIf(cur)) break; y += r.every; i++; }
     }
     return out;
   }
@@ -1825,7 +1843,7 @@ function editableSub(node, viewKey, fallback) {
 
   return {
     pad, today, fmt, parse, addDays, addMonths, dow, mondayOf, weekDays, monthFirst, monthLast,
-    yearFirst, yearLast, wdName, cnDate, between, daysDiff, t2m, m2t, uid, money, esc, el, $, $$,
+    yearFirst, yearLast, wdName, cnDate, between, daysDiff, t2m, m2t, safeT2m, uid, money, esc, el, $, $$,
     toast, modal, confirm, copy, pie, bars, columns, subColor, SUBJECT_COLORS, WEEK_MUTED, WD, rebind, unbindNode, pct, fmtTime, isMobile,
     editableSub, draggableSortable,
     monthDay, recurRuleOf, recurOccurrencesBetween, recurOccursOn, recurDescribe,
@@ -2183,6 +2201,19 @@ const DB = (() => {
   let data = blank();
   data = load();
 
+  // 数据损坏兜底：尝试从内嵌备份（离线版自带）恢复真实数据；否则返回 null 由调用方回退演示。
+  // 绝不直接用示例数据静默覆盖真实数据。
+  function salvageCorrupt() {
+    try {
+      const emb = (typeof window !== 'undefined') && window.__EMBEDDED_BACKUP__;
+      if (emb && Array.isArray(emb.students)) {
+        const d = JSON.parse(JSON.stringify(emb));
+        if (Array.isArray(d.students) && d.students.length) return d;
+      }
+    } catch (e) { console.warn('损坏恢复-内嵌备份失败', e); }
+    return null;
+  }
+
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
@@ -2197,7 +2228,22 @@ const DB = (() => {
         migrateRecurrence(d);
         return d;
       }
-    } catch (e) { console.warn('数据读取失败', e); }
+    } catch (e) {
+      // 本地数据损坏：暂存原串以便恢复，绝不直接用示例数据覆盖真实数据。
+      console.warn('本地数据解析失败，已保留原串并尝试恢复', e);
+      try { localStorage.setItem(KEY + '__corrupt', localStorage.getItem(KEY)); } catch (_) {}
+      const recovered = salvageCorrupt();
+      if (recovered) {
+        const d = adoptData(recovered);
+        d.__corruptRecovered = true;
+        return d;
+      }
+      const d = blank();
+      Object.assign(d, demoData());
+      d.__demo = true;
+      d.__corrupt = true;   // 标记：本次是损坏回退的示例数据，UI 需提示
+      return d;
+    }
     // 本机尚无任何数据时：若当前打开的是「内含数据的离线版」文件，优先用它自带的备份开局。
     // 这样即便原网页彻底失效，双击这个文件就能直接看到全部数据，无需再手动导入。
     try {
@@ -2359,7 +2405,10 @@ const DB = (() => {
 
   // 抽成口径：默认只统计已完成课程
   function statIn(a, b, opt = {}) {
-    const ls = lessonsIn(a, b).filter(l => opt.includeScheduled ? true : l.status === 'done');
+    let ls = lessonsIn(a, b).filter(l => opt.includeScheduled ? true : l.status === 'done');
+    // 财务页「含导入数据」未勾选时，导入的抽成表记录(importedCommission)不计入任何合计，
+    // 与明细行、抽成率的口径保持一致（默认 true = 计入，仪表盘/日历不受影响）。
+    if (opt.includeImported === false) ls = ls.filter(l => !l.importedCommission);
     const gross = ls.reduce((s, l) => s + (+l.tuition || 0), 0);
     const commission = ls.reduce((s, l) => s + (+l.commission || 0), 0);
     const reimb = ls.reduce((s, l) => s + reimburseOf(l), 0);
@@ -2519,7 +2568,8 @@ const DB = (() => {
     getCodeTemplate, tokenizeCode, presentFields, resolveField, DEFAULT_CODE_TEMPLATE,
     student, teacher, teacherName, studentLabel, lessonsIn, statIn, lessonBreakdown, defaultTemplates, defaultPhrases,
     DASH_MODULES, studentSubjects, primarySubject, studentCode, normDateFlexible, lessonSub, migrateSubjects,
-    resolveTeacher, rememberGradesSubjects
+    resolveTeacher, rememberGradesSubjects,
+    reimburseOf, takeHomeOf
   };
 })();
 
@@ -2862,7 +2912,10 @@ window.Sync = (() => {
       if (localDirty) {
         try { await push(); return; }               // 上传成功会同步 baseSavedAt
         catch (e) {
-          if (e.message === 'conflict') status('云端和本机都有改动，已暂停自动同步，请手动「下载同步」处理', 'warn');
+          if (e.message === 'conflict') {
+            stopAutoPull();   // 停止自动拉取，避免每 20s 重复弹同一警告刷屏
+            status('云端和本机都有改动，已暂停自动同步，请手动「下载同步」处理', 'warn');
+          }
           return;
         }
       }
@@ -2983,7 +3036,15 @@ const Todo = (() => {
     const undone = list.filter(t => t.status !== 'done').sort(sortFn);
     const done = list.filter(t => t.status === 'done').sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
     const shown = filter < 0 ? undone : undone.filter(t => t.priority === filter);
-    const overdue = DB.data.todos.filter(t => t.status === 'pending' && t.date < U.today());
+    // 与 dashboard 一致的遗留判定：仅“非重复且过去日期未完成”的旧任务算遗留。
+    // 重复任务从不计入遗留——它们按发生日由 ofDate 在当天列表里自然出现，避免重复/错位。
+    const today = U.today();
+    const overdue = DB.data.todos.filter(t => {
+      if (t.status === 'done') return false;
+      const r = U.recurRuleOf(t.repeat, t.date);
+      if (r && r.type !== 'never') return false;   // 重复任务不进遗留
+      return t.date < today;
+    });
     const isM = U.isMobile();
     const segHTML = isM ? '' : `<div class="seg" style="margin-bottom:12px">
             <div class="opt ${filter < 0 ? 'on' : ''}" data-f="-1">全部</div>
@@ -3116,8 +3177,10 @@ const Todo = (() => {
         ? '<svg viewBox="0 0 24 24" class="ico"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>'
         : '';
     const chkCls = doneOnCur ? 'done' : (blockedOnCur ? 'blocked' : 'pending');
+    // 重复任务勾掉（写进 completedDates）的完成态用绿色语义，而非「未完成」粉色。
+    const chkColor = doneOnCur ? 'var(--leaf, #38a169)' : st.color;
     return `<div class="todo-item ${doneOnCur ? 'done' : ''} ${blockedOnCur ? 'blocked' : ''}" data-p="${t.priority}" data-id="${t.id}">
-      <div class="chk chk-${chkCls}" data-act="toggle" title="${doneOnCur ? '已完成' : (blockedOnCur ? '今日无法完成' : '未完成')}" style="color:#fff;border-color:${st.color};${doneOnCur || blockedOnCur ? 'background:' + st.color : ''}">${chkIcon}</div>
+      <div class="chk chk-${chkCls}" data-act="toggle" title="${doneOnCur ? '已完成' : (blockedOnCur ? '今日无法完成' : '未完成')}" style="color:#fff;border-color:${chkColor};${doneOnCur || blockedOnCur ? 'background:' + chkColor : ''}">${chkIcon}</div>
       <div class="t-body">
         <div class="t-title">
           ${t.time ? `<span class="t-time">${U.esc(t.time)}</span>` : ''}${U.esc(t.title)}
@@ -3161,7 +3224,10 @@ const Todo = (() => {
         case 'quickAdd': doQuickAdd(root); break;
         case 'toggle': {
           const rule = U.recurRuleOf(t.repeat, t.date);
-          if (U.recurOccursOn(curDate, rule)) {
+          // 仅「真正重复」的任务(type!=='never' 且当前展示日确为发生日)才走「按日期单独勾选」分支；
+          // 非重复任务(never)必须改 status，否则在到期日当天点击时只写 completedDates、
+          // 而渲染/未读数都按 status 判定，导致对勾不显示、未读数不减。
+          if (rule.type !== 'never' && U.recurOccursOn(curDate, rule)) {
             // 重复任务：按当前展示日单独勾选完成
             t.completedDates = Array.isArray(t.completedDates) ? t.completedDates : [];
             const i = t.completedDates.indexOf(curDate);
@@ -3178,7 +3244,14 @@ const Todo = (() => {
         case 'edit': editTodo(t); break;
         case 'del': DB.data.todos = DB.data.todos.filter(x => x.id !== tid); DB.save(); render(); App.refreshBadge(); break;
         case 'pullOverdue':
-          DB.data.todos.forEach(x => { if (x.status !== 'done' && x.date < U.today()) x.date = U.today(); });
+          // 仅把「非重复」的过期未完成任务拉到今天；重复任务以 repeat 为锚点，
+          // 改 date 会悄悄偏移发生日，故跳过（重复任务本就会在今天发生）。
+          DB.data.todos.forEach(x => {
+            if (x.status === 'done') return;
+            const r = U.recurRuleOf(x.repeat, x.date);
+            if (r && r.type !== 'never') return;
+            if (x.date < U.today()) x.date = U.today();
+          });
           DB.save(); curDate = U.today(); render(); U.toast('已全部拉到今天');
           break;
         case 'toggleArch': {
@@ -3197,7 +3270,8 @@ const Todo = (() => {
       }
     });
 
-    U.$('#quickTitle', root).addEventListener('keydown', e => { if (e.key === 'Enter') doQuickAdd(root); });
+    const quickTitle = U.$('#quickTitle', root);
+    if (quickTitle) quickTitle.addEventListener('keydown', e => { if (e.key === 'Enter') doQuickAdd(root); });
   }
 
   function doQuickAdd(root) {
@@ -3651,7 +3725,10 @@ const Students = (() => {
           DB.data.students.push(Object.assign({ id: U.uid('stu'), createdAt: Date.now() }, o));
         }
         else Object.assign(s, o);
-        DB.save(); DB.touch('student'); Todo.checkAuto(); App.refreshBadge(); render();
+        DB.save(); DB.touch('student');
+        if (typeof Todo !== 'undefined' && Todo.checkAuto) { try { Todo.checkAuto(); } catch (_) {} }
+        if (typeof App !== 'undefined' && App.refreshBadge) { try { App.refreshBadge(); } catch (_) {} }
+        render();
         U.toast(isNew ? '档案已创建' : '已保存');
       }
     });
@@ -3769,7 +3846,9 @@ const Students = (() => {
   }
   function createStudentFromRow(r) {
     const grade = r.grade || '未分级', subject = r.subject || '其它';
-    const sub = { id: U.uid('sbj'), grade, subject, tuition: r.tuition || r.commission || 0, commission: r.commission || 0, duration: r.duration || 60, fixed: [] };
+    // 仅提供「抽成」而无「课时费」时，课时费留空(0)，不把抽成误填为课时费（否则 takeHome=0 且统计失真）。
+    const hasTuition = (r.tuition !== undefined && r.tuition !== null && r.tuition !== '');
+    const sub = { id: U.uid('sbj'), grade, subject, tuition: hasTuition ? r.tuition : 0, commission: r.commission || 0, duration: r.duration || 60, fixed: [] };
     const st = {
       id: U.uid('stu'), code: '', signDate: r.date, parentName: r.name, studentName: '',
       teacherId: '', status: 'active', note: '', trialDate: '', createdAt: Date.now(),
@@ -3783,7 +3862,7 @@ const Students = (() => {
   function getSubject(stu, r) {
     const grade = r.grade || '未分级', subject = r.subject || '其它';
     let sub = (stu.subjects || []).find(s => s.grade === grade && s.subject === subject);
-    if (!sub) { sub = { id: U.uid('sbj'), grade, subject, tuition: r.tuition || r.commission || 0, commission: r.commission || 0, duration: r.duration || 60, fixed: [] }; stu.subjects.push(sub); }
+    if (!sub) { sub = { id: U.uid('sbj'), grade, subject, tuition: r.tuition || 0, commission: r.commission || 0, duration: r.duration || 60, fixed: [] }; stu.subjects.push(sub); }
     else { if (r.tuition) sub.tuition = r.tuition; if (r.commission) sub.commission = r.commission; if (r.duration) sub.duration = r.duration; }
     return sub;
   }
@@ -4015,9 +4094,12 @@ const Teachers = (() => {
         case 'addT': editTeacher(null); break;
         case 'editT': editTeacher(t); break;
         case 'delT':
-          U.confirm(`删除老师「${t.name}」？其名下学员会变为「未指派」。`, () => {
+          U.confirm(`删除老师「${t.name}」？其名下学员会变为「未指派」，相关课时记录也会解除老师关联。`, () => {
             DB.data.teachers = DB.data.teachers.filter(x => x.id !== t.id);
             DB.data.students.forEach(s => { if (s.teacherId === t.id) s.teacherId = ''; });
+            // 同步解除课表/日历事件中该老师的关联，避免按老师分组或日历出现幽灵项。
+            (DB.data.lessons || []).forEach(l => { if (l.teacherId === t.id) l.teacherId = ''; });
+            (DB.data.events || []).forEach(e => { if (e.teacherId === t.id) e.teacherId = ''; });
             DB.save(); render();
           }, '删除');
           break;
@@ -4751,8 +4833,10 @@ const Schedule = (() => {
     mm.body.addEventListener('click', e => {
       if (e.target.id === 'btnDone') { l.status = 'done'; DB.save(); DB.touch('lesson'); render(); U.toast('已标记完成'); e.target.closest('.mask').remove(); }
       if (e.target.id === 'btnDel') {
-        DB.data.lessons = DB.data.lessons.filter(x => x.id !== l.id); DB.save(); DB.touch('lesson'); render();
-        U.toast('已删除'); e.target.closest('.mask').remove();
+        U.confirm('确定删除这一节课吗？此操作不可撤销。', () => {
+          DB.data.lessons = DB.data.lessons.filter(x => x.id !== l.id); DB.save(); DB.touch('lesson'); render();
+          U.toast('已删除'); e.target.closest('.mask').remove();
+        }, '删除');
       }
     });
     mm.body.addEventListener('input', e => {
@@ -4803,12 +4887,14 @@ const Finance = (() => {
   }
 
   // 抽成率只按「真实课时」且从 2026-08-01 起算；导入的抽成表数据不参与抽成率。
+  // 抽成率口径 = 我的抽成(commission) ÷ 家长流水(gross)，与明细表「我的抽成」列一致，
+  // 不再用「实际到手(takeHome=commission-报销)」作分子，否则率值会比抽成列低、互相矛盾。
   const RATE_CUTOFF = '2026-08-01';
   function effectiveRate(lessons) {
     const ls = (lessons || []).filter(l => !l.importedCommission && l.date >= RATE_CUTOFF && l.status === 'done');
     const gross = ls.reduce((s, l) => s + (+l.tuition || 0), 0);
-    const profit = ls.reduce((s, l) => s + DB.lessonBreakdown(l).takeHome, 0);
-    return { gross, profit, rate: gross ? Math.round(profit / gross * 100) : 0 };
+    const commission = ls.reduce((s, l) => s + (+l.commission || 0), 0);
+    return { gross, commission, rate: gross ? Math.round(commission / gross * 100) : 0 };
   }
 
   const PALETTE = ['#f9709d', '#ffb6ce', '#8fb8f0', '#7fc8a9', '#f2b544', '#b48ce0', '#65c7c0', '#e2a06a', '#ef8ea4', '#79b36b'];
@@ -4949,7 +5035,7 @@ const Finance = (() => {
             <td class="num money" data-label="我的抽成">${U.money(g.commission)}</td>
             <td class="num money out" data-label="报销支出">${U.money(g.reimb)}</td>
             <td class="num money in" data-label="实际到手">${U.money(g.profit)}</td>
-            ${showRate ? `<td class="num" data-label="有效抽成率" title="不含导入抽成表数据，自 8 月 1 日起的真实课时抽成率">${(() => { const r = effectiveRate(g.lessons); return `${r.rate}%`; })()}</td>` : ''}
+            ${showRate ? `<td class="num" data-label="抽成率" title="自 2026-08-01 起、不含导入抽成表的课时抽成率 = 我的抽成 ÷ 家长流水">${(() => { const r = effectiveRate(g.lessons); return `${r.rate}%`; })()}</td>` : ''}
             <td data-label="占比"><div class="bt" style="height:8px;background:var(--pink-75);border-radius:6px;overflow:hidden">
               <i style="display:block;height:100%;width:${st.profit ? g.profit / st.profit * 100 : 0}%;background:linear-gradient(90deg,#ffb6ce,#f9709d)"></i></div></td>
           </tr>`).join('') || `<tr><td colspan="${showRate ? 8 : 7}" class="muted" style="text-align:center;padding:26px">该区间还没有课程记录</td></tr>`}
@@ -4958,7 +5044,7 @@ const Finance = (() => {
           <td>合计</td>          <td class="num">${st.count}</td><td class="num">${(st.minutes / 60).toFixed(1)} h</td>
           <td class="num money">${U.money(st.commission)}</td><td class="num money out">${U.money(st.reimb)}</td>
           <td class="num money in">${U.money(st.profit)}</td>
-          ${showRate ? `<td class="num" title="不含导入抽成表数据，自 8 月 1 日起">${(() => { const r = effectiveRate(st.lessons); return `${r.rate}%`; })()}%</td>` : ''}<td></td></tr></tfoot>` : ''}
+          ${showRate ? `<td class="num" title="自 2026-08-01 起、不含导入抽成表的课时抽成率 = 我的抽成 ÷ 家长流水">${(() => { const r = effectiveRate(st.lessons); return `${r.rate}%`; })()}</td>` : ''}<td></td></tr></tfoot>` : ''}
       </table>
       <p class="muted" style="font-size:11.5px;margin-top:10px">
         统计口径：${includeScheduled ? '已完成 + 待上课程' : '仅已完成课程'}；区间 ${from} 至 ${to}（共 ${ctx.days} 天）。
@@ -5129,11 +5215,11 @@ const Finance = (() => {
   }
   function exportCSV() {
     try {
-      const cur = group(DB.statIn(from, to, { includeScheduled }).lessons, dim);
+      const cur = group(DB.statIn(from, to, { includeScheduled, includeImported }).lessons, dim);
       const head = { student: '学员', grade: '年级', subject: '学科', teacher: '老师' }[dim];
       const header = [head, '课时', '总时长(h)', '我的抽成', '报销支出', '实际到手', '有效抽成率(8.1起)'];
       const rows = cur.map(g => [g.label, g.count, (g.minutes / 60).toFixed(1), g.commission, g.reimb, g.profit, includeImported ? '' : effectiveRate(g.lessons).rate]);
-      const st = DB.statIn(from, to, { includeScheduled });
+      const st = DB.statIn(from, to, { includeScheduled, includeImported });
       rows.push(['合计', st.count, (st.minutes / 60).toFixed(1), st.commission, st.reimb, st.profit, includeImported ? '' : effectiveRate(st.lessons).rate]);
       const csv = [header, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n');
       const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
@@ -5150,7 +5236,7 @@ const Finance = (() => {
 
   function exportPDF() {
     try {
-      const st = DB.statIn(from, to, { includeScheduled });
+      const st = DB.statIn(from, to, { includeScheduled, includeImported });
       const title = range === 'year' ? `${from.slice(0, 4)} 年度对账单` : `${from.slice(0, 7)} 月度对账单`;
       const items = st.lessons
         .filter(l => l.status === 'done' && DB.lessonBreakdown(l).takeHome > 0)
@@ -5214,7 +5300,7 @@ const Finance = (() => {
     const root = U.$('#view');
     if (!root || App.route !== 'finance') return;
 
-    const st = DB.statIn(from, to, { includeScheduled });
+    const st = DB.statIn(from, to, { includeScheduled, includeImported });
     const ls = st.lessons;
     const byStu = group(ls, 'student');
     const byGrade = group(ls, 'grade');
@@ -5226,14 +5312,14 @@ const Finance = (() => {
     const monthly = Array.from({ length: 12 }, (_, i) => {
       const mk = `${y}-${U.pad(i + 1)}`;
       const m = `${mk}-01`;
-      const s = DB.statIn(m, U.monthLast(m), { includeScheduled });
+      const s = DB.statIn(m, U.monthLast(m), { includeScheduled, includeImported });
       const hist = histMonthTotal(mk);
       return { label: (i + 1) + '月', value: s.profit + hist, hl: mk === U.today().slice(0, 7) };
     });
 
     const span = U.daysDiff(from, to);
     const pFrom = U.addDays(from, -span - 1), pTo = U.addDays(from, -1);
-    const prev = DB.statIn(pFrom, pTo, { includeScheduled });
+    const prev = DB.statIn(pFrom, pTo, { includeScheduled, includeImported });
     const delta = prev.profit ? Math.round((st.profit - prev.profit) / prev.profit * 100) : null;
 
     const lastEdit = Math.max(DB.data.meta.lastLessonEdit || 0, DB.data.meta.lastStudentEdit || 0);
@@ -5996,16 +6082,22 @@ const Calendar = (() => {
     return out;
   }
 
-  function todoHTML(x) {
+  function todoHTML(x, day) {
     const p = Todo.pInfo(x.priority);
     const st = Todo.sInfo(x.status);
-    const chkIcon = x.status === 'done'
+    // 重复任务在某天被勾掉（completedDates 含该日）→ 视为已完成态，与 todo 视图一致。
+    const r = U.recurRuleOf(x.repeat, x.date);
+    const doneOnDay = (r && r.type !== 'never')
+      ? (Array.isArray(x.completedDates) && x.completedDates.includes(day))
+      : (x.status === 'done');
+    const chkColor = doneOnDay ? 'var(--leaf, #38a169)' : st.color;
+    const chkIcon = doneOnDay
       ? '<svg viewBox="0 0 24 24" class="ico"><path d="M5 12.5 10 17 19 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
       : x.status === 'blocked'
         ? '<svg viewBox="0 0 24 24" class="ico"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>'
         : '';
-    return `<div class="cal-event ${x.status === 'done' ? 'done' : ''} ${x.status === 'blocked' ? 'blocked' : ''}" data-tid="${x.id}">
-      <button class="cal-check" data-act="toggleTodo" aria-label="${st.name}" style="border-color:${st.color};${x.status !== 'pending' ? 'background:' + st.color : ''}">
+    return `<div class="cal-event ${doneOnDay ? 'done' : ''} ${x.status === 'blocked' ? 'blocked' : ''}" data-tid="${x.id}">
+      <button class="cal-check" data-act="toggleTodo" aria-label="${doneOnDay ? '已完成' : st.name}" style="border-color:${chkColor};${doneOnDay || x.status !== 'pending' ? 'background:' + chkColor : ''}">
         ${chkIcon}
       </button>
       <div class="cal-ev-body" data-act="openTodo">
@@ -6014,7 +6106,7 @@ const Calendar = (() => {
           ${x.time ? `<span class="cal-ev-time">${U.esc(x.time)}</span>` : ''}
           <span class="cal-ev-title">${U.esc(x.title)}</span>
         </div>
-        <div class="cal-ev-meta">${st.name}${x.status === 'pending' ? ' · ' + p.name : ''}${x.tag ? ' · ' + U.esc(x.tag) : ''}${x.autoKey ? ' · 自动生成' : ''}</div>
+        <div class="cal-ev-meta">${(doneOnDay ? '已完成' : st.name)}${x.status === 'pending' && !doneOnDay ? ' · ' + p.name : ''}${x.tag ? ' · ' + U.esc(x.tag) : ''}${x.autoKey ? ' · 自动生成' : ''}</div>
       </div>
     </div>`;
   }
@@ -6173,14 +6265,17 @@ const Calendar = (() => {
       else if (a.dataset.act === 'toggleTodo') {
         const x = DB.data.todos.find(y => y.id === a.closest('[data-tid]').dataset.tid);
         if (!x) return;
+        // 取被点击单元格的真实发生日（周/月视图列携带 data-day），而非整周焦点 anchor，
+        // 否则在周三列勾掉重复实例会被记成 anchor（周一），导致跨视图与今日统计错位。
+        const day = a.closest('[data-day]')?.dataset.day || anchor;
         const rule = U.recurRuleOf(x.repeat, x.date);
-        const occursHere = U.recurOccursOn(anchor, rule);   // 是否就是这个发生日
+        const occursHere = U.recurOccursOn(day, rule);   // 是否就是这个发生日
         if (occursHere) {
           // 重复任务：按发生日单独勾选完成
           x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
-          const i = x.completedDates.indexOf(anchor);
+          const i = x.completedDates.indexOf(day);
           if (i >= 0) x.completedDates.splice(i, 1);
-          else x.completedDates.push(anchor);
+          else x.completedDates.push(day);
           x.doneAt = i >= 0 ? null : Date.now();
         } else {
           x.status = Todo.cycle(x.status);
@@ -6210,7 +6305,7 @@ const Calendar = (() => {
     const tds = todosOf(dt);
     const parts = [];
     if (evs.length) parts.push(`<div class="cal-seg-h">日程 · ${evs.length}</div>` + evs.map(eventHTML).join(''));
-    if (tds.length) parts.push(`<div class="cal-seg-h">提醒事项 · ${tds.length}</div>` + tds.map(todoHTML).join(''));
+    if (tds.length) parts.push(`<div class="cal-seg-h">提醒事项 · ${tds.length}</div>` + tds.map(x => todoHTML(x, dt)).join(''));
     return parts.length ? parts.join('') : `<div class="cal-empty">这一天还没有日程和提醒事项，点上方按钮添加</div>`;
   }
 
@@ -6245,7 +6340,7 @@ const Calendar = (() => {
             return `<div class="cal-week-col ${d===anchor?'sel':''}" data-day="${d}">
               <div class="cal-week-col-h">${evs.length ? evs.length + ' 个日程' : ''}${evs.length && tds.length ? ' · ' : ''}${tds.length ? tds.length + ' 个提醒' : ''}</div>
               ${evs.map(eventHTML).join('')}
-              ${tds.map(todoHTML).join('')}
+              ${tds.map(x => todoHTML(x, d)).join('')}
               ${!evs.length && !tds.length ? '<div class="cal-empty-mini">无</div>' : ''}
               <button class="cal-add-mini" data-act="add" data-day="${d}" aria-label="添加">+</button>
             </div>`;
@@ -6267,7 +6362,7 @@ const Calendar = (() => {
           <span class="cnt">${evs.length || tds.length ? (evs.length + tds.length) + ' 项' : '无'}</span>
         </div>
         ${evs.map(eventHTML).join('')}
-        ${tds.map(todoHTML).join('')}
+        ${tds.map(x => todoHTML(x, d)).join('')}
         ${!evs.length && !tds.length ? '<div class="cal-empty-mini">这一天还没有安排</div>' : ''}
       </div>`;
     }).join('')}</div>`;
@@ -6290,7 +6385,7 @@ const Calendar = (() => {
     }
     const mm = first.slice(0, 7);
     const isM = U.isMobile();
-    const cellEvents = (evs, tds) => {
+    const cellEvents = (evs, tds, dt) => {
       if (isM) {
         const dots = [];
         evs.slice(0, 3).forEach(x => dots.push(`<i style="background:${eventColor(x.calendar)}"></i>`));
@@ -6307,8 +6402,13 @@ const Calendar = (() => {
       html += tds.slice(0, Math.max(0, 3 - evs.length)).map(x => {
         const p = Todo.pInfo(x.priority);
         const st = Todo.sInfo(x.status);
-        return `<div class="cal-month-ev ${x.status==='done'?'done':''} ${x.status==='blocked'?'blocked':''}" data-tid="${x.id}" title="${U.esc(x.title)}">
-          <i style="background:${x.status==='pending'?p.color:st.color}"></i>
+        const r = U.recurRuleOf(x.repeat, x.date);
+        const doneOnDay = (r && r.type !== 'never')
+          ? (Array.isArray(x.completedDates) && x.completedDates.includes(dt))
+          : (x.status === 'done');
+        const dotColor = doneOnDay ? 'var(--leaf, #38a169)' : (x.status === 'pending' ? p.color : st.color);
+        return `<div class="cal-month-ev ${doneOnDay?'done':''} ${x.status==='blocked'?'blocked':''}" data-tid="${x.id}" title="${U.esc(x.title)}">
+          <i style="background:${dotColor}"></i>
           <span>${x.time ? `<b class="cal-month-ev-time">${U.esc(x.time)}</b>` : ''}${U.esc(x.title)}</span>
         </div>`;
       }).join('');
@@ -6327,7 +6427,7 @@ const Calendar = (() => {
             const out = dt.slice(0, 7) !== mm;
             return `<div class="cal-month-cell ${out?'out':''} ${dt===today?'today':''} ${dt===anchor?'sel':''}" data-day="${dt}">
               <div class="cal-month-dn">${+dt.slice(8)}</div>
-              <div class="cal-month-events">${cellEvents(evs, tds)}</div>
+              <div class="cal-month-events">${cellEvents(evs, tds, dt)}</div>
               <button class="cal-month-add" data-act="add" data-day="${dt}" aria-label="添加">+</button>
             </div>`;
           }).join('')}
@@ -6453,7 +6553,7 @@ const Dashboard = (() => {
 
   function moduleGreet(ctx) {
     return `
-    <div class="card dash-greet" style="margin-bottom:16px;background:linear-gradient(120deg,#fff,var(--pink-50));border-color:var(--pink-200)">
+    <div class="card dash-greet" style="margin-bottom:16px;background:linear-gradient(120deg,var(--card),var(--pink-50));border-color:var(--pink-200)">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
         <div>
           <h2 style="font-size:19px">${greet()}，今天有 <span style="color:var(--pink-600)">${ctx.todayLessons.length}</span> 节课、
@@ -6504,11 +6604,11 @@ const Dashboard = (() => {
       const sub = DB.lessonSub(l);
       const c = U.subColor(sub.subject);
       const now = new Date().getHours() * 60 + new Date().getMinutes();
-      const passed = U.t2m(l.start) + l.duration < now;
+      const passed = U.safeT2m(l) + l.duration < now;
       return `<div class="todo-item plain" data-lid="${l.id}" style="cursor:pointer;${passed ? 'opacity:.6' : ''}">
               <div style="width:4px;align-self:stretch;border-radius:4px;background:${c};flex:none"></div>
               <div style="width:52px;text-align:center;flex:none">
-                <b style="font-size:14px">${l.start}</b>
+                <b style="font-size:14px">${l.start || '--'}</b>
                 <div class="muted" style="font-size:10px">${l.duration}分</div></div>
               <div class="t-body">
                 <div class="t-title"><b>${U.esc(sub.grade)}${U.esc(sub.subject)}</b> · ${U.esc(s.parentName)}</div>
@@ -6776,16 +6876,19 @@ const Dashboard = (() => {
           const x = DB.data.todos.find(y => y.id === b.closest('[data-tid]').dataset.tid);
           if (x) {
             const rule = U.recurRuleOf(x.repeat, x.date);
+            let justDone = false;
             if (U.recurOccursOn(t, rule)) {
               x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
               const i = x.completedDates.indexOf(t);
-              if (i >= 0) { x.completedDates.splice(i, 1); x.doneAt = null; } else { x.completedDates.push(t); x.doneAt = Date.now(); }
+              if (i >= 0) { x.completedDates.splice(i, 1); x.doneAt = null; }
+              else { x.completedDates.push(t); x.doneAt = Date.now(); justDone = true; }
             } else {
               x.status = Todo.cycle(x.status);
               x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
+              if (x.status === 'done') justDone = true;
             }
             DB.save(); render(); App.refreshBadge();
-            if (x.status === 'done') U.toast('完成一件');
+            if (justDone) U.toast('完成一件');
           }
           break;
         }
@@ -6807,7 +6910,7 @@ const Dashboard = (() => {
     // 主页抽成口径：默认只统计「已上课」的实际抽成；开启开关后把待上课也计入
     const inc = !!DB.data.settings.dashIncScheduled;
     const todayLessons = DB.data.lessons.filter(l => l.date === t && l.status !== 'cancelled')
-      .sort((a, b) => U.t2m(a.start) - U.t2m(b.start));
+      .sort((a, b) => U.safeT2m(a) - U.safeT2m(b));
     const todosAll = Todo.ofDate(t);
     const undone = todosAll.filter(x => x.status !== 'done').sort((a, b) => a.priority - b.priority);
     // 遗留未完成：真正「过期」的任务——基准日早于今天，且今天不再发生（重复任务若今天仍要发生，
@@ -6911,16 +7014,19 @@ const Dashboard = (() => {
           const x = DB.data.todos.find(y => y.id === b.closest('[data-tid]').dataset.tid);
           if (x) {
             const rule = U.recurRuleOf(x.repeat, x.date);
+            let justDone = false;
             if (U.recurOccursOn(t, rule)) {
               x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
               const i = x.completedDates.indexOf(t);
-              if (i >= 0) { x.completedDates.splice(i, 1); x.doneAt = null; } else { x.completedDates.push(t); x.doneAt = Date.now(); }
+              if (i >= 0) { x.completedDates.splice(i, 1); x.doneAt = null; }
+              else { x.completedDates.push(t); x.doneAt = Date.now(); justDone = true; }
             } else {
               x.status = Todo.cycle(x.status);
               x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
+              if (x.status === 'done') justDone = true;
             }
             DB.save(); render(); App.refreshBadge();
-            if (x.status === 'done') U.toast('完成一件');
+            if (justDone) U.toast('完成一件');
           }
           break;
         }
@@ -7535,14 +7641,14 @@ const More = (() => {
     }
     const connected = s.token && s.gistId;
     if (!connected) {
-      return `<div class="card only-mobile" style="background:linear-gradient(120deg,#fff,var(--pink-50));border-color:var(--pink-200)">
+      return `<div class="card only-mobile" style="background:linear-gradient(120deg,var(--card),var(--pink-50));border-color:var(--pink-200)">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
           <div><b style="font-size:14px">☁ 云同步</b></div>
           <button class="btn btn-primary btn-sm" data-go="settings">去连接</button>
         </div></div>`;
     }
     const last = s.lastSync ? U.fmtTime(s.lastSync) : '尚未同步';
-    return `<div class="card only-mobile" style="background:linear-gradient(120deg,#fff,#eefaf1);border-color:#bfe6c9">
+    return `<div class="card only-mobile" style="background:linear-gradient(120deg,var(--card),#eefaf1);border-color:#bfe6c9">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
         <div><b style="font-size:14px">☁ 云同步</b>
           <div class="muted" style="font-size:12px">已连接 · 上次 ${last}</div></div>
@@ -7561,7 +7667,7 @@ const More = (() => {
     if (!root || App.route !== 'more') return;
     root.innerHTML = `
     <div class="more-view">
-      <div class="card brand-card" style="margin-bottom:12px;background:linear-gradient(120deg,#fff,var(--pink-50));border-color:var(--pink-200)">
+      <div class="card brand-card" style="margin-bottom:12px;background:linear-gradient(120deg,var(--card),var(--pink-50));border-color:var(--pink-200)">
         <div style="display:flex;align-items:center;gap:10px">
           <div class="brand-mark" style="width:36px;height:36px;color:var(--pink-400)">
             <svg viewBox="0 0 40 40"><g fill="currentColor">
@@ -7827,6 +7933,28 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+
+      <div class="log-ver">v2.0.0</div><div class="log-date">2026-08-05</div>
+      <ul class="log-list">
+        <li><b>「最彻底 · 最深度」全身体检 2 轮 + 实测核验后发布正式版</b>：在 v1.9.x 三轮体检基础上，按你的要求再做<b>两轮独立深度审计</b>（第一轮按数据/财务/导入导出/模块/修复分维度查；第二轮从零重建状态、跨视图端到端串联数据流复检），每发现一个问题都<b>真实运行代码核验</b>后才声明修复，绝不口头糊弄。新增 4 套无头测试（deepaudit / corrupt / edgecases / datacrunch），与原有 6 套基线合计 <b>10 套 harness、115 条断言全绿</b>、冒烟 0 运行时错误。</li>
+        <li><b>修复：待办勾选级联真 bug</b>——非重复待办在「自己的到期日」点击完成时，toggle 守卫误把 never 任务当重复任务走「按日期单独勾选」分支（只写 completedDates、不动 status），导致<b>对勾不显示、未读数不减、列表仍显示未完成</b>。现守卫仅对真正重复的任务（type!=='never'）走按日期分支，非重复任务正确置 status=done。</li>
+        <li><b>修复：首页「今日课程」崩溃</b>——任一课时缺失 start 字段时 <code>U.t2m(undefined)</code> 抛错、整页仪表盘挂掉。新增 <code>U.safeT2m</code>（缺失/非法时间回退 8:00），首页改用它，与课表已有防御一致。</li>
+        <li><b>修复：财务合计抽成率双百分号</b>——合计行单元格渲染成 <code>18%%</code>。去掉多余 <code>%</code>。</li>
+        <li><b>修复：财务合计与明细口径不一致</b>——<code>statIn</code> 此前不实现「含导入数据」过滤，导致默认（不勾选）视图下明细行按文案应排除导入课、但合计行仍包含导入课（<b>合计 ≠ 各行之和</b>）。<code>statIn</code> 新增 <code>opt.includeImported</code>（默认 true 向后兼容，仪表盘/日历不受影响），财务页全部统计透传该开关，明细行 / 合计 / CSV / 月份走势口径彻底一致。</li>
+        <li><b>修复：抽成率口径（v1.9.x 遗留）</b>——合计行抽成率此前分子用「实际到手 = 抽成 − 报销」，比「我的抽成」列低、互相矛盾。现统一为 <code>我的抽成 ÷ 家长流水</code>，与明细表一致。三处版本常量同步 bump 至 v2.0.0。</li>
+      </ul>
+
+      <div class="log-ver">v1.9.8</div><div class="log-date">2026-08-05</div>
+      <ul class="log-list">
+        <li><b>补修全身体检遗漏项 #17</b>：导入学员时若记录仅含「抽成」、未提供「课时费」，此前会误把课时费填成抽成金额，导致 takeHome（到手 = 课时费 − 抽成）被算成 0、财务统计失真。现改为：有课时费才填课时费，否则课时费留 0 仅记录抽成。三处版本常量同步 bump，回归 43 条全绿。</li>
+      </ul>
+
+      <div class="log-ver">v1.9.7</div><div class="log-date">2026-08-05</div>
+      <ul class="log-list">
+        <li><b>全身体检（第二批）：逐文件 + 跨模块 + 双盲审计，共修复 17 项</b>：① <b>重复任务跨视图一致</b>——周视图勾选重复实例改用被点单元格真实日期（此前误记成周焦点，导致跨视图错位）；重复完成态在日历/待办/首页统一读 completedDates 并显示绿色勾选。② <b>遗留列表不再误收重复任务</b>——重复任务只在其发生日出现，不再永久塞进「遗留」。③ <b>「拉到今天」不再偏移重复锚点</b>——仅移动非重复过期任务。④ <b>本地数据损坏不再静默覆盖</b>——损坏时保留原串并尝试从内嵌备份恢复，否则明确提示而非用示例数据覆盖真实数据。⑤ <b>ServiceWorker 离线首开崩溃修复</b>——预缓存键剥离 ?v 查询串，装到主屏离线打开不再把 index.html 当 JS 返回。⑥ <b>删老师级联解绑课时</b>，避免财务按老师分组出现幽灵项；⑦ 年重复以 2/29 为起点时非闰年规整为 2/28；⑧ 自动同步冲突后停止轮询，避免每 20s 重复弹警告；⑨ 删除单节课加确认；⑩ 首页/小助手写死白色背景改用主题变量（夜览不再白块）；⑪ 补全 favicon；⑫ 保存学员时对 Todo/App 做存在性守护等若干稳健性修复。</li>
+        <li>回归测试扩充至 43 条全绿；全流程 79 条、冒烟 0 运行时错误，三套全绿。</li>
+      </ul>
+
       <div class="log-ver">v1.9.6</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>全身体检修复（4 项真实问题）</b>：① 修复<b>跨标签页同步未跑数据迁移</b>——同一浏览器多标签时，旧结构数据同步到本页会缺失 repeat / 完成记录等字段，导致重复与完成逻辑错乱；现已复用迁移逻辑，两端数据严格一致。② 修复<b>年视图热力图不展开重复</b>——此前年度统计把重复日程/提醒按原始日期计数，漏掉重复实例，现改为按重复规则逐天展开。③ 修复<b>首页「遗留未完成」误判</b>——重复任务（如每周一回访）因基准日早于今天被全部算作遗留，导致首页拥塞；现仅把「今天不再发生、且未完成」的旧任务判为遗留。④ <b>重复任务勾选视觉一致</b>——当天勾掉的重复待办，勾选框正确显示为已勾选态。</li>
@@ -8400,7 +8528,13 @@ const App = (() => {
     boot();
     backupGuard();
     if (DB.data.__demo) {
-      setTimeout(() => U.toast('已载入演示数据，可在「设置」中清空'), 600);
+      if (DB.data.__corrupt) {
+        // 本地数据损坏：本次是回退的示例数据，明确告知用户真实数据已被暂存可恢复。
+        setTimeout(() => U.toast('本地数据损坏，已载入示例（原数据已暂存，可在「设置→数据管理」恢复）', 'warn', 6000), 600);
+        delete DB.data.__corrupt;
+      } else {
+        setTimeout(() => U.toast('已载入演示数据，可在「设置」中清空'), 600);
+      }
       delete DB.data.__demo; DB.save();
     }
   }

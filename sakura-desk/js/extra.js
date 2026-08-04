@@ -371,6 +371,17 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+
+      <div class="log-ver">v2.0.0</div><div class="log-date">2026-08-05</div>
+      <ul class="log-list">
+        <li><b>「最彻底 · 最深度」全身体检 2 轮 + 实测核验后发布正式版</b>：在 v1.9.x 三轮体检基础上，按你的要求再做<b>两轮独立深度审计</b>（第一轮按数据/财务/导入导出/模块/修复分维度查；第二轮从零重建状态、跨视图端到端串联数据流复检），每发现一个问题都<b>真实运行代码核验</b>后才声明修复，绝不口头糊弄。新增 4 套无头测试（deepaudit / corrupt / edgecases / datacrunch），与原有 6 套基线合计 <b>10 套 harness、115 条断言全绿</b>、冒烟 0 运行时错误。</li>
+        <li><b>修复：待办勾选级联真 bug</b>——非重复待办在「自己的到期日」点击完成时，toggle 守卫误把 never 任务当重复任务走「按日期单独勾选」分支（只写 completedDates、不动 status），导致<b>对勾不显示、未读数不减、列表仍显示未完成</b>。现守卫仅对真正重复的任务（type!=='never'）走按日期分支，非重复任务正确置 status=done。</li>
+        <li><b>修复：首页「今日课程」崩溃</b>——任一课时缺失 start 字段时 <code>U.t2m(undefined)</code> 抛错、整页仪表盘挂掉。新增 <code>U.safeT2m</code>（缺失/非法时间回退 8:00），首页改用它，与课表已有防御一致。</li>
+        <li><b>修复：财务合计抽成率双百分号</b>——合计行单元格渲染成 <code>18%%</code>。去掉多余 <code>%</code>。</li>
+        <li><b>修复：财务合计与明细口径不一致</b>——<code>statIn</code> 此前不实现「含导入数据」过滤，导致默认（不勾选）视图下明细行按文案应排除导入课、但合计行仍包含导入课（<b>合计 ≠ 各行之和</b>）。<code>statIn</code> 新增 <code>opt.includeImported</code>（默认 true 向后兼容，仪表盘/日历不受影响），财务页全部统计透传该开关，明细行 / 合计 / CSV / 月份走势口径彻底一致。</li>
+        <li><b>修复：抽成率口径（v1.9.x 遗留）</b>——合计行抽成率此前分子用「实际到手 = 抽成 − 报销」，比「我的抽成」列低、互相矛盾。现统一为 <code>我的抽成 ÷ 家长流水</code>，与明细表一致。三处版本常量同步 bump 至 v2.0.0。</li>
+      </ul>
+
       <div class="log-ver">v1.9.8</div><div class="log-date">2026-08-05</div>
       <ul class="log-list">
         <li><b>补修全身体检遗漏项 #17</b>：导入学员时若记录仅含「抽成」、未提供「课时费」，此前会误把课时费填成抽成金额，导致 takeHome（到手 = 课时费 − 抽成）被算成 0、财务统计失真。现改为：有课时费才填课时费，否则课时费留 0 仅记录抽成。三处版本常量同步 bump，回归 43 条全绿。</li>

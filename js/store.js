@@ -550,7 +550,10 @@ const DB = (() => {
 
   // 抽成口径：默认只统计已完成课程
   function statIn(a, b, opt = {}) {
-    const ls = lessonsIn(a, b).filter(l => opt.includeScheduled ? true : l.status === 'done');
+    let ls = lessonsIn(a, b).filter(l => opt.includeScheduled ? true : l.status === 'done');
+    // 财务页「含导入数据」未勾选时，导入的抽成表记录(importedCommission)不计入任何合计，
+    // 与明细行、抽成率的口径保持一致（默认 true = 计入，仪表盘/日历不受影响）。
+    if (opt.includeImported === false) ls = ls.filter(l => !l.importedCommission);
     const gross = ls.reduce((s, l) => s + (+l.tuition || 0), 0);
     const commission = ls.reduce((s, l) => s + (+l.commission || 0), 0);
     const reimb = ls.reduce((s, l) => s + reimburseOf(l), 0);
@@ -710,6 +713,7 @@ const DB = (() => {
     getCodeTemplate, tokenizeCode, presentFields, resolveField, DEFAULT_CODE_TEMPLATE,
     student, teacher, teacherName, studentLabel, lessonsIn, statIn, lessonBreakdown, defaultTemplates, defaultPhrases,
     DASH_MODULES, studentSubjects, primarySubject, studentCode, normDateFlexible, lessonSub, migrateSubjects,
-    resolveTeacher, rememberGradesSubjects
+    resolveTeacher, rememberGradesSubjects,
+    reimburseOf, takeHomeOf
   };
 })();

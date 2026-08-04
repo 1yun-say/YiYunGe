@@ -284,7 +284,10 @@ const Todo = (() => {
         case 'quickAdd': doQuickAdd(root); break;
         case 'toggle': {
           const rule = U.recurRuleOf(t.repeat, t.date);
-          if (U.recurOccursOn(curDate, rule)) {
+          // 仅「真正重复」的任务(type!=='never' 且当前展示日确为发生日)才走「按日期单独勾选」分支；
+          // 非重复任务(never)必须改 status，否则在到期日当天点击时只写 completedDates、
+          // 而渲染/未读数都按 status 判定，导致对勾不显示、未读数不减。
+          if (rule.type !== 'never' && U.recurOccursOn(curDate, rule)) {
             // 重复任务：按当前展示日单独勾选完成
             t.completedDates = Array.isArray(t.completedDates) ? t.completedDates : [];
             const i = t.completedDates.indexOf(curDate);
@@ -327,7 +330,8 @@ const Todo = (() => {
       }
     });
 
-    U.$('#quickTitle', root).addEventListener('keydown', e => { if (e.key === 'Enter') doQuickAdd(root); });
+    const quickTitle = U.$('#quickTitle', root);
+    if (quickTitle) quickTitle.addEventListener('keydown', e => { if (e.key === 'Enter') doQuickAdd(root); });
   }
 
   function doQuickAdd(root) {

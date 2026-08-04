@@ -29,10 +29,13 @@ const U = (() => {
   /* --- 时间(分钟) --- */
   const t2m = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
   const m2t = m => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+  // 安全版：课时 start 缺失/格式非法时回退 8:00(480)，避免首页今日课程整页崩溃
+  const validTime = t => typeof t === 'string' && /^\d{1,2}:\d{2}$/.test(t);
+  const safeT2m = l => validTime(l && l.start) ? t2m(l.start) : 8 * 60;
 
   /* --- 通用 --- */
   const uid = p => (p || 'id') + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  const money = n => '¥' + (Math.round(n * 100) / 100).toLocaleString('zh-CN');
+  const money = n => '¥' + ((isFinite(n) ? Math.round(n * 100) / 100 : 0).toLocaleString('zh-CN'));
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
   const $ = (s, r = document) => r.querySelector(s);
@@ -359,20 +362,26 @@ function editableSub(node, viewKey, fallback) {
       }
     } else if (r.type === 'monthly') {
       const day = +S.slice(8);
-      let cur = S, i = 0;
-      while (cur <= to && i < LIMIT) {
+      let y = +S.slice(0, 4), m = +S.slice(5, 7), i = 0;
+      while (i < LIMIT) {
+        const cur = monthDay(y, m, day);   // 锚定到目标月的 day 日，自动 clamp 到月末；避免 31 日锚点在短月被 addMonths 溢出丢失
+        if (cur > to) break;
         if (!pushIf(cur)) break;
-        cur = addMonths(cur, 1); cur = monthDay(+cur.slice(0, 4), +cur.slice(5, 7), day); i++;
+        m++; if (m > 12) { m = 1; y++; }
+        i++;
       }
     } else if (r.type === 'yearly') {
       let y = +S.slice(0, 4); const mm = +S.slice(5, 7), dd = +S.slice(8); let i = 0;
       while (i < LIMIT) { const cur = monthDay(y, mm, dd); if (cur > to) break; if (!pushIf(cur)) break; y++; i++; }
     } else if (r.type === 'custom' && r.unit === 'month') {
       const day = +S.slice(8);
-      let cur = S, i = 0;
-      while (cur <= to && i < LIMIT) {
+      let y = +S.slice(0, 4), m = +S.slice(5, 7), i = 0;
+      while (i < LIMIT) {
+        const cur = monthDay(y, m, day);   // 同上：逐月锚定，避免 addMonths 跨短月溢出丢失
+        if (cur > to) break;
         if (!pushIf(cur)) break;
-        cur = addMonths(cur, r.every); cur = monthDay(+cur.slice(0, 4), +cur.slice(5, 7), day); i++;
+        m += r.every; while (m > 12) { m -= 12; y++; }
+        i++;
       }
     } else if (r.type === 'custom' && r.unit === 'year') {
       let y = +S.slice(0, 4); const mm = +S.slice(5, 7), dd = +S.slice(8); let i = 0;
@@ -498,7 +507,7 @@ function editableSub(node, viewKey, fallback) {
 
   return {
     pad, today, fmt, parse, addDays, addMonths, dow, mondayOf, weekDays, monthFirst, monthLast,
-    yearFirst, yearLast, wdName, cnDate, between, daysDiff, t2m, m2t, uid, money, esc, el, $, $$,
+    yearFirst, yearLast, wdName, cnDate, between, daysDiff, t2m, m2t, safeT2m, uid, money, esc, el, $, $$,
     toast, modal, confirm, copy, pie, bars, columns, subColor, SUBJECT_COLORS, WEEK_MUTED, WD, rebind, unbindNode, pct, fmtTime, isMobile,
     editableSub, draggableSortable,
     monthDay, recurRuleOf, recurOccurrencesBetween, recurOccursOn, recurDescribe,
