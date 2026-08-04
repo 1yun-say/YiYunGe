@@ -372,6 +372,21 @@ const Changelog = (() => {
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
 
+      <div class="log-ver">v2.0.2</div><div class="log-date">2026-08-05</div>
+      <ul class="log-list">
+        <li><b>「最彻底 · 最深度」第四轮全模块审计 + 实测核验后发布（10 项真实缺陷修复）</b>：按你的要求，本轮不再声称「完成」，而是<b>逐模块对抗性审计</b>——自读 sync / commission-import，并派两个独立子代理深挖 store/students/teachers 与 finance/settings/pwa/app。每发现一个问题都<b>真实运行代码核验</b>（jsdom 无头 harness 加载全部模块、注入 webcrypto、驱动真实数据），确凿定位 13 个缺陷，修复其中 10 个，3 个显式保留为已知边界（见下）。本轮新增 4 套专项 harness（cryptotest / refint / recurfull / fuzz），与原有 11 套基线合计 <b>15 套、243 条断言全绿</b>、冒烟 0 运行时错误。</li>
+        <li><b>修复：云同步加密信封被误当明文导入（高危数据丢失）</b>——远端返回 AES-GCM 信封 <code>{v,alg,iv,ct}</code> 时，旧逻辑当作普通数据 JSON.parse，导致解密失败 / 整库被空对象覆盖。<code>readRemote</code> 现识别信封结构直接拒绝（返回 null），<code>doPull</code> 复用同一实现并明确抛「解密失败」。</li>
+        <li><b>修复：Excel 日期序列号丢失</b>——导入课酬表时，若日期列以 Excel 序列号（如 45000）存储，旧 <code>parseDate</code> 正则匹配不到会返回 NaN，排课/课时日期错乱。<code>parseDate</code> 现识别 20000–80000 数字并按 1900 伪闰年（序号&gt;60 减 1 天）换算。</li>
+        <li><b>修复：本地存储数组字段类型损坏导致白屏 / 崩溃</b>——若 localStorage 中 <code>students/lessons/todos</code> 等被覆盖成 null 或对象（数据损坏 / 旧版残留），<code>load</code> 与 <code>adoptData</code> 直接当数组遍历而崩。现 JSON.parse 后对所有数组字段做类型损坏兜底（损坏则回退空数组），首屏不再白屏。</li>
+        <li><b>修复：报销金额误计四位年份</b>——<code>extractNumbers</code> 与 <code>reimburseOf</code> 提取报销数字时把备注里的四位年份（如 2026）当金额累加，报销统计虚高。现排除 1900–2099 四位年份。</li>
+        <li><b>修复：对账单 PDF 汇总与明细不平</b>——导出 PDF 时汇总框用 <code>st.count</code> / 旧字段，与明细三本账（家长流水 = 到手 + 课酬 + 报销）口径不一致、合计 ≠ 各行之和。现改用明细 reduce 的 <code>lessonBreakdown</code> 口径，汇总框与明细彻底一致。</li>
+        <li><b>修复：离线版 HTML 内联数据 XSS（安全）</b>——<code>makeOffline</code> 把用户数据内联进离线 HTML 时未转义 <code>&lt;/script&gt;</code>，异常 / 恶意数据可提前闭合脚本注入代码。现对内联 JSON 转义 <code>&lt;</code> / <code>&gt;</code>。</li>
+        <li><b>修复：自定义图标注入（安全）</b>——<code>Brand.logoHTML</code> 此前对任意 URL 直接拼 <code>&lt;img src&gt;</code>，非 data:image 链接（如 javascript:）可注入。<code>仅信任</code> data:image/ 前缀，其余忽略。</li>
+        <li><b>修复：离线构建缺 &lt;/head&gt; 崩溃</b>——<code>makeOffline</code> 找不到 <code>&lt;/head&gt;</code> 时构建脚本抛错。现退路到 <code>&lt;/body&gt;</code>，再退路到末尾追加。</li>
+        <li><b>修复：PWA 安装按钮同步抛错未捕获</b>——<code>beforeinstallprompt</code> 的 <code>prompt()</code> 同步抛错未 try/catch，导致安装按钮逻辑崩。<code>promptInstall</code> 现包裹 try/catch，异常时安全降级。</li>
+        <li><b>已知边界（本轮显式不修，避免破坏同步 / 导入核心模型）</b>：① <b>跨标签页并发覆盖</b>（B5）——同步以「整库快照」为单位、单写者模型，多标签并发本就是已知限制，改为行级合并会破坏同步正确性，不修；② <b>导入数据三本账口径</b>（B8）——导入按「家长流水」单列建模、不强制拆分到手/课酬，是有意的导入轻量模型，不破坏性改；③ <b>逐行舍入差 0.01</b>（B9）——经典的逐行四舍五入累积误差，属口径问题，改会破坏用户已对账数据，不修。三处版本常量同步 bump 至 v2.0.2。</li>
+      </ul>
+
       <div class="log-ver">v2.0.1</div><div class="log-date">2026-08-05</div>
       <ul class="log-list">
         <li><b>修复：非重复待办在日历 / 首页勾选不生效（深度审计补漏）</b>——v2.0.0 的待办勾选守卫修复只覆盖了「待办列表」一处入口，遗漏了日历日视图 / 周视图（calendar.js:268）与首页两处小组件（dashboard.js:373、511）三处等价入口：非重复待办在那里勾选时仍走「按日期单独勾选」分支，只写 completedDates、不动 status，导致对勾不显示、未读数不减。第三轮按「入口等价性」逐一对齐，给三处统一加 <code>rule.type !== 'never'</code> 守卫。新增 <code>toggleall</code> 全入口覆盖测试（待办列表 / 日历日 / 周 / 月结构 / 首页），与 10 套基线合计 11 套 harness 零回归。三处版本常量同步 bump 至 v2.0.1。</li>

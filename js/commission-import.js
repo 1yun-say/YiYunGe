@@ -41,8 +41,19 @@
       return m ? m[0] : null;
     },
     parseDate(s) {
-      if (!s) return null;
-      const m = String(s).match(/(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})/);
+      if (s == null) return null;
+      const rawStr = String(s).trim();
+      // 处理 Excel 日期序列号：默认解析下日期单元格为数字（如 45000），正则匹配不到会导致整行被跳过、记录大量丢失
+      const num = Number(rawStr);
+      if (isFinite(num) && /^\d{4,6}(\.\d+)?$/.test(rawStr) && num > 20000 && num < 80000) {
+        const adj = num > 60 ? num - 1 : num;                 // 修正 Excel 1900 伪闰年（序列号>60 减 1 天）
+        const d = new Date((adj - 25569) * 86400 * 1000);     // Excel 序列号 → JS 时间戳（UTC）
+        if (!isNaN(d.getTime())) {
+          const y = d.getUTCFullYear(), M = d.getUTCMonth() + 1, D = d.getUTCDate();
+          if (M >= 1 && M <= 12 && D >= 1 && D <= 31) return `${y}-${String(M).padStart(2, '0')}-${String(D).padStart(2, '0')}`;
+        }
+      }
+      const m = rawStr.match(/(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})/);
       if (!m) return null;
       const y = +m[1], M = +m[2], D = +m[3];
       if (M < 1 || M > 12 || D < 1 || D > 31) return null;
@@ -165,7 +176,11 @@
       const s = String(t || '');
       const m = s.match(/\d+(\.\d+)?/g);
       if (!m) return 0;
-      return m.reduce((a, v) => a + parseFloat(v), 0);
+      return m.reduce((a, v) => {
+        const n = parseFloat(v);
+        if (/^\d{4}$/.test(v) && n >= 1900 && n <= 2099) return a;  // 排除年份（如 2026），避免误计报销支出
+        return a + n;
+      }, 0);
     },
 
     commit(res) {

@@ -387,6 +387,10 @@ const Finance = (() => {
           <td class="note">${U.esc(l.incomeNote || '')}</td>
         </tr>`;
       }).join('');
+      // 汇总框必须与实际明细行同口径（已完成且实际到手>0），避免「含待上课」或报销口径导致汇总≠明细之和的对账不平
+      const sumCommission = items.reduce((s, l) => s + DB.lessonBreakdown(l).commission, 0);
+      const sumReimb = items.reduce((s, l) => s + DB.lessonBreakdown(l).reimb, 0);
+      const sumTakeHome = items.reduce((s, l) => s + DB.lessonBreakdown(l).takeHome, 0);
       const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>逸云阁对账单</title>
 <style>
@@ -408,10 +412,10 @@ const Finance = (() => {
   <h1>逸云阁 · ${U.esc(title)}</h1>
   <div class="sub">统计区间：${from} 至 ${to} · 仅含已完成且实际到手 &gt; 0 的记录</div>
   <div class="summary">
-    <div class="sum-item"><div class="lab">我的抽成</div><div class="val">${U.money(st.commission)}</div></div>
-    <div class="sum-item"><div class="lab">报销支出</div><div class="val">${U.money(st.reimb)}</div></div>
-    <div class="sum-item"><div class="lab">实际到手</div><div class="val">${U.money(st.profit)}</div></div>
-    <div class="sum-item"><div class="lab">课时数</div><div class="val">${st.count} 节</div></div>
+    <div class="sum-item"><div class="lab">我的抽成</div><div class="val">${U.money(sumCommission)}</div></div>
+    <div class="sum-item"><div class="lab">报销支出</div><div class="val">${U.money(sumReimb)}</div></div>
+    <div class="sum-item"><div class="lab">实际到手</div><div class="val">${U.money(sumTakeHome)}</div></div>
+    <div class="sum-item"><div class="lab">课时数</div><div class="val">${items.length} 节</div></div>
   </div>
   <table>
     <thead><tr><th>日期</th><th>来源</th><th style="text-align:right">我的抽成</th><th style="text-align:right">报销支出</th><th style="text-align:right">实际到手</th><th>批注</th></tr></thead>

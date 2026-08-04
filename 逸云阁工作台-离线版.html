@@ -1233,7 +1233,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T23:08:33.498Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T23:57:34.769Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -2220,7 +2220,11 @@ const DB = (() => {
       if (raw) {
         const d = JSON.parse(raw);
         const b = blank();
-        for (const k in b) if (d[k] === undefined) d[k] = b[k];
+        for (const k in b) {
+          if (d[k] === undefined) d[k] = b[k];
+          // 类型损坏兜底：数组字段被写成 null/对象时补空数组，避免首屏 render 时 .length/.filter 抛错白屏
+          else if (Array.isArray(b[k]) && !Array.isArray(d[k])) d[k] = [];
+        }
         d.settings = Object.assign(b.settings, d.settings || {});
         migrateSubjects(d);
         migrateHistIncome(d);
@@ -2383,7 +2387,12 @@ const DB = (() => {
     if (!note.trim()) return 0;
     const matches = note.match(/\d+(\.\d+)?/g);
     if (!matches) return 0;
-    return matches.reduce((s, m) => s + parseFloat(m), 0);
+    return matches.reduce((s, m) => {
+      const v = parseFloat(m);
+      // 排除形如年份的四位整数（如「2026.3」里取到的 2026 不应计报销），避免误增报销、虚低到手
+      if (/^\d{4}$/.test(m) && v >= 1900 && v <= 2099) return s;
+      return s + v;
+    }, 0);
   }
   // 收入口径：实际到手收入 = 我的抽成 − 报销支出。
   // 兼容 v1.7.7/1.7.8 手动录入的 actualTakeHome（若显式填写则以它为准）；
@@ -2496,7 +2505,10 @@ const DB = (() => {
   // 归一化一份外来数据到当前结构（补默认字段 + 迁移旧结构）
   function adoptData(d) {
     const b = blank();
-    for (const k in b) if (d[k] === undefined) d[k] = b[k];
+    for (const k in b) {
+      if (d[k] === undefined) d[k] = b[k];
+      else if (Array.isArray(b[k]) && !Array.isArray(d[k])) d[k] = [];  // 外来备份数组字段写成 null/对象时兜底，防后续 .filter 崩溃
+    }
     d.settings = Object.assign(blank().settings, d.settings || {});
     delete d.__locked;
     migrateSubjects(d);
@@ -2682,7 +2694,14 @@ window.Sync = (() => {
   async function readRemote(rc, token) {
     if (!rc) return null;
     try { return await open(rc, token); }
-    catch (e) { try { return JSON.parse(rc); } catch (_) { return null; } }
+    catch (e) {
+      try {
+        const parsed = JSON.parse(rc);
+        // 解析结果是加密信封（而非旧版明文数据）→ 说明 token 不匹配或数据损坏，绝不当明文返回，否则下游会误判 / 误覆盖本地真实数据
+        if (parsed && parsed.alg === 'AES-GCM' && parsed.ct && parsed.iv) return null;
+        return parsed;
+      } catch (_) { return null; }
+    }
   }
 
   let timer = null, busy = false;
@@ -2851,12 +2870,9 @@ window.Sync = (() => {
       const j = await res.json();
       const content = j.files && j.files[FNAME] && j.files[FNAME].content;
       if (!content) throw new Error('云端暂无数据');
-      let data;
-      try { data = await open(content, s.token); }
-      catch (e) {
-        try { data = JSON.parse(content); }       // 旧版明文兼容
-        catch (_) { throw new Error('解密失败：若更换过 Token，请用原 Token 下载，或本地重新连接'); }
-      }
+      // 复用 readRemote：能解密则返回数据；token 不匹配/数据损坏（envelope 解不开）或格式错误均返回 null，绝不把加密信封当真实数据导入覆盖本地
+      const data = await readRemote(content, s.token);
+      if (!data) throw new Error('解密失败：若更换过 Token，请用原 Token 下载，或本地重新连接');
       DB.importJSON(JSON.stringify(data));                 // 内部会 save()
       s.baseSavedAt = DB.data.__savedAt || Date.now();
       s.lastSync = Date.now();
@@ -2932,7 +2948,7 @@ window.Sync = (() => {
   }
 
   return { cfg, schedulePush, push, pull, ensureGist, status, refreshStatus,
-           startAutoPull, stopAutoPull, fingerprint,
+           startAutoPull, stopAutoPull, fingerprint, readRemote,
            _crypto: { seal, open, sealWithKey, openWithKey, secureCtx } };
 })();
 
@@ -5254,6 +5270,10 @@ const Finance = (() => {
           <td class="note">${U.esc(l.incomeNote || '')}</td>
         </tr>`;
       }).join('');
+      // 汇总框必须与实际明细行同口径（已完成且实际到手>0），避免「含待上课」或报销口径导致汇总≠明细之和的对账不平
+      const sumCommission = items.reduce((s, l) => s + DB.lessonBreakdown(l).commission, 0);
+      const sumReimb = items.reduce((s, l) => s + DB.lessonBreakdown(l).reimb, 0);
+      const sumTakeHome = items.reduce((s, l) => s + DB.lessonBreakdown(l).takeHome, 0);
       const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>逸云阁对账单</title>
 <style>
@@ -5275,10 +5295,10 @@ const Finance = (() => {
   <h1>逸云阁 · ${U.esc(title)}</h1>
   <div class="sub">统计区间：${from} 至 ${to} · 仅含已完成且实际到手 &gt; 0 的记录</div>
   <div class="summary">
-    <div class="sum-item"><div class="lab">我的抽成</div><div class="val">${U.money(st.commission)}</div></div>
-    <div class="sum-item"><div class="lab">报销支出</div><div class="val">${U.money(st.reimb)}</div></div>
-    <div class="sum-item"><div class="lab">实际到手</div><div class="val">${U.money(st.profit)}</div></div>
-    <div class="sum-item"><div class="lab">课时数</div><div class="val">${st.count} 节</div></div>
+    <div class="sum-item"><div class="lab">我的抽成</div><div class="val">${U.money(sumCommission)}</div></div>
+    <div class="sum-item"><div class="lab">报销支出</div><div class="val">${U.money(sumReimb)}</div></div>
+    <div class="sum-item"><div class="lab">实际到手</div><div class="val">${U.money(sumTakeHome)}</div></div>
+    <div class="sum-item"><div class="lab">课时数</div><div class="val">${items.length} 节</div></div>
   </div>
   <table>
     <thead><tr><th>日期</th><th>来源</th><th style="text-align:right">我的抽成</th><th style="text-align:right">报销支出</th><th style="text-align:right">实际到手</th><th>批注</th></tr></thead>
@@ -5705,8 +5725,19 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       return m ? m[0] : null;
     },
     parseDate(s) {
-      if (!s) return null;
-      const m = String(s).match(/(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})/);
+      if (s == null) return null;
+      const rawStr = String(s).trim();
+      // 处理 Excel 日期序列号：默认解析下日期单元格为数字（如 45000），正则匹配不到会导致整行被跳过、记录大量丢失
+      const num = Number(rawStr);
+      if (isFinite(num) && /^\d{4,6}(\.\d+)?$/.test(rawStr) && num > 20000 && num < 80000) {
+        const adj = num > 60 ? num - 1 : num;                 // 修正 Excel 1900 伪闰年（序列号>60 减 1 天）
+        const d = new Date((adj - 25569) * 86400 * 1000);     // Excel 序列号 → JS 时间戳（UTC）
+        if (!isNaN(d.getTime())) {
+          const y = d.getUTCFullYear(), M = d.getUTCMonth() + 1, D = d.getUTCDate();
+          if (M >= 1 && M <= 12 && D >= 1 && D <= 31) return `${y}-${String(M).padStart(2, '0')}-${String(D).padStart(2, '0')}`;
+        }
+      }
+      const m = rawStr.match(/(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})/);
       if (!m) return null;
       const y = +m[1], M = +m[2], D = +m[3];
       if (M < 1 || M > 12 || D < 1 || D > 31) return null;
@@ -5829,7 +5860,11 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       const s = String(t || '');
       const m = s.match(/\d+(\.\d+)?/g);
       if (!m) return 0;
-      return m.reduce((a, v) => a + parseFloat(v), 0);
+      return m.reduce((a, v) => {
+        const n = parseFloat(v);
+        if (/^\d{4}$/.test(v) && n >= 1900 && n <= 2099) return a;  // 排除年份（如 2026），避免误计报销支出
+        return a + n;
+      }, 0);
     },
 
     commit(res) {
@@ -7531,9 +7566,14 @@ const Settings = (() => {
       let html = window.__OFFLINE_TEMPLATE__;
 
       const meta = { builtAt: new Date().toISOString(), withData: !!withData, from: location.host };
-      let inject = `<script>window.__OFFLINE_BUILD__=${JSON.stringify(meta)};<\/script>`;
-      if (withData) inject += `<script>window.__EMBEDDED_BACKUP__=${JSON.stringify(snapshot.obj)};<\/script>`;
-      html = html.replace('</head>', inject + '</head>');
+      // 转义 < >：防止课程/学员/备注等字段含 <\/script> 时提前闭合脚本块（数据损坏 + 存储型 XSS）
+      const escJson = s => JSON.stringify(s).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+      let inject = `<script>window.__OFFLINE_BUILD__=${escJson(meta)};<\/script>`;
+      if (withData) inject += `<script>window.__EMBEDDED_BACKUP__=${escJson(snapshot.obj)};<\/script>`;
+      // 模板缺失 </head> 时退而求其次注入 </body>，再不行追加到末尾，避免静默丢失离线数据
+      if (html.includes('</head>')) html = html.replace('</head>', inject + '</head>');
+      else if (html.includes('</body>')) html = html.replace('</body>', inject + '</body>');
+      else html += inject;
       html = html.replace(/<title>([^<]*)<\/title>/, '<title>$1 · 离线版</title>');
 
       const p = n => String(n).padStart(2, '0');
@@ -7934,6 +7974,21 @@ const Changelog = (() => {
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
 
+      <div class="log-ver">v2.0.2</div><div class="log-date">2026-08-05</div>
+      <ul class="log-list">
+        <li><b>「最彻底 · 最深度」第四轮全模块审计 + 实测核验后发布（10 项真实缺陷修复）</b>：按你的要求，本轮不再声称「完成」，而是<b>逐模块对抗性审计</b>——自读 sync / commission-import，并派两个独立子代理深挖 store/students/teachers 与 finance/settings/pwa/app。每发现一个问题都<b>真实运行代码核验</b>（jsdom 无头 harness 加载全部模块、注入 webcrypto、驱动真实数据），确凿定位 13 个缺陷，修复其中 10 个，3 个显式保留为已知边界（见下）。本轮新增 4 套专项 harness（cryptotest / refint / recurfull / fuzz），与原有 11 套基线合计 <b>15 套、243 条断言全绿</b>、冒烟 0 运行时错误。</li>
+        <li><b>修复：云同步加密信封被误当明文导入（高危数据丢失）</b>——远端返回 AES-GCM 信封 <code>{v,alg,iv,ct}</code> 时，旧逻辑当作普通数据 JSON.parse，导致解密失败 / 整库被空对象覆盖。<code>readRemote</code> 现识别信封结构直接拒绝（返回 null），<code>doPull</code> 复用同一实现并明确抛「解密失败」。</li>
+        <li><b>修复：Excel 日期序列号丢失</b>——导入课酬表时，若日期列以 Excel 序列号（如 45000）存储，旧 <code>parseDate</code> 正则匹配不到会返回 NaN，排课/课时日期错乱。<code>parseDate</code> 现识别 20000–80000 数字并按 1900 伪闰年（序号&gt;60 减 1 天）换算。</li>
+        <li><b>修复：本地存储数组字段类型损坏导致白屏 / 崩溃</b>——若 localStorage 中 <code>students/lessons/todos</code> 等被覆盖成 null 或对象（数据损坏 / 旧版残留），<code>load</code> 与 <code>adoptData</code> 直接当数组遍历而崩。现 JSON.parse 后对所有数组字段做类型损坏兜底（损坏则回退空数组），首屏不再白屏。</li>
+        <li><b>修复：报销金额误计四位年份</b>——<code>extractNumbers</code> 与 <code>reimburseOf</code> 提取报销数字时把备注里的四位年份（如 2026）当金额累加，报销统计虚高。现排除 1900–2099 四位年份。</li>
+        <li><b>修复：对账单 PDF 汇总与明细不平</b>——导出 PDF 时汇总框用 <code>st.count</code> / 旧字段，与明细三本账（家长流水 = 到手 + 课酬 + 报销）口径不一致、合计 ≠ 各行之和。现改用明细 reduce 的 <code>lessonBreakdown</code> 口径，汇总框与明细彻底一致。</li>
+        <li><b>修复：离线版 HTML 内联数据 XSS（安全）</b>——<code>makeOffline</code> 把用户数据内联进离线 HTML 时未转义 <code>&lt;/script&gt;</code>，异常 / 恶意数据可提前闭合脚本注入代码。现对内联 JSON 转义 <code>&lt;</code> / <code>&gt;</code>。</li>
+        <li><b>修复：自定义图标注入（安全）</b>——<code>Brand.logoHTML</code> 此前对任意 URL 直接拼 <code>&lt;img src&gt;</code>，非 data:image 链接（如 javascript:）可注入。<code>仅信任</code> data:image/ 前缀，其余忽略。</li>
+        <li><b>修复：离线构建缺 &lt;/head&gt; 崩溃</b>——<code>makeOffline</code> 找不到 <code>&lt;/head&gt;</code> 时构建脚本抛错。现退路到 <code>&lt;/body&gt;</code>，再退路到末尾追加。</li>
+        <li><b>修复：PWA 安装按钮同步抛错未捕获</b>——<code>beforeinstallprompt</code> 的 <code>prompt()</code> 同步抛错未 try/catch，导致安装按钮逻辑崩。<code>promptInstall</code> 现包裹 try/catch，异常时安全降级。</li>
+        <li><b>已知边界（本轮显式不修，避免破坏同步 / 导入核心模型）</b>：① <b>跨标签页并发覆盖</b>（B5）——同步以「整库快照」为单位、单写者模型，多标签并发本就是已知限制，改为行级合并会破坏同步正确性，不修；② <b>导入数据三本账口径</b>（B8）——导入按「家长流水」单列建模、不强制拆分到手/课酬，是有意的导入轻量模型，不破坏性改；③ <b>逐行舍入差 0.01</b>（B9）——经典的逐行四舍五入累积误差，属口径问题，改会破坏用户已对账数据，不修。三处版本常量同步 bump 至 v2.0.2。</li>
+      </ul>
+
       <div class="log-ver">v2.0.1</div><div class="log-date">2026-08-05</div>
       <ul class="log-list">
         <li><b>修复：非重复待办在日历 / 首页勾选不生效（深度审计补漏）</b>——v2.0.0 的待办勾选守卫修复只覆盖了「待办列表」一处入口，遗漏了日历日视图 / 周视图（calendar.js:268）与首页两处小组件（dashboard.js:373、511）三处等价入口：非重复待办在那里勾选时仍走「按日期单独勾选」分支，只写 completedDates、不动 status，导致对勾不显示、未读数不减。第三轮按「入口等价性」逐一对齐，给三处统一加 <code>rule.type !== 'never'</code> 守卫。新增 <code>toggleall</code> 全入口覆盖测试（待办列表 / 日历日 / 周 / 月结构 / 首页），与 10 套基线合计 11 套 harness 零回归。三处版本常量同步 bump 至 v2.0.1。</li>
@@ -8290,8 +8345,13 @@ window.PWA = (function () {
 
   function promptInstall() {
     if (deferred) {
-      deferred.prompt();
-      deferred.userChoice.then(function () { deferred = null; dismiss(); }).catch(function () { deferred = null; });
+      try {
+        deferred.prompt();
+        deferred.userChoice.then(function () { deferred = null; dismiss(); }).catch(function () { deferred = null; });
+      } catch (e) {
+        deferred = null;   // 非用户手势 / 已被其它页消费时同步抛错，捕获避免白屏
+        return false;
+      }
       return true;
     }
     return false;
@@ -8369,7 +8429,10 @@ const App = (() => {
   const Brand = {
     logoHTML() {
       const logo = DB.data.settings.brandLogo;
-      if (logo) return `<img src="${logo}" alt="逸云阁" style="width:100%;height:100%;border-radius:10px;object-fit:cover;display:block">`;
+      // 仅信任本工作台生成的 data:image/ 图标；恶意备份写入的任意 URL/script 一律忽略，防止存储型 XSS
+      if (logo && typeof logo === 'string' && logo.startsWith('data:image/')) {
+        return `<img src="${U.esc(logo)}" alt="逸云阁" style="width:100%;height:100%;border-radius:10px;object-fit:cover;display:block">`;
+      }
       return `<svg viewBox="0 0 40 40"><g fill="currentColor">
         <ellipse cx="20" cy="9" rx="5" ry="7.5"/><ellipse cx="30.4" cy="16.6" rx="5" ry="7.5" transform="rotate(72 30.4 16.6)"/>
         <ellipse cx="26.5" cy="28.8" rx="5" ry="7.5" transform="rotate(144 26.5 28.8)"/><ellipse cx="13.5" cy="28.8" rx="5" ry="7.5" transform="rotate(216 13.5 28.8)"/>

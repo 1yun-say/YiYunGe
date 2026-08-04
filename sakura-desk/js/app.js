@@ -6,7 +6,10 @@ const App = (() => {
   const Brand = {
     logoHTML() {
       const logo = DB.data.settings.brandLogo;
-      if (logo) return `<img src="${logo}" alt="逸云阁" style="width:100%;height:100%;border-radius:10px;object-fit:cover;display:block">`;
+      // 仅信任本工作台生成的 data:image/ 图标；恶意备份写入的任意 URL/script 一律忽略，防止存储型 XSS
+      if (logo && typeof logo === 'string' && logo.startsWith('data:image/')) {
+        return `<img src="${U.esc(logo)}" alt="逸云阁" style="width:100%;height:100%;border-radius:10px;object-fit:cover;display:block">`;
+      }
       return `<svg viewBox="0 0 40 40"><g fill="currentColor">
         <ellipse cx="20" cy="9" rx="5" ry="7.5"/><ellipse cx="30.4" cy="16.6" rx="5" ry="7.5" transform="rotate(72 30.4 16.6)"/>
         <ellipse cx="26.5" cy="28.8" rx="5" ry="7.5" transform="rotate(144 26.5 28.8)"/><ellipse cx="13.5" cy="28.8" rx="5" ry="7.5" transform="rotate(216 13.5 28.8)"/>

@@ -105,7 +105,14 @@ window.Sync = (() => {
   async function readRemote(rc, token) {
     if (!rc) return null;
     try { return await open(rc, token); }
-    catch (e) { try { return JSON.parse(rc); } catch (_) { return null; } }
+    catch (e) {
+      try {
+        const parsed = JSON.parse(rc);
+        // 解析结果是加密信封（而非旧版明文数据）→ 说明 token 不匹配或数据损坏，绝不当明文返回，否则下游会误判 / 误覆盖本地真实数据
+        if (parsed && parsed.alg === 'AES-GCM' && parsed.ct && parsed.iv) return null;
+        return parsed;
+      } catch (_) { return null; }
+    }
   }
 
   let timer = null, busy = false;
@@ -274,12 +281,9 @@ window.Sync = (() => {
       const j = await res.json();
       const content = j.files && j.files[FNAME] && j.files[FNAME].content;
       if (!content) throw new Error('云端暂无数据');
-      let data;
-      try { data = await open(content, s.token); }
-      catch (e) {
-        try { data = JSON.parse(content); }       // 旧版明文兼容
-        catch (_) { throw new Error('解密失败：若更换过 Token，请用原 Token 下载，或本地重新连接'); }
-      }
+      // 复用 readRemote：能解密则返回数据；token 不匹配/数据损坏（envelope 解不开）或格式错误均返回 null，绝不把加密信封当真实数据导入覆盖本地
+      const data = await readRemote(content, s.token);
+      if (!data) throw new Error('解密失败：若更换过 Token，请用原 Token 下载，或本地重新连接');
       DB.importJSON(JSON.stringify(data));                 // 内部会 save()
       s.baseSavedAt = DB.data.__savedAt || Date.now();
       s.lastSync = Date.now();
@@ -355,6 +359,6 @@ window.Sync = (() => {
   }
 
   return { cfg, schedulePush, push, pull, ensureGist, status, refreshStatus,
-           startAutoPull, stopAutoPull, fingerprint,
+           startAutoPull, stopAutoPull, fingerprint, readRemote,
            _crypto: { seal, open, sealWithKey, openWithKey, secureCtx } };
 })();

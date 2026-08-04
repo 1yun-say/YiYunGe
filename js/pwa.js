@@ -45,8 +45,13 @@ window.PWA = (function () {
 
   function promptInstall() {
     if (deferred) {
-      deferred.prompt();
-      deferred.userChoice.then(function () { deferred = null; dismiss(); }).catch(function () { deferred = null; });
+      try {
+        deferred.prompt();
+        deferred.userChoice.then(function () { deferred = null; dismiss(); }).catch(function () { deferred = null; });
+      } catch (e) {
+        deferred = null;   // 非用户手势 / 已被其它页消费时同步抛错，捕获避免白屏
+        return false;
+      }
       return true;
     }
     return false;

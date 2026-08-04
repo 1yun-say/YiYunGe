@@ -401,9 +401,14 @@ const Settings = (() => {
       let html = window.__OFFLINE_TEMPLATE__;
 
       const meta = { builtAt: new Date().toISOString(), withData: !!withData, from: location.host };
-      let inject = `<script>window.__OFFLINE_BUILD__=${JSON.stringify(meta)};</script>`;
-      if (withData) inject += `<script>window.__EMBEDDED_BACKUP__=${JSON.stringify(snapshot.obj)};</script>`;
-      html = html.replace('</head>', inject + '</head>');
+      // 转义 < >：防止课程/学员/备注等字段含 </script> 时提前闭合脚本块（数据损坏 + 存储型 XSS）
+      const escJson = s => JSON.stringify(s).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+      let inject = `<script>window.__OFFLINE_BUILD__=${escJson(meta)};</script>`;
+      if (withData) inject += `<script>window.__EMBEDDED_BACKUP__=${escJson(snapshot.obj)};</script>`;
+      // 模板缺失 </head> 时退而求其次注入 </body>，再不行追加到末尾，避免静默丢失离线数据
+      if (html.includes('</head>')) html = html.replace('</head>', inject + '</head>');
+      else if (html.includes('</body>')) html = html.replace('</body>', inject + '</body>');
+      else html += inject;
       html = html.replace(/<title>([^<]*)<\/title>/, '<title>$1 · 离线版</title>');
 
       const p = n => String(n).padStart(2, '0');

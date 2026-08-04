@@ -365,7 +365,11 @@ const DB = (() => {
       if (raw) {
         const d = JSON.parse(raw);
         const b = blank();
-        for (const k in b) if (d[k] === undefined) d[k] = b[k];
+        for (const k in b) {
+          if (d[k] === undefined) d[k] = b[k];
+          // 类型损坏兜底：数组字段被写成 null/对象时补空数组，避免首屏 render 时 .length/.filter 抛错白屏
+          else if (Array.isArray(b[k]) && !Array.isArray(d[k])) d[k] = [];
+        }
         d.settings = Object.assign(b.settings, d.settings || {});
         migrateSubjects(d);
         migrateHistIncome(d);
@@ -528,7 +532,12 @@ const DB = (() => {
     if (!note.trim()) return 0;
     const matches = note.match(/\d+(\.\d+)?/g);
     if (!matches) return 0;
-    return matches.reduce((s, m) => s + parseFloat(m), 0);
+    return matches.reduce((s, m) => {
+      const v = parseFloat(m);
+      // 排除形如年份的四位整数（如「2026.3」里取到的 2026 不应计报销），避免误增报销、虚低到手
+      if (/^\d{4}$/.test(m) && v >= 1900 && v <= 2099) return s;
+      return s + v;
+    }, 0);
   }
   // 收入口径：实际到手收入 = 我的抽成 − 报销支出。
   // 兼容 v1.7.7/1.7.8 手动录入的 actualTakeHome（若显式填写则以它为准）；
@@ -641,7 +650,10 @@ const DB = (() => {
   // 归一化一份外来数据到当前结构（补默认字段 + 迁移旧结构）
   function adoptData(d) {
     const b = blank();
-    for (const k in b) if (d[k] === undefined) d[k] = b[k];
+    for (const k in b) {
+      if (d[k] === undefined) d[k] = b[k];
+      else if (Array.isArray(b[k]) && !Array.isArray(d[k])) d[k] = [];  // 外来备份数组字段写成 null/对象时兜底，防后续 .filter 崩溃
+    }
     d.settings = Object.assign(blank().settings, d.settings || {});
     delete d.__locked;
     migrateSubjects(d);
