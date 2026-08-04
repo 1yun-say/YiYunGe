@@ -659,7 +659,10 @@ const DB = (() => {
       const d = JSON.parse(raw);
       const b = blank();
       for (const k in b) if (d[k] === undefined) d[k] = b[k];
-      data = d;
+      // 关键修复：跨标签页同步直接拿到的「其他标签页当前数据」，必须复用 adoptData 跑迁移
+      // （migrateRecurrence 等），否则旧结构数据会绕过 repeat/completedDates/flag 等字段补齐，
+      // 导致重复/完成逻辑在本页错乱。
+      data = adoptData(d);
       if (remoteHandler) remoteHandler();
     } catch (e) { /* 忽略损坏数据 */ }
   }

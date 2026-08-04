@@ -403,7 +403,16 @@ const Dashboard = (() => {
       .sort((a, b) => U.t2m(a.start) - U.t2m(b.start));
     const todosAll = Todo.ofDate(t);
     const undone = todosAll.filter(x => x.status !== 'done').sort((a, b) => a.priority - b.priority);
-    const overdue = DB.data.todos.filter(x => { const r = U.recurRuleOf(x.repeat, x.date); return U.recurOccursOn(t, r) && x.status !== 'done' && x.date < t; });
+    // 遗留未完成：真正「过期」的任务——基准日早于今天，且今天不再发生（重复任务若今天仍要发生，
+    // 已计入今日 undone，不能再算遗留）。重复任务今天已勾掉（completedDates 含今天）也不算遗留。
+    const overdue = DB.data.todos.filter(x => {
+      if (x.status === 'done') return false;
+      if (x.date >= t) return false;                       // 今天或未来才发生，不是遗留
+      const r = U.recurRuleOf(x.repeat, x.date);
+      if (U.recurOccursOn(t, r)) return false;             // 今天仍要发生 → 归今日，不算遗留
+      if (Array.isArray(x.completedDates) && x.completedDates.includes(t)) return false;
+      return true;
+    });
     const mFrom = U.monthFirst(t), mTo = U.monthLast(t);
     const mStat = DB.statIn(mFrom, mTo, { includeScheduled: inc });
     const mDone = DB.statIn(mFrom, mTo);

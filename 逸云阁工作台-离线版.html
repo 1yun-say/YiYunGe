@@ -1223,7 +1223,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T15:42:00.606Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T16:07:01.714Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -2496,7 +2496,10 @@ const DB = (() => {
       const d = JSON.parse(raw);
       const b = blank();
       for (const k in b) if (d[k] === undefined) d[k] = b[k];
-      data = d;
+      // 关键修复：跨标签页同步直接拿到的「其他标签页当前数据」，必须复用 adoptData 跑迁移
+      // （migrateRecurrence 等），否则旧结构数据会绕过 repeat/completedDates/flag 等字段补齐，
+      // 导致重复/完成逻辑在本页错乱。
+      data = adoptData(d);
       if (remoteHandler) remoteHandler();
     } catch (e) { /* 忽略损坏数据 */ }
   }
@@ -3100,13 +3103,21 @@ const Todo = (() => {
     const p = pInfo(t.priority);
     const st = sInfo(t.status);
     const stu = t.studentId ? DB.student(t.studentId) : null;
-    const chkIcon = t.status === 'done'
+    // 重复任务在「当前展示日」被勾掉时（写进 completedDates 而非改 status），也要显示为已勾选态
+    const doneOnCur = (t.repeat && t.repeat !== 'never')
+      ? (Array.isArray(t.completedDates) && t.completedDates.includes(curDate))
+      : (t.status === 'done');
+    const blockedOnCur = (t.repeat && t.repeat !== 'never')
+      ? false
+      : (t.status === 'blocked');
+    const chkIcon = doneOnCur
       ? '<svg viewBox="0 0 24 24" class="ico"><path d="M5 12.5 10 17 19 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-      : t.status === 'blocked'
+      : blockedOnCur
         ? '<svg viewBox="0 0 24 24" class="ico"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>'
         : '';
-    return `<div class="todo-item ${t.status === 'done' ? 'done' : ''} ${t.status === 'blocked' ? 'blocked' : ''}" data-p="${t.priority}" data-id="${t.id}">
-      <div class="chk chk-${t.status}" data-act="toggle" title="${st.name}" style="color:#fff;border-color:${st.color};${t.status !== 'pending' ? 'background:' + st.color : ''}">${chkIcon}</div>
+    const chkCls = doneOnCur ? 'done' : (blockedOnCur ? 'blocked' : 'pending');
+    return `<div class="todo-item ${doneOnCur ? 'done' : ''} ${blockedOnCur ? 'blocked' : ''}" data-p="${t.priority}" data-id="${t.id}">
+      <div class="chk chk-${chkCls}" data-act="toggle" title="${doneOnCur ? '已完成' : (blockedOnCur ? '今日无法完成' : '未完成')}" style="color:#fff;border-color:${st.color};${doneOnCur || blockedOnCur ? 'background:' + st.color : ''}">${chkIcon}</div>
       <div class="t-body">
         <div class="t-title">
           ${t.time ? `<span class="t-time">${U.esc(t.time)}</span>` : ''}${U.esc(t.title)}
@@ -6344,8 +6355,20 @@ const Calendar = (() => {
     const months = Array.from({ length: 12 }, (_, i) => `${y}-${U.pad(i + 1)}-01`);
     const data = months.map(m => {
       const a = m, b = U.monthLast(m);
-      const tds = DB.data.todos.filter(x => x.date >= a && x.date <= b).length;
-      const evs = DB.data.events.filter(x => x.startDate <= b && x.endDate >= a).length;
+      // 展开重复：某条 todo/event 只要在当月任一天发生且未在该天完成，即计入当月
+      const tds = DB.data.todos.filter(x => {
+        const rule = U.recurRuleOf(x.repeat, x.date);
+        // 在当月内任一天发生（且当天没被完成）则计入
+        for (let d = a; d <= b; d = U.addDays(d, 1)) {
+          if (U.recurOccursOn(d, rule) && !(Array.isArray(x.completedDates) && x.completedDates.includes(d))) return true;
+        }
+        return false;
+      }).length;
+      const evs = DB.data.events.filter(x => {
+        const rule = U.recurRuleOf(x.repeat, x.startDate);
+        for (let d = a; d <= b; d = U.addDays(d, 1)) { if (U.recurOccursOn(d, rule)) return true; }
+        return false;
+      }).length;
       return { m, label: +m.slice(5, 7) + '月', count: tds + evs, events: evs, reminders: tds, a, b };
     });
     const max = Math.max(...data.map(d => d.count), 1);
@@ -6787,7 +6810,16 @@ const Dashboard = (() => {
       .sort((a, b) => U.t2m(a.start) - U.t2m(b.start));
     const todosAll = Todo.ofDate(t);
     const undone = todosAll.filter(x => x.status !== 'done').sort((a, b) => a.priority - b.priority);
-    const overdue = DB.data.todos.filter(x => { const r = U.recurRuleOf(x.repeat, x.date); return U.recurOccursOn(t, r) && x.status !== 'done' && x.date < t; });
+    // 遗留未完成：真正「过期」的任务——基准日早于今天，且今天不再发生（重复任务若今天仍要发生，
+    // 已计入今日 undone，不能再算遗留）。重复任务今天已勾掉（completedDates 含今天）也不算遗留。
+    const overdue = DB.data.todos.filter(x => {
+      if (x.status === 'done') return false;
+      if (x.date >= t) return false;                       // 今天或未来才发生，不是遗留
+      const r = U.recurRuleOf(x.repeat, x.date);
+      if (U.recurOccursOn(t, r)) return false;             // 今天仍要发生 → 归今日，不算遗留
+      if (Array.isArray(x.completedDates) && x.completedDates.includes(t)) return false;
+      return true;
+    });
     const mFrom = U.monthFirst(t), mTo = U.monthLast(t);
     const mStat = DB.statIn(mFrom, mTo, { includeScheduled: inc });
     const mDone = DB.statIn(mFrom, mTo);
@@ -7795,6 +7827,12 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.9.6</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>全身体检修复（4 项真实问题）</b>：① 修复<b>跨标签页同步未跑数据迁移</b>——同一浏览器多标签时，旧结构数据同步到本页会缺失 repeat / 完成记录等字段，导致重复与完成逻辑错乱；现已复用迁移逻辑，两端数据严格一致。② 修复<b>年视图热力图不展开重复</b>——此前年度统计把重复日程/提醒按原始日期计数，漏掉重复实例，现改为按重复规则逐天展开。③ 修复<b>首页「遗留未完成」误判</b>——重复任务（如每周一回访）因基准日早于今天被全部算作遗留，导致首页拥塞；现仅把「今天不再发生、且未完成」的旧任务判为遗留。④ <b>重复任务勾选视觉一致</b>——当天勾掉的重复待办，勾选框正确显示为已勾选态。</li>
+        <li>回归测试新增 8 条（旧字符串 weekly 兼容、跨标签页迁移字段补齐、overdue 误判修复前后对照），重复引擎专项测试达 34 条全绿；全流程 79 条、冒烟 0 运行时错误，三套全绿。</li>
+      </ul>
+
       <div class="log-ver">v1.9.5</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>提醒事项 / 日程「重复」全面自定义</b>：不再只有固定的「每天/每周/每月」等预设。新增<b>自定义重复</b>——可选择每 N 天 / 周 / 个月 / 年，按星期多选（例如<b>每周一、周四、周五</b>），并设置<b>结束方式</b>：永不 / 直到某天 / 重复 N 次。旧版固定值（如 daily / weekly）自动兼容，无需重新录入。</li>

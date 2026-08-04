@@ -216,13 +216,21 @@ const Todo = (() => {
     const p = pInfo(t.priority);
     const st = sInfo(t.status);
     const stu = t.studentId ? DB.student(t.studentId) : null;
-    const chkIcon = t.status === 'done'
+    // 重复任务在「当前展示日」被勾掉时（写进 completedDates 而非改 status），也要显示为已勾选态
+    const doneOnCur = (t.repeat && t.repeat !== 'never')
+      ? (Array.isArray(t.completedDates) && t.completedDates.includes(curDate))
+      : (t.status === 'done');
+    const blockedOnCur = (t.repeat && t.repeat !== 'never')
+      ? false
+      : (t.status === 'blocked');
+    const chkIcon = doneOnCur
       ? '<svg viewBox="0 0 24 24" class="ico"><path d="M5 12.5 10 17 19 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-      : t.status === 'blocked'
+      : blockedOnCur
         ? '<svg viewBox="0 0 24 24" class="ico"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>'
         : '';
-    return `<div class="todo-item ${t.status === 'done' ? 'done' : ''} ${t.status === 'blocked' ? 'blocked' : ''}" data-p="${t.priority}" data-id="${t.id}">
-      <div class="chk chk-${t.status}" data-act="toggle" title="${st.name}" style="color:#fff;border-color:${st.color};${t.status !== 'pending' ? 'background:' + st.color : ''}">${chkIcon}</div>
+    const chkCls = doneOnCur ? 'done' : (blockedOnCur ? 'blocked' : 'pending');
+    return `<div class="todo-item ${doneOnCur ? 'done' : ''} ${blockedOnCur ? 'blocked' : ''}" data-p="${t.priority}" data-id="${t.id}">
+      <div class="chk chk-${chkCls}" data-act="toggle" title="${doneOnCur ? '已完成' : (blockedOnCur ? '今日无法完成' : '未完成')}" style="color:#fff;border-color:${st.color};${doneOnCur || blockedOnCur ? 'background:' + st.color : ''}">${chkIcon}</div>
       <div class="t-body">
         <div class="t-title">
           ${t.time ? `<span class="t-time">${U.esc(t.time)}</span>` : ''}${U.esc(t.title)}

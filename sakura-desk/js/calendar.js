@@ -437,8 +437,20 @@ const Calendar = (() => {
     const months = Array.from({ length: 12 }, (_, i) => `${y}-${U.pad(i + 1)}-01`);
     const data = months.map(m => {
       const a = m, b = U.monthLast(m);
-      const tds = DB.data.todos.filter(x => x.date >= a && x.date <= b).length;
-      const evs = DB.data.events.filter(x => x.startDate <= b && x.endDate >= a).length;
+      // 展开重复：某条 todo/event 只要在当月任一天发生且未在该天完成，即计入当月
+      const tds = DB.data.todos.filter(x => {
+        const rule = U.recurRuleOf(x.repeat, x.date);
+        // 在当月内任一天发生（且当天没被完成）则计入
+        for (let d = a; d <= b; d = U.addDays(d, 1)) {
+          if (U.recurOccursOn(d, rule) && !(Array.isArray(x.completedDates) && x.completedDates.includes(d))) return true;
+        }
+        return false;
+      }).length;
+      const evs = DB.data.events.filter(x => {
+        const rule = U.recurRuleOf(x.repeat, x.startDate);
+        for (let d = a; d <= b; d = U.addDays(d, 1)) { if (U.recurOccursOn(d, rule)) return true; }
+        return false;
+      }).length;
       return { m, label: +m.slice(5, 7) + '月', count: tds + evs, events: evs, reminders: tds, a, b };
     });
     const max = Math.max(...data.map(d => d.count), 1);
