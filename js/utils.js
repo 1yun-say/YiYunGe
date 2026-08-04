@@ -170,6 +170,8 @@ const U = (() => {
   }
 
   function columns(data, opt = {}) {
+    if (!data || !data.length || !data.some(d => d.value))
+      return `<div class="empty" style="padding:26px"><p>暂无数据</p></div>`;
     const max = Math.max(...data.map(d => d.value)) || 1;
     const H = 138;
     return `<div style="display:flex;align-items:flex-end;gap:6px;height:${H + 34}px;padding-top:6px">

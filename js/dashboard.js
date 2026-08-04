@@ -303,8 +303,8 @@ const Dashboard = (() => {
         : x.status === 'blocked'
           ? '<svg viewBox="0 0 24 24" style="width:12px;height:12px" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"><path d="M6 12h12"/></svg>'
           : '';
-      return `<div class="todo-item ${x.status === 'done' ? 'done' : ''} ${x.status === 'blocked' ? 'blocked' : ''}" data-tid="${x.id}" style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line-2);min-height:40px">
-        <div class="chk" data-act="toggleTodo" style="box-sizing:border-box;width:22px;height:22px;border:2px solid ${p.color};border-radius:6px;flex:none;cursor:pointer;display:grid;place-items:center;background:${x.status !== 'pending' ? p.color : 'transparent'}">${chkIcon}</div>
+      return `<div class="todo-item ${x.status === 'done' ? 'done' : ''} ${x.status === 'blocked' ? 'blocked' : ''}" data-tid="${x.id}" style="display:flex;align-items:center;gap:10px;padding:7px 8px 7px 12px;border-bottom:1px solid var(--line-2);min-height:40px">
+        <div class="chk" data-act="toggleTodo" style="box-sizing:border-box;width:17px;height:17px;border:2px solid ${p.color};border-radius:5px;flex:none;cursor:pointer;display:grid;place-items:center;background:${x.status !== 'pending' ? p.color : 'transparent'}">${chkIcon}</div>
         <div style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${x.status === 'done' ? 'text-decoration:line-through;color:var(--ink-3)' : ''}">${U.esc(x.title)}</div>
         <span class="tag" style="font-size:9px;padding:1px 6px;background:${p.color}1f;color:${p.color};flex:none">${p.short}</span>
       </div>`;
