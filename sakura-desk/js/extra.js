@@ -371,6 +371,14 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.9.4</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>云同步体验增强（解决「两端是否连到同一空间」困扰）</b>：连接成功后，下方以<b>醒目绿色卡片</b>展示本机的<b>真实空间 ID</b> 与一键「复制此 ID」；并新增<b>空间指纹</b>（取 ID 首尾各 4 位，如 <code>5a9c-191b</code>）。两端连到<b>同一份</b>数据时指纹必然相同，用户只要对比指纹即可确认两端是否同步到同一份，不再靠肉眼比对一长串 ID。</li>
+        <li><b>复制按钮升级为醒目主按钮</b>，并延长成功提示停留时间（2s → 6s），确保「已连接 / 请核对指纹」的关键提示不被快速淹没。</li>
+        <li><b>Toast 支持自定义时长</b>：<code>U.toast(msg, type, dur)</code> 新增可选的 <code>dur</code> 毫秒参数。</li>
+        <li><b>ID 格式复核</b>：用户提供的自动生成 ID <code>5a9c0cabf5a31b0802b6ce20a385191b</code>（32 位十六进制）经验证为合法 GitHub Gist ID，可在新版正则下正确识别、不会新建。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.9.3</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>全站「零错误」体检通过</b>：新建一套真正加载全部 19 个脚本（含两个第三方库）、启动 App、逐一渲染全部 17 个视图（仪表盘 / 提醒事项 / 学员 / 老师 / 课表 / 财务 / 日历 / 话术 / 设置 / 我的 / AI / 帮助 / 关联 / 更新日志等）、并触发各视图主要交互（打开新建弹窗、切换日历日 / 周 / 月 / 年、打开搜索、夜间模式切换等）的无头浏览器冒烟测试，全程捕获 <code>console.error</code> / 未捕获异常 / <code>unhandledrejection</code>。结果：<b>运行时错误总数 = 0</b>，并与原有 79 项全流程断言、7 项云同步 ID 断言一同全部通过。</li>

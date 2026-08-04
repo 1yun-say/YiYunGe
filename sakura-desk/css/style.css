@@ -119,6 +119,13 @@ body.public .secret{display:none!important}
 .field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
 .field label{font-size:12px;color:var(--ink-2);font-weight:600}
 .field .hint{font-size:11px;color:var(--ink-3);font-weight:400}
+/* 连接成功后的醒目提示卡片：突出「真实空间 ID + 空间指纹」，方便两端核对 */
+#syncIdTip.hint{
+  background:linear-gradient(120deg,rgba(26,157,107,.10),rgba(26,157,107,.04));
+  border:1px solid rgba(26,157,107,.45);border-radius:var(--r-s);
+  padding:12px 14px;margin-top:8px;color:var(--ink-2);font-size:12px;line-height:1.9}
+#syncIdTip .mono{font-size:12px}
+#syncFpShown{font-weight:700;letter-spacing:.5px}
 .input,select.input,textarea.input{
   width:100%;background:var(--pink-75);border:1px solid var(--line-2);border-radius:var(--r-s);
   padding:9px 12px;transition:.18s;outline:none}

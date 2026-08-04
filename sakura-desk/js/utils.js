@@ -89,11 +89,11 @@ const U = (() => {
   const isMobile = () => window.matchMedia('(max-width: 820px)').matches;
 
   /* --- Toast --- */
-  function toast(msg, type = 'ok') {
+  function toast(msg, type = 'ok', dur = 2000) {
     const t = el(`<div class="toast ${type}">${esc(msg)}</div>`);
     $('#toastRoot').appendChild(t);
-    setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(-8px)'; t.style.transition = '.3s'; }, 1900);
-    setTimeout(() => t.remove(), 2300);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(-8px)'; t.style.transition = '.3s'; }, Math.max(800, dur - 400));
+    setTimeout(() => t.remove(), Math.max(1200, dur));
   }
 
   /* --- Modal --- */

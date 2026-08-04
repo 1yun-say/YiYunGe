@@ -130,11 +130,13 @@ const Settings = (() => {
         <div class="field" style="max-width:440px">
           <label>同步空间 ID<span class="hint">留空则自动创建新空间。<b>多端共用同一份数据：</b>请在电脑端连接后，复制下方自动生成的<b>真实空间 ID（一长串字符）</b>填到这里。⚠️ 不要自己起名（如 20260802）——GitHub 不认自定义名，各端会各自新建、无法同步。</span></label>
           <input class="input" id="syncGistId" placeholder="留空自动创建；多端共用请填电脑端生成的真实空间 ID" value="${(sc.gistId || '').replace(/"/g, '&quot;')}">
-          <p class="hint" id="syncIdTip" style="display:none;margin-top:6px">
-            本机当前的真实空间 ID（GitHub 自动分配，无法自定义）：<br>
-            <span class="mono" id="syncIdShown" style="word-break:break-all"></span>
-            <button class="btn btn-ghost btn-sm" data-act="copyId" style="margin-left:6px;margin-top:4px">复制此 ID</button><br>
-            <b>多端共用同一份数据：在其他设备填<b>同一个</b>真实 ID 即可，不要自己起名。</b>
+          <p class="hint" id="syncIdTip" style="display:none;margin-top:8px">
+            <b>本机当前的真实空间 ID（GitHub 自动分配，无法自定义）：</b><br>
+            <span class="mono" id="syncIdShown" style="word-break:break-all;display:inline-block;margin:4px 0"></span>
+            <button class="btn btn-primary btn-sm" data-act="copyId" style="margin-left:6px;vertical-align:middle">复制此 ID</button><br>
+            <b style="color:#1a9d6b">空间指纹：<span class="mono" id="syncFpShown" style="color:#1a9d6b"></span></b>
+            <span class="muted" style="font-size:11.5px">（由 ID 推导，两端连到同一份数据则指纹必相同）</span><br>
+            <b>多端共用同一份数据：在其他设备填<b>同一个</b>真实 ID，再回来对比指纹——一致说明两端连到同一份数据。</b>
           </p>
         </div>
         <label class="switch-row" style="margin:12px 0">
@@ -227,13 +229,18 @@ const Settings = (() => {
           DB.save();
           const hadGistId = !!(Sync.cfg().gistId || '').trim();
           Sync.ensureGist().then(() => {
-            U.$('#syncGistId', root).value = Sync.cfg().gistId || '';
+            const _id = Sync.cfg().gistId || '';
+            U.$('#syncGistId', root).value = _id;
             const _tip = U.$('#syncIdTip', root);
-            if (_tip) { const _shown = U.$('#syncIdShown', root); if (_shown) _shown.textContent = Sync.cfg().gistId || ''; _tip.style.display = 'block'; }
+            if (_tip) {
+              const _shown = U.$('#syncIdShown', root); if (_shown) _shown.textContent = _id;
+              const _fp = U.$('#syncFpShown', root); if (_fp) _fp.textContent = Sync.fingerprint(_id) || '（无法识别）';
+              _tip.style.display = 'block';
+            }
             if (hadGistId) {
-              U.toast('已连接到现有空间！其他设备也使用同一个空间 ID 即可同步', 'ok');
+              U.toast('已连接到现有空间！请确认下方「空间指纹」与另一端的指纹一致，即说明两端连到同一份数据', 'ok', 6000);
             } else {
-              U.toast('已连接！已生成真实空间 ID，请复制它到其他设备共用（不要自己起名）', 'ok');
+              U.toast('已连接！已生成真实空间 ID，请复制它到其他设备共用（不要自己起名）', 'ok', 6000);
             }
             Sync.refreshStatus();
             Sync.startAutoPull();
@@ -289,7 +296,11 @@ const Settings = (() => {
     };
     if (sc.gistId) {
       const tip = U.$('#syncIdTip', root);
-      if (tip) { const shown = U.$('#syncIdShown', root); if (shown) shown.textContent = sc.gistId; tip.style.display = 'block'; }
+      if (tip) {
+        const shown = U.$('#syncIdShown', root); if (shown) shown.textContent = sc.gistId;
+        const fp = U.$('#syncFpShown', root); if (fp) fp.textContent = Sync.fingerprint(sc.gistId) || '（无法识别）';
+        tip.style.display = 'block';
+      }
     }
     Sync.refreshStatus();
 

@@ -137,6 +137,14 @@ window.Sync = (() => {
     if (/^[0-9a-f]{20,40}$/i.test(r)) return r;
     return r;
   }
+  // 空间指纹：由真实空间 ID 确定性推导（两端连到同一份空间 → 指纹必然相同）。
+  // 用于「两端是否连到同一空间」的直观核对；不依赖联网，只看 ID 本身。
+  function fingerprint(id) {
+    const s = (id || '').toLowerCase();
+    if (!/^[0-9a-f]+$/.test(s)) return '';
+    if (s.length <= 10) return s;
+    return s.slice(0, 4) + '-' + s.slice(-4);
+  }
 
   async function ensureGist() {
     const s = cfg();
@@ -344,6 +352,6 @@ window.Sync = (() => {
   }
 
   return { cfg, schedulePush, push, pull, ensureGist, status, refreshStatus,
-           startAutoPull, stopAutoPull,
+           startAutoPull, stopAutoPull, fingerprint,
            _crypto: { seal, open, sealWithKey, openWithKey, secureCtx } };
 })();
