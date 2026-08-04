@@ -1233,7 +1233,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T22:20:21.591Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T23:08:33.498Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -6269,7 +6269,7 @@ const Calendar = (() => {
         // 否则在周三列勾掉重复实例会被记成 anchor（周一），导致跨视图与今日统计错位。
         const day = a.closest('[data-day]')?.dataset.day || anchor;
         const rule = U.recurRuleOf(x.repeat, x.date);
-        const occursHere = U.recurOccursOn(day, rule);   // 是否就是这个发生日
+        const occursHere = rule.type !== 'never' && U.recurOccursOn(day, rule);   // 仅真正重复任务走「按日期勾选」；非重复任务(never)走 status 分支
         if (occursHere) {
           // 重复任务：按发生日单独勾选完成
           x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
@@ -6877,7 +6877,7 @@ const Dashboard = (() => {
           if (x) {
             const rule = U.recurRuleOf(x.repeat, x.date);
             let justDone = false;
-            if (U.recurOccursOn(t, rule)) {
+            if (rule.type !== 'never' && U.recurOccursOn(t, rule)) {
               x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
               const i = x.completedDates.indexOf(t);
               if (i >= 0) { x.completedDates.splice(i, 1); x.doneAt = null; }
@@ -7015,7 +7015,7 @@ const Dashboard = (() => {
           if (x) {
             const rule = U.recurRuleOf(x.repeat, x.date);
             let justDone = false;
-            if (U.recurOccursOn(t, rule)) {
+            if (rule.type !== 'never' && U.recurOccursOn(t, rule)) {
               x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
               const i = x.completedDates.indexOf(t);
               if (i >= 0) { x.completedDates.splice(i, 1); x.doneAt = null; }
@@ -7933,6 +7933,11 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+
+      <div class="log-ver">v2.0.1</div><div class="log-date">2026-08-05</div>
+      <ul class="log-list">
+        <li><b>修复：非重复待办在日历 / 首页勾选不生效（深度审计补漏）</b>——v2.0.0 的待办勾选守卫修复只覆盖了「待办列表」一处入口，遗漏了日历日视图 / 周视图（calendar.js:268）与首页两处小组件（dashboard.js:373、511）三处等价入口：非重复待办在那里勾选时仍走「按日期单独勾选」分支，只写 completedDates、不动 status，导致对勾不显示、未读数不减。第三轮按「入口等价性」逐一对齐，给三处统一加 <code>rule.type !== 'never'</code> 守卫。新增 <code>toggleall</code> 全入口覆盖测试（待办列表 / 日历日 / 周 / 月结构 / 首页），与 10 套基线合计 11 套 harness 零回归。三处版本常量同步 bump 至 v2.0.1。</li>
+      </ul>
 
       <div class="log-ver">v2.0.0</div><div class="log-date">2026-08-05</div>
       <ul class="log-list">

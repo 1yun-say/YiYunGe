@@ -370,7 +370,7 @@ const Dashboard = (() => {
           if (x) {
             const rule = U.recurRuleOf(x.repeat, x.date);
             let justDone = false;
-            if (U.recurOccursOn(t, rule)) {
+            if (rule.type !== 'never' && U.recurOccursOn(t, rule)) {
               x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
               const i = x.completedDates.indexOf(t);
               if (i >= 0) { x.completedDates.splice(i, 1); x.doneAt = null; }
@@ -508,7 +508,7 @@ const Dashboard = (() => {
           if (x) {
             const rule = U.recurRuleOf(x.repeat, x.date);
             let justDone = false;
-            if (U.recurOccursOn(t, rule)) {
+            if (rule.type !== 'never' && U.recurOccursOn(t, rule)) {
               x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
               const i = x.completedDates.indexOf(t);
               if (i >= 0) { x.completedDates.splice(i, 1); x.doneAt = null; }

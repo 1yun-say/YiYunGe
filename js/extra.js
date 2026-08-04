@@ -372,6 +372,11 @@ const Changelog = (() => {
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
 
+      <div class="log-ver">v2.0.1</div><div class="log-date">2026-08-05</div>
+      <ul class="log-list">
+        <li><b>修复：非重复待办在日历 / 首页勾选不生效（深度审计补漏）</b>——v2.0.0 的待办勾选守卫修复只覆盖了「待办列表」一处入口，遗漏了日历日视图 / 周视图（calendar.js:268）与首页两处小组件（dashboard.js:373、511）三处等价入口：非重复待办在那里勾选时仍走「按日期单独勾选」分支，只写 completedDates、不动 status，导致对勾不显示、未读数不减。第三轮按「入口等价性」逐一对齐，给三处统一加 <code>rule.type !== 'never'</code> 守卫。新增 <code>toggleall</code> 全入口覆盖测试（待办列表 / 日历日 / 周 / 月结构 / 首页），与 10 套基线合计 11 套 harness 零回归。三处版本常量同步 bump 至 v2.0.1。</li>
+      </ul>
+
       <div class="log-ver">v2.0.0</div><div class="log-date">2026-08-05</div>
       <ul class="log-list">
         <li><b>「最彻底 · 最深度」全身体检 2 轮 + 实测核验后发布正式版</b>：在 v1.9.x 三轮体检基础上，按你的要求再做<b>两轮独立深度审计</b>（第一轮按数据/财务/导入导出/模块/修复分维度查；第二轮从零重建状态、跨视图端到端串联数据流复检），每发现一个问题都<b>真实运行代码核验</b>后才声明修复，绝不口头糊弄。新增 4 套无头测试（deepaudit / corrupt / edgecases / datacrunch），与原有 6 套基线合计 <b>10 套 harness、115 条断言全绿</b>、冒烟 0 运行时错误。</li>

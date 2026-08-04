@@ -265,7 +265,7 @@ const Calendar = (() => {
         // 否则在周三列勾掉重复实例会被记成 anchor（周一），导致跨视图与今日统计错位。
         const day = a.closest('[data-day]')?.dataset.day || anchor;
         const rule = U.recurRuleOf(x.repeat, x.date);
-        const occursHere = U.recurOccursOn(day, rule);   // 是否就是这个发生日
+        const occursHere = rule.type !== 'never' && U.recurOccursOn(day, rule);   // 仅真正重复任务走「按日期勾选」；非重复任务(never)走 status 分支
         if (occursHere) {
           // 重复任务：按发生日单独勾选完成
           x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
