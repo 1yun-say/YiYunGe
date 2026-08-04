@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<title>逸云阁 · Yiyun Ge</title>
+<link rel="stylesheet" href="css/style.css?v=1.9.1">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="逸云阁">
+<meta name="theme-color" content="#ff8fb3">
+</head>
+<body>
+
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M9 4h6a2 2 0 0 1 2 2h1a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h1a2 2 0 0 1 2-2m-1 9.5 2.2 2.2L15 11"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8m8 9c0-4-3.6-6.5-8-6.5S4 17 4 21"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM4 9h16M8 3v4m8-4v4"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 7v10m2.5-7.5c0-1.1-1.1-2-2.5-2s-2.5.9-2.5 2 1.1 2 2.5 2 2.5.9 2.5 2-1.1 2-2.5 2-2.5-.9-2.5-2"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/><path d="m19.4 15-.6 1a1.7 1.7 0 0 1-2 .8l-.7-.2a1.7 1.7 0 0 0-2 1.2l-.2.7a1.7 1.7 0 0 1-1.7 1.3h-1.2a1.7 1.7 0 0 1-1.7-1.3l-.2-.7a1.7 1.7 0 0 0-2-1.2l-.7.2a1.7 1.7 0 0 1-2-.8l-.6-1a1.7 1.7 0 0 1 .4-2.1l.5-.5a1.7 1.7 0 0 0 0-2.4l-.5-.5A1.7 1.7 0 0 1 3.8 8l.6-1a1.7 1.7 0 0 1 2-.8l.7.2a1.7 1.7 0 0 0 2-1.2l.2-.7A1.7 1.7 0 0 1 11 3.2h1.2a1.7 1.7 0 0 1 1.7 1.3l.2.7a1.7 1.7 0 0 0 2 1.2l.7-.2a1.7 1.7 0 0 1 2 .8l.6 1a1.7 1.7 0 0 1-.4 2.1l-.5.5a1.7 1.7 0 0 0 0 2.4l.5.5a1.7 1.7 0 0 1 .4 2.1"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6m4-6v6M5 7l1 13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-13M9 7V4h6v3"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L20 8l-4-4L4 16zM14 6l4 4"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></symbol>
+  <symbol id="i-flower" viewBox="0 0 24 24"><path d="M12 12c0-3 1-6 3-8-3 0-5 2-6 4-1-2-3-4-6-4 2 2 3 5 3 8-3 0-6 1-8 3 0 3 2 5 4 6-2 1-4 3-4 6 3 0 5-2 6-4 1 2 3 4 6 4 0-3-1-6-3-8"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><path d="M9.1 9a3 3 0 1 1 4.3 2.7c-.8.4-1.4 1.2-1.4 2.3M12 17h.01"/><circle cx="12" cy="12" r="9"/></symbol>
+  <symbol id="i-ai" viewBox="0 0 24 24"><path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8zM18 14l.9 2.1L21 17l-2.1.9L18 20l-.9-2.1L15 17l2.1-.9z"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1 1"/><path d="M14 10a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1-1"/></symbol>
+  <symbol id="i-log" viewBox="0 0 24 24"><path d="M5 4h11l3 3v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 9h7M8 13h7M8 17h4"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+</svg>
+
+<div class="sakura-layer" id="sakuraLayer"></div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 40 40"><g fill="currentColor">
+          <ellipse cx="20" cy="9" rx="5" ry="7.5"/><ellipse cx="30.4" cy="16.6" rx="5" ry="7.5" transform="rotate(72 30.4 16.6)"/>
+          <ellipse cx="26.5" cy="28.8" rx="5" ry="7.5" transform="rotate(144 26.5 28.8)"/><ellipse cx="13.5" cy="28.8" rx="5" ry="7.5" transform="rotate(216 13.5 28.8)"/>
+          <ellipse cx="9.6" cy="16.6" rx="5" ry="7.5" transform="rotate(288 9.6 16.6)"/><circle cx="20" cy="20" r="3.4" fill="#fff7fa"/>
+        </g></svg>
+      </div>
+      <div class="brand-text">
+        <strong>逸云阁</strong>
+        <span>Yiyun Ge</span>
+      </div>
+    </div>
+
+    <nav class="nav" id="nav">
+      <div class="nav-group">日常</div>
+      <a class="nav-item" data-route="dashboard"><svg class="ico"><use href="#i-home"/></svg><span>主页</span></a>
+      <a class="nav-item" data-route="calendar"><svg class="ico"><use href="#i-cal"/></svg><span>日历</span></a>
+      <a class="nav-item" data-route="todo"><svg class="ico"><use href="#i-check"/></svg><span>提醒事项</span><b class="badge" id="navTodoBadge"></b></a>
+      <div class="nav-group">教务</div>
+      <a class="nav-item" data-route="students"><svg class="ico"><use href="#i-user"/></svg><span>学员档案</span></a>
+      <a class="nav-item" data-route="teachers"><svg class="ico"><use href="#i-user"/></svg><span>老师名册</span></a>
+      <a class="nav-item" data-route="schedule"><svg class="ico"><use href="#i-cal"/></svg><span>可视化课表</span></a>
+      <a class="nav-item" data-route="finance"><svg class="ico"><use href="#i-coin"/></svg><span>财务统计</span></a>
+      <div class="nav-group">辅助</div>
+      <a class="nav-item" data-route="scripts"><svg class="ico"><use href="#i-chat"/></svg><span>常用话术</span></a>
+      <a class="nav-item" data-route="settings"><svg class="ico"><use href="#i-gear"/></svg><span>数据管理</span></a>
+      <a class="nav-item" data-route="more"><svg class="ico"><use href="#i-more"/></svg><span>更多</span></a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 id="pageTitle">主页</h1>
+      </div>
+      <div class="topbar-right">
+        <div class="today-chip" id="todayChip"></div>
+        <button class="btn btn-ghost btn-icon only-desk" id="searchBtn" title="搜索"><svg class="ico"><use href="#i-search"/></svg></button>
+        <button class="btn btn-primary only-desk" id="quickAdd"><svg class="ico"><use href="#i-plus"/></svg>快速新建</button>
+      </div>
+    </header>
+
+    <div class="view" id="view"></div>
+  </main>
+</div>
+
+<!-- 移动端底部导航：4 入口等分（学员档案放到「我的」里），图标在上文字在下 -->
+<nav class="bottom-nav" id="bottomNav">
+  <a class="bn-item" data-route="dashboard"><svg class="bn-ico"><use href="#i-home"/></svg><span>主页</span></a>
+  <a class="bn-item" data-route="calendar"><svg class="bn-ico"><use href="#i-cal"/></svg><span>日历</span></a>
+  <a class="bn-item" data-route="todo"><svg class="bn-ico"><use href="#i-check"/></svg><span>提醒事项</span><b class="badge" id="bnTodoBadge"></b></a>
+  <a class="bn-item" data-route="more"><svg class="bn-ico"><use href="#i-user"/></svg><span>我的</span></a>
+</nav>
+<button class="fab" id="fab" title="快速新建"><svg class="ico"><use href="#i-plus"/></svg></button>
+
+<div id="modalRoot"></div>
+<div id="toastRoot" class="toast-root"></div>
+
+<script src="js/utils.js?v=1.9.1"></script>
+<script src="js/store.js?v=1.9.1"></script>
+<script src="js/sync.js?v=1.9.1"></script>
+<script src="js/todo.js?v=1.9.1"></script>
+<script src="js/students.js?v=1.9.1"></script>
+<script src="js/teachers.js?v=1.9.1"></script>
+<script src="js/schedule.js?v=1.9.1"></script>
+<script src="js/finance.js?v=1.9.1"></script>
+<script src="js/html2canvas.min.js?v=1.9.1"></script>
+<script src="js/xlsx.full.min.js?v=1.9.1"></script>
+<script src="js/commission-import.js?v=1.9.1"></script>
+<script src="js/phrases.js?v=1.9.1"></script>
+<script src="js/calendar.js?v=1.9.1"></script>
+<script src="js/dashboard.js?v=1.9.1"></script>
+<script src="js/settings.js?v=1.9.1"></script>
+<script src="js/extra.js?v=1.9.1"></script>
+<script src="js/pwa.js?v=1.9.1"></script>
+<script src="js/register-sw.js?v=1.9.1"></script>
+<script src="js/app.js?v=1.9.1"></script>
+</body>
+</html>

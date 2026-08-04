@@ -1,0 +1,11 @@
+# 个人隐私 / 密钥：绝不进仓库
+*.local.json
+token*
+*.env
+.env
+secrets/
+
+# 系统 / 依赖
+.DS_Store
+Thumbs.db
+node_modules/
