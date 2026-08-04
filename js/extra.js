@@ -370,6 +370,11 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.8.5</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>真正修复可视化课表「空白」</b>：电脑/平板端周视图只显示头部、整个 grid 不渲染，根因是部分课程数据异常（如上课时间 start 字段缺失/格式错误），导致 `U.t2m` 抛异常、`renderWeek` 整体失败。已加多层防御：① `includeLesson` 过滤掉 start 无效的课程；② 新增 `safeT2m`/`safeEndMin` 遇到异常时间不再抛错；③ 排序/冲突分组时把 id 强转字符串，避免 `undefined.localeCompare` 崩溃；④ `renderWeek`/`renderWeekMobile` 外层包 try-catch，再出错会在页面显示具体错误信息而不是空白。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.8.4</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>修复可视化课表周视图课块「隐身」</b>：课块背景由 #RRGGBBAA 8 位十六进制透明度改为 rgba() 写法，兼容 iPad / 旧版 Safari 及各类浏览器；同时把周视图课块不透明度从 25% 提升到 32%、重叠区 55%、月视图/手机端课卡 12%，让课程在桌面 / 平板端清晰可见，不再和白色背景融为一体。</li>

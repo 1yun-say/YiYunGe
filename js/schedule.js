@@ -8,10 +8,15 @@ const Schedule = (() => {
   let anchor = U.today();
   let showImported = DB.data.settings.scheduleShowImported !== false; // 默认显示导入抽成
 
-  const endMin = l => U.t2m(l.start) + (+l.duration || 60);
+  /* 数据防御：有用户反馈电脑/平板周视图完全空白。根因疑似个别课程 start 字段缺失/格式错误，
+     导致 U.t2m 抛异常、renderWeek 整体失败。以下辅助函数用于过滤/容错。 */
+  function validStart(l) { return typeof l.start === 'string' && /^\d{1,2}:\d{2}$/.test(l.start); }
+  function safeT2m(l) { return validStart(l) ? safeT2m(l) : DAY_START; }
+  function safeEndMin(l) { return safeT2m(l) + (+l.duration || 60); }
+  const endMin = safeEndMin; // 兼容旧调用
 
   function includeLesson(l) {
-    return l.status !== 'cancelled' && (!l.importedCommission || showImported);
+    return l.status !== 'cancelled' && (!l.importedCommission || showImported) && validStart(l);
   }
 
   // 该学员上一次上课的开始时间（按日期+时间倒序取最近一节）；无历史返回 ''
@@ -37,7 +42,7 @@ const Schedule = (() => {
   /* 冲突分组：返回 map lessonId -> {cols, idx, conflict} */
   function layout(list) {
     const res = {};
-    const sorted = list.slice().sort((a, b) => U.t2m(a.start) - U.t2m(b.start) || a.id.localeCompare(b.id));
+    const sorted = list.slice().sort((a, b) => safeT2m(a) - safeT2m(b) || String(a.id).localeCompare(String(b.id)));
     let group = [], groupEnd = -1;
     const flush = () => {
       if (!group.length) return;
@@ -46,7 +51,7 @@ const Schedule = (() => {
       group = []; groupEnd = -1;
     };
     sorted.forEach(l => {
-      const s = U.t2m(l.start);
+      const s = safeT2m(l);
       if (group.length && s >= groupEnd) flush();
       group.push(l);
       groupEnd = Math.max(groupEnd, endMin(l));
@@ -144,50 +149,68 @@ const Schedule = (() => {
 
   /* ---------- 周视图 ---------- */
   function renderWeek(box) {
-    if (U.isMobile()) { renderWeekMobile(box); return; }
-    const days = U.weekDays(anchor), t = U.today();
-    const slots = [];
-    for (let m = DAY_START; m < DAY_END; m += 30) slots.push(m);
+    try {
+      if (U.isMobile()) { renderWeekMobile(box); return; }
+      const days = U.weekDays(anchor), t = U.today();
+      const slots = [];
+      for (let m = DAY_START; m < DAY_END; m += 30) slots.push(m);
 
-    box.innerHTML = `
-    <div class="week-wrap">
-      <div class="week-head">
-        <div class="wh-cell"></div>
-        ${days.map(d => `<div class="wh-cell ${d === t ? 'today' : ''}">${U.wdName(d)}<b>${+d.slice(8)}</b></div>`).join('')}
+      box.innerHTML = `
+      <div class="week-wrap">
+        <div class="week-head">
+          <div class="wh-cell"></div>
+          ${days.map(d => `<div class="wh-cell ${d === t ? 'today' : ''}">${U.wdName(d)}<b>${+d.slice(8)}</b></div>`).join('')}
+        </div>
+        <div class="week-body">
+          <div class="time-col">${slots.map(m => `<div class="time-slot">${m % 60 === 0 ? U.m2t(m) : ''}</div>`).join('')}</div>
+          ${days.map(d => `<div class="day-col ${d === t ? 'today' : ''}" data-date="${d}">
+              ${slots.map(m => `<div class="slot" data-date="${d}" data-min="${m}"></div>`).join('')}
+              ${dayLessonsHTML(d)}
+            </div>`).join('')}
+        </div>
       </div>
-      <div class="week-body">
-        <div class="time-col">${slots.map(m => `<div class="time-slot">${m % 60 === 0 ? U.m2t(m) : ''}</div>`).join('')}</div>
-        ${days.map(d => `<div class="day-col ${d === t ? 'today' : ''}" data-date="${d}">
-            ${slots.map(m => `<div class="slot" data-date="${d}" data-min="${m}"></div>`).join('')}
-            ${dayLessonsHTML(d)}
-          </div>`).join('')}
-      </div>
-    </div>
-    <div class="legend">
-      ${Object.entries(U.SUBJECT_COLORS).slice(0, 8).map(([k, v]) => `<span><i style="background:${U.subColor(k)}"></i>${k}</span>`).join('')}
-    </div>`;
+      <div class="legend">
+        ${Object.entries(U.SUBJECT_COLORS).slice(0, 8).map(([k, v]) => `<span><i style="background:${U.subColor(k)}"></i>${k}</span>`).join('')}
+      </div>`;
 
-    bindWeek(box);
+      bindWeek(box);
+    } catch (e) {
+      console.error('renderWeek error', e);
+      box.innerHTML = `<div class="card" style="border-color:var(--alert);background:#fff3f3;padding:18px 20px;margin-top:10px">
+        <h4 style="color:var(--alert);margin-bottom:8px">可视化课表渲染出错</h4>
+        <p style="color:var(--ink-1);margin-bottom:8px;word-break:break-word">${U.esc(e.message || String(e))}</p>
+        <p style="font-size:12px;color:var(--ink-3)">常见原因：最近添加或导入的课程「上课时间」格式不对（应为 08:00、14:30 等 HH:MM）。<br>请检查「学员档案 → 课程记录」，或尝试「数据管理 → 导出备份」后联系我排查。</p>
+      </div>`;
+    }
   }
 
   /* 手机端周视图：iOS 风格「按天议程清单」，避免 7 列时间轴在窄屏挤压、重叠 */
   function renderWeekMobile(box) {
-    const days = U.weekDays(anchor), t = U.today();
-    box.innerHTML = `<div class="cal-week-list">
-      ${days.map(d => {
-        const ls = DB.data.lessons.filter(l => l.date === d && includeLesson(l))
-          .sort((a, b) => U.t2m(a.start) - U.t2m(b.start));
-        const isToday = d === t, isSel = d === anchor;
-        return `<div class="cal-week-row">
-          <div class="cal-week-dayhead ${isToday ? 'today' : ''} ${isSel ? 'sel' : ''}" style="cursor:default">
-            <span class="wd">${U.wdName(d)}</span><span class="dn">${+d.slice(8)}</span>
-            <span class="cnt">${ls.length ? ls.length + ' 节' : '无'}</span>
-          </div>
-          ${ls.length ? ls.map(l => lessonCardMobile(l)).join('') : '<div class="cal-empty-mini">这天没课</div>'}
-        </div>`;
-      }).join('')}
-    </div>`;
-    box.querySelectorAll('.sch-lesson-card').forEach(el => el.addEventListener('click', () => editLesson(el.dataset.lid)));
+    try {
+      const days = U.weekDays(anchor), t = U.today();
+      box.innerHTML = `<div class="cal-week-list">
+        ${days.map(d => {
+          const ls = DB.data.lessons.filter(l => l.date === d && includeLesson(l))
+            .sort((a, b) => safeT2m(a) - safeT2m(b));
+          const isToday = d === t, isSel = d === anchor;
+          return `<div class="cal-week-row">
+            <div class="cal-week-dayhead ${isToday ? 'today' : ''} ${isSel ? 'sel' : ''}" style="cursor:default">
+              <span class="wd">${U.wdName(d)}</span><span class="dn">${+d.slice(8)}</span>
+              <span class="cnt">${ls.length ? ls.length + ' 节' : '无'}</span>
+            </div>
+            ${ls.length ? ls.map(l => lessonCardMobile(l)).join('') : '<div class="cal-empty-mini">这天没课</div>'}
+          </div>`;
+        }).join('')}
+      </div>`;
+      box.querySelectorAll('.sch-lesson-card').forEach(el => el.addEventListener('click', () => editLesson(el.dataset.lid)));
+    } catch (e) {
+      console.error('renderWeekMobile error', e);
+      box.innerHTML = `<div class="card" style="border-color:var(--alert);background:#fff3f3;padding:18px 20px;margin-top:10px">
+        <h4 style="color:var(--alert);margin-bottom:8px">周视图渲染出错</h4>
+        <p style="color:var(--ink-1);margin-bottom:8px;word-break:break-word">${U.esc(e.message || String(e))}</p>
+        <p style="font-size:12px;color:var(--ink-3)">常见原因：某条课程记录的上「上课时间」格式不对（应为 HH:MM）。请检查课程记录或「数据管理 → 导出备份」后联系我排查。</p>
+      </div>`;
+    }
   }
 
   function lessonCardMobile(l) {
@@ -206,10 +229,10 @@ const Schedule = (() => {
   }
 
   function overlapGroups(ls) {
-    const sorted = ls.slice().sort((a, b) => U.t2m(a.start) - U.t2m(b.start) || a.id.localeCompare(b.id));
+    const sorted = ls.slice().sort((a, b) => safeT2m(a) - safeT2m(b) || String(a.id).localeCompare(String(b.id)));
     const groups = []; let g = [], end = -1;
     sorted.forEach(l => {
-      const s = U.t2m(l.start);
+      const s = safeT2m(l);
       if (g.length && s >= end) { groups.push(g); g = []; end = -1; }
       g.push(l); end = Math.max(end, endMin(l));
     });
@@ -241,7 +264,7 @@ const Schedule = (() => {
     const s = DB.student(l.studentId) || { parentName: '已删除' };
     const isImp = !!l.importedCommission;
     const bd = DB.lessonBreakdown(l);
-    const top = U.t2m(l.start) - DAY_START;
+    const top = safeT2m(l) - DAY_START;
     const h = Math.max(24, +l.duration || 60);
     const sub = currentSub(l);
     const timeLine = `<div class="lm">${l.start}-${U.m2t(endMin(l))} · ${U.money(l.tuition)}${pub ? '' : ` <span style="color:var(--pink-600)">到手${U.money(bd.takeHome)}</span>`}</div>`;
@@ -277,7 +300,7 @@ const Schedule = (() => {
       // 重叠区：两两之间画竖直渐变（上方课色 → 下方课色），形成三色过渡
       for (let i = 0; i < g.length; i++) for (let j = i + 1; j < g.length; j++) {
         const a = g[i], b = g[j];
-        const s = Math.max(U.t2m(a.start), U.t2m(b.start));
+        const s = Math.max(safeT2m(a), safeT2m(b));
         const e = Math.min(endMin(a), endMin(b));
         if (e > s) {
           const ca = morandiColor(a), cb = morandiColor(b);
@@ -286,9 +309,9 @@ const Schedule = (() => {
       }
       // 课程名写到各自「非重叠」区域
       g.forEach(l => {
-        const s = U.t2m(l.start), e = endMin(l);
+        const s = safeT2m(l), e = endMin(l);
         let ovs = [];
-        g.forEach(o => { if (o.id === l.id) return; const os = Math.max(s, U.t2m(o.start)), oe = Math.min(e, endMin(o)); if (oe > os) ovs.push([os, oe]); });
+        g.forEach(o => { if (o.id === l.id) return; const os = Math.max(s, safeT2m(o)), oe = Math.min(e, endMin(o)); if (oe > os) ovs.push([os, oe]); });
         ovs.sort((x, y) => x[0] - y[0]);
         let ex = [[s, e]];
         ovs.forEach(([a, b]) => {
@@ -339,7 +362,7 @@ const Schedule = (() => {
 
   function overlaps(l) {
     return DB.data.lessons.filter(x => x.id !== l.id && x.date === l.date && x.status !== 'cancelled'
-      && U.t2m(x.start) < endMin(l) && endMin(x) > U.t2m(l.start));
+      && safeT2m(x) < endMin(l) && endMin(x) > safeT2m(l));
   }
 
   /* ---------- 月视图 ---------- */
@@ -356,7 +379,7 @@ const Schedule = (() => {
       ${U.WD.slice(1).concat(U.WD[0]).map(w => `<div class="mg-head">${w}</div>`).join('')}
       ${cells.map(day => {
       const ls = DB.data.lessons.filter(l => l.date === day && includeLesson(l))
-        .sort((a, b) => U.t2m(a.start) - U.t2m(b.start));
+        .sort((a, b) => safeT2m(a) - safeT2m(b));
       const profit = ls.reduce((s, l) => s + DB.lessonBreakdown(l).takeHome, 0);
       const gross = ls.reduce((s, l) => s + (+l.tuition || 0), 0);
       return `<div class="mg-cell ${day.slice(0, 7) !== mm ? 'out' : ''} ${day === t ? 'today' : ''}" data-day="${day}">
