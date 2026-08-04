@@ -138,7 +138,7 @@ const Students = (() => {
       <div class="stu-body">
         ${subs.map(sb => `<div class="kv"><span class="k">${U.esc(sb.grade)}${U.esc(sb.subject)}</span>
           <b class="money">${U.money(sb.tuition)} / ${sb.duration}分</b>
-          <span class="tag secret" style="background:#ffe9f1;color:#e85686">抽${U.money(sb.commission)}</span></div>`).join('')}
+          <span class="tag secret" style="background:var(--pink-100);color:var(--pink-600)">抽${U.money(sb.commission)}</span></div>`).join('')}
         <div class="kv"><span class="k">授课老师</span><b>${U.esc(DB.teacherName(s.teacherId))}</b></div>
         <div class="kv"><span class="k">上课频率</span><b>${U.esc(freqName(s.freq))}</b></div>
         <div class="kv"><span class="k">签约 / 已上</span><b>${U.esc(s.signDate || '-')} · ${stat.done}节</b></div>

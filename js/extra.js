@@ -78,7 +78,7 @@ const More = (() => {
     }
     const connected = s.token && s.gistId;
     if (!connected) {
-      return `<div class="card only-mobile" style="background:linear-gradient(120deg,#fff,#fff4f8);border-color:var(--pink-200)">
+      return `<div class="card only-mobile" style="background:linear-gradient(120deg,#fff,var(--pink-50));border-color:var(--pink-200)">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
           <div><b style="font-size:14px">☁ 云同步</b></div>
           <button class="btn btn-primary btn-sm" data-go="settings">去连接</button>
@@ -104,7 +104,7 @@ const More = (() => {
     if (!root || App.route !== 'more') return;
     root.innerHTML = `
     <div class="more-view">
-      <div class="card brand-card" style="margin-bottom:12px;background:linear-gradient(120deg,#fff,#fff4f8);border-color:var(--pink-200)">
+      <div class="card brand-card" style="margin-bottom:12px;background:linear-gradient(120deg,#fff,var(--pink-50));border-color:var(--pink-200)">
         <div style="display:flex;align-items:center;gap:10px">
           <div class="brand-mark" style="width:36px;height:36px;color:var(--pink-400)">
             <svg viewBox="0 0 40 40"><g fill="currentColor">
@@ -126,12 +126,14 @@ const More = (() => {
           <div class="ic"><svg class="ico"><use href="#${t.ic}"/></svg></div>
           <b>${t.name}</b><small>${t.desc}</small></div>`).join('')}
       </div>
-      <div class="card only-mobile" style="margin:16px 0">
-        <div class="card-h"><h3>导入数据</h3></div>
-        <button class="btn btn-primary btn-sm" data-act="m-import">选择备份文件导入</button>
-        <input type="file" id="mFileIn" accept="application/json" style="display:none">
+      <div class="more-sync-row">
+        <div class="card" style="margin:0">
+          <div class="card-h"><h3>导入数据</h3></div>
+          <button class="btn btn-primary btn-sm" data-act="m-import">选择备份文件导入</button>
+          <input type="file" id="mFileIn" accept="application/json" style="display:none">
+        </div>
+        ${syncCardHTML()}
       </div>
-      ${syncCardHTML()}
     </div>`;
     U.rebind(root, 'more', e => {
       const tile = e.target.closest('[data-go],[data-act]'); if (!tile) return;
@@ -368,6 +370,11 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.8.2</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>手机端布局整改（用户反馈 8 项）</b>：① 主页彻底删除模板库，模板库改放到导航第 3 个「待办」页「今日待办」下方；② 手机端老师名册改为一行 2 个卡片、卡片内部去空白更紧凑；③ 三端日历 / 课表「今天」按钮强制单行完整显示、不截断不换行；④ 手机端「我的」页「导入数据 / 云同步」由上下两块改为左右并排；⑤ 财务顶部「含未上课程」复选框与按钮保持同一行且不超出屏幕；⑥ 财务账单列表去除横向滑动、去除居中布局；⑦ 手机端明细统计卡片中间空白收紧；⑧ 三端周视图重叠课程恢复横条占满整列，重叠区域改用半透明渐变叠加过渡，课程名显示在各自非重叠区域。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.8.1</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>v1.8.0 遗留项补全整改</b>：① 三端日历 / 课表「今天」按钮与日期标题严格同一行；② 手机端月视图课程右下角金额不再与课程重叠（改为正常文档流 + 移动端单格最多 2 条课程）；③ 财务列表无批注的项不再显示「批注：导入抽成」，且去除头像列；④ 三端周视图重叠课程改为并列错开、互不压字；⑤ 手机端周视图按 iOS 风格重做为按天议程清单。</li>

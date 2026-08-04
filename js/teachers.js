@@ -6,6 +6,7 @@ const Teachers = (() => {
     const root = U.$('#view');
     if (!root || App.route !== 'teachers') return;
     const d = DB.data;
+    const isM = U.isMobile();
 
     // 老师课时排行（自财务页移来）：按老师汇总已完成课时 / 课酬 / 我的收入
     const tRank = (() => {
@@ -24,13 +25,38 @@ const Teachers = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>老师课时排行</h3></div>
-      <table class="tbl"><thead><tr><th>老师</th><th class="num">课时</th><th class="num">课酬</th><th class="num">我的收入</th></tr></thead>
-        <tbody>${tRank.map(t => `<tr><td data-label="老师">${U.esc(t.name)}</td><td class="num" data-label="课时">${t.count}</td><td class="num money out" data-label="课酬">${U.money(t.teacherPay)}</td><td class="num money in" data-label="我的收入">${U.money(t.profit)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted" style="text-align:center;padding:20px">还没有已完成课程</td></tr>'}</tbody></table>
+      ${isM
+        ? (tRank.length ? `<div class="t-grid t-rank-grid">${tRank.map(t => `<div class="t-card">
+            <div class="t-top"><b class="t-name">${U.esc(t.name)}</b></div>
+            <div class="t-stats"><span>课时<i>${t.count}</i></span><span>课酬<i>${U.money(t.teacherPay)}</i></span><span>收入<i>${U.money(t.profit)}</i></span></div>
+          </div>`).join('')}</div>`
+          : '<div class="muted" style="text-align:center;padding:20px">还没有已完成课程</div>')
+        : `<table class="tbl"><thead><tr><th>老师</th><th class="num">课时</th><th class="num">课酬</th><th class="num">我的收入</th></tr></thead>
+          <tbody>${tRank.map(t => `<tr><td data-label="老师">${U.esc(t.name)}</td><td class="num" data-label="课时">${t.count}</td><td class="num money out" data-label="课酬">${U.money(t.teacherPay)}</td><td class="num money in" data-label="我的收入">${U.money(t.profit)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted" style="text-align:center;padding:20px">还没有已完成课程</td></tr>'}</tbody></table>`}
     </div>
     <div class="card">
       <div class="card-h"><h3>老师名册</h3>
         <button class="btn btn-sm btn-primary" data-act="addT"><svg class="ico"><use href="#i-plus"/></svg>添加老师</button></div>
-      <table class="tbl"><thead><tr><th>姓名</th><th>联系方式</th><th class="num">在带学员</th><th class="num">累计课时</th><th></th></tr></thead>
+      ${isM
+        ? (d.teachers.length ? `<div class="t-grid">${d.teachers.map(t => {
+            const stu = d.students.filter(s => s.teacherId === t.id && s.status !== 'ended').length;
+            const les = d.lessons.filter(l => {
+              const lt = l.teacherId || (DB.student(l.studentId) || {}).teacherId || '';
+              return lt === t.id && l.status === 'done' && !l.importedCommission;
+            }).length;
+            return `<div class="t-card" data-tid="${t.id}">
+              <div class="t-top"><b class="t-name">${U.esc(t.name)}</b>
+                <div class="t-ops">
+                  <button class="btn btn-icon" data-act="editT"><svg class="ico"><use href="#i-edit"/></svg></button>
+                  <button class="btn btn-icon" data-act="delT"><svg class="ico"><use href="#i-trash"/></svg></button>
+                </div></div>
+              ${t.note ? `<div class="t-note">${U.esc(t.note)}</div>` : ''}
+              ${t.phone ? `<div class="t-phone">${U.esc(t.phone)}</div>` : ''}
+              <div class="t-stats"><span>在带<i>${stu}</i></span><span>课时<i>${les}</i></span></div>
+            </div>`;
+          }).join('')}</div>`
+          : `<div class="muted" style="text-align:center;padding:20px">还没有老师，先添加一位</div>`)
+        : `<table class="tbl"><thead><tr><th>姓名</th><th>联系方式</th><th class="num">在带学员</th><th class="num">累计课时</th><th></th></tr></thead>
       <tbody>
       ${d.teachers.map(t => {
         const stu = d.students.filter(s => s.teacherId === t.id && s.status !== 'ended').length;
@@ -47,7 +73,7 @@ const Teachers = (() => {
             <button class="btn btn-icon" data-act="delT"><svg class="ico"><use href="#i-trash"/></svg></button></td>
         </tr>`;
       }).join('') || `<tr><td colspan="5" class="muted" style="text-align:center;padding:20px">还没有老师，先添加一位</td></tr>`}
-      </tbody></table>
+      </tbody></table>`}
     </div>`;
 
     U.rebind(root, 'teachers', e => {

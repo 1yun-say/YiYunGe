@@ -389,12 +389,12 @@ const Finance = (() => {
 <html><head><meta charset="utf-8"><title>逸云阁对账单</title>
 <style>
   body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;font-size:13px;color:#4a2c3c;padding:24px;max-width:760px;margin:0 auto}
-  h1{font-size:22px;color:#e85686;margin-bottom:6px}
+  h1{font-size:22px;color:var(--pink-600);margin-bottom:6px}
   .sub{color:#7b5b6b;font-size:12px;margin-bottom:18px}
   .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
   .sum-item{background:#fff8fb;border:1px solid #ffd2e2;border-radius:12px;padding:12px;text-align:center}
   .sum-item .lab{font-size:11px;color:#7b5b6b}
-  .sum-item .val{font-size:18px;font-weight:700;color:#e85686;margin-top:4px}
+  .sum-item .val{font-size:18px;font-weight:700;color:var(--pink-600);margin-top:4px}
   table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
   th{background:#fff0f5;border-bottom:2px solid #ffd2e2;padding:8px;text-align:left;font-weight:600}
   td{padding:8px;border-bottom:1px solid #ffe9f1}
@@ -467,23 +467,27 @@ const Finance = (() => {
           ${[['month', '本月'], ['lastMonth', '上月'], ['30d', '近30天'], ['year', '本年'], ['custom', '自定义']]
         .map(([k, n]) => `<div class="opt ${range === k ? 'on' : ''}" data-r="${k}">${n}</div>`).join('')}
         </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <input type="date" class="input" id="f_from" value="${from}" style="width:150px;padding:6px 9px">
-          <span class="muted">至</span>
-          <input type="date" class="input" id="f_to" value="${to}" style="width:150px;padding:6px 9px">
-          <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);cursor:pointer;padding:6px 8px;border-radius:8px;background:var(--pink-50)">
-            <input type="checkbox" id="f_inc" ${includeScheduled ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--pink-600)"> 含未上课程
-          </label>
-          <span style="display:flex;gap:8px;margin-left:auto">
-          <button class="btn btn-ghost btn-sm" data-act="importCommission">导入抽成表</button>
-          ${U.isMobile() ? '' : '<button class="btn btn-ghost btn-sm" data-act="editHist">历史收入</button>'}
-          <button class="btn btn-ghost btn-sm" data-act="exportPng">导出图片</button>
-          ${U.isMobile() ? '' : '<button class="btn btn-ghost btn-sm" data-act="exportPdf">导出PDF</button>'}
-          <button class="btn ${editMode ? 'btn-primary' : 'btn-ghost'} btn-sm" data-act="toggleEdit">
-              <svg class="ico"><use href="#${editMode ? 'i-check' : 'i-gear'}"/></svg>
-              ${editMode ? '完成编辑' : '编辑模块'}
-            </button>
-          </span>
+        <div class="fin-controls" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <div class="fin-dates">
+            <input type="date" class="input" id="f_from" value="${from}" style="flex:1;min-width:0;padding:6px 9px">
+            <span class="muted">至</span>
+            <input type="date" class="input" id="f_to" value="${to}" style="flex:1;min-width:0;padding:6px 9px">
+          </div>
+          <div class="fin-bottom">
+            <label class="fin-inc" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);cursor:pointer;padding:6px 8px;border-radius:8px;background:var(--pink-50)">
+              <input type="checkbox" id="f_inc" ${includeScheduled ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--pink-600)"> 含未上课程
+            </label>
+            <span class="fin-actions">
+              <button class="btn btn-ghost btn-sm" data-act="importCommission">导入抽成表</button>
+              ${U.isMobile() ? '' : '<button class="btn btn-ghost btn-sm" data-act="editHist">历史收入</button>'}
+              <button class="btn btn-ghost btn-sm" data-act="exportPng">导出图片</button>
+              ${U.isMobile() ? '' : '<button class="btn btn-ghost btn-sm" data-act="exportPdf">导出PDF</button>'}
+              <button class="btn ${editMode ? 'btn-primary' : 'btn-ghost'} btn-sm" data-act="toggleEdit">
+                <svg class="ico"><use href="#${editMode ? 'i-check' : 'i-gear'}"/></svg>
+                ${editMode ? '完成编辑' : '编辑模块'}
+              </button>
+            </span>
+          </div>
         </div>
       </div>
     </div>

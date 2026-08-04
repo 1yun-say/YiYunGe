@@ -164,7 +164,7 @@ const Schedule = (() => {
       </div>
     </div>
     <div class="legend">
-      ${Object.entries(U.SUBJECT_COLORS).slice(0, 8).map(([k, v]) => `<span><i style="background:${v}"></i>${k}</span>`).join('')}
+      ${Object.entries(U.SUBJECT_COLORS).slice(0, 8).map(([k, v]) => `<span><i style="background:${U.subColor(k)}"></i>${k}</span>`).join('')}
     </div>`;
 
     bindWeek(box);
@@ -205,45 +205,102 @@ const Schedule = (() => {
     </div>`;
   }
 
+  function overlapGroups(ls) {
+    const sorted = ls.slice().sort((a, b) => U.t2m(a.start) - U.t2m(b.start) || a.id.localeCompare(b.id));
+    const groups = []; let g = [], end = -1;
+    sorted.forEach(l => {
+      const s = U.t2m(l.start);
+      if (g.length && s >= end) { groups.push(g); g = []; end = -1; }
+      g.push(l); end = Math.max(end, endMin(l));
+    });
+    if (g.length) groups.push(g);
+    return groups;
+  }
+
+  /* 周视图课块颜色：固定淡色（轻盈通透），导入课用中性灰 */
+  function morandiColor(l){
+    if(l.importedCommission) return '#b0b0b0';
+    const sub=currentSub(l);
+    return U.WEEK_MUTED[sub.subject] || U.WEEK_MUTED['其它'];
+  }
+
+  function nameOf(l) {
+    const s = DB.student(l.studentId) || { parentName: '已删除' };
+    const sub = currentSub(l);
+    return `${U.esc(s.parentName)} · ${U.esc(sub.subject || '未设科目')}`;
+  }
+
+  function lessonBar(l, conflict, isM, pub) {
+    const s = DB.student(l.studentId) || { parentName: '已删除' };
+    const isImp = !!l.importedCommission;
+    const bd = DB.lessonBreakdown(l);
+    const top = U.t2m(l.start) - DAY_START;
+    const h = Math.max(24, +l.duration || 60);
+    const sub = currentSub(l);
+    const timeLine = `<div class="lm">${l.start}-${U.m2t(endMin(l))} · ${U.money(l.tuition)}${pub ? '' : ` <span style="color:var(--pink-600)">到手${U.money(bd.takeHome)}</span>`}</div>`;
+    if (isImp) {
+      return `<div class="lesson imported ${conflict ? 'conflict' : ''} ${l.status}" draggable="false" data-lid="${l.id}"
+        style="top:${top}px;height:${h}px;left:2px;width:calc(100% - 4px);z-index:${conflict ? 3 : 2};
+        border-left-color:#b9b2a8;background:${conflict ? 'rgba(185,178,168,.62)' : 'rgba(245,245,245,.85)'};color:#666">
+        ${conflict ? '' : `<b>${U.esc(s.parentName)}</b>`}
+        ${timeLine}
+        ${conflict ? '' : `<div class="lm take">到手 ${U.money(bd.takeHome)}${l.incomeNote ? ' · 批注：' + U.esc(l.incomeNote) : ''}</div>`}
+      </div>`;
+    }
+    const c = morandiColor(l);
+    const bg = conflict ? c + '78' : c + '40';
+    return `<div class="lesson ${l.status} ${conflict ? 'conflict' : ''}" draggable="${isM ? 'false' : 'true'}" data-lid="${l.id}"
+      style="top:${top}px;height:${h}px;left:2px;width:calc(100% - 4px);z-index:${conflict ? 3 : 2};
+      border-left-color:${c};background:${bg}">
+      ${conflict ? '' : `<b>${U.esc(s.parentName)}</b>`}
+      ${conflict ? '' : timeLine + (h > 62 ? `<div class="lm">${U.esc(DB.teacherName(l.teacherId))}${l.status === 'done' ? ' · 已完成' : ''}</div>` : '') + `<div class="lm take">到手 ${U.money(bd.takeHome)}${l.incomeNote ? ' · 批注：' + U.esc(l.incomeNote) : ''}</div>`}
+    </div>`;
+  }
+
   function dayLessonsHTML(date) {
     const ls = DB.data.lessons.filter(l => l.date === date && includeLesson(l));
-    const lay = layout(ls);
     const isM = U.isMobile();
     const pub = App.isPublic();
-    return ls.map(l => {
-      const s = DB.student(l.studentId) || { parentName: '已删除' };
-      const isImp = !!l.importedCommission;
-      const info = lay[l.id] || { cols: 1, idx: 0 };
-      const top = U.t2m(l.start) - DAY_START;
-      const h = Math.max(24, +l.duration || 60);
-      const bd = DB.lessonBreakdown(l);
-      const take = `<div class="lm take">到手 ${U.money(bd.takeHome)}${l.incomeNote ? ' · 批注：' + U.esc(l.incomeNote) : ''}</div>`;
-      // 重叠时：列宽按 cols 等分，每节占一段（并列 / side-by-side），文字不再相互压住
-      const conflict = info.cols > 1;
-      const left = conflict ? `calc(2px + (100% - 4px) * ${info.idx} / ${info.cols})` : '2px';
-      const width = conflict ? `calc((100% - 4px) / ${info.cols} - 2px)` : 'calc(100% - 4px)';
-      const z = 2 + info.idx;
-      const badge = conflict ? '<span class="conflict-tag">重叠</span>' : '';
-      if (isImp) {
-        return `<div class="lesson imported ${conflict ? 'conflict' : ''}" draggable="false" data-lid="${l.id}"
-          style="top:${top}px;height:${h}px;left:${left};width:${width};z-index:${z};
-          border-left-color:#b0b0b0;background:#f5f5f5;color:#666">
-          <b>${U.esc(s.parentName)}</b>
-          ${take}
-        </div>`;
+    const groups = overlapGroups(ls);
+    let html = '';
+    groups.forEach(g => {
+      if (g.length === 1) { html += lessonBar(g[0], false, isM, pub); return; }
+      // 每节课占满整列（莫兰迪色，半透明）
+      g.forEach(l => { html += lessonBar(l, true, isM, pub); });
+      // 重叠区：两两之间画竖直渐变（上方课色 → 下方课色），形成三色过渡
+      for (let i = 0; i < g.length; i++) for (let j = i + 1; j < g.length; j++) {
+        const a = g[i], b = g[j];
+        const s = Math.max(U.t2m(a.start), U.t2m(b.start));
+        const e = Math.min(endMin(a), endMin(b));
+        if (e > s) {
+          const ca = morandiColor(a), cb = morandiColor(b);
+          html += `<div class="lesson-overlap" style="top:${s - DAY_START}px;height:${e - s}px;left:2px;width:calc(100% - 4px);background:linear-gradient(to bottom, ${ca}b3, ${cb}b3)"></div>`;
+        }
       }
-      const sub = currentSub(l);
-      const c = U.subColor(sub.subject);
-      return `<div class="lesson ${l.status} ${conflict ? 'conflict' : ''}" draggable="${isM ? 'false' : 'true'}" data-lid="${l.id}"
-        style="top:${top}px;height:${h}px;left:${left};width:${width};z-index:${z};
-        border-left-color:${c};background:${c}14">
-        <b>${U.esc(s.parentName)}</b>
-        ${badge}
-        <div class="lm">${l.start}-${U.m2t(endMin(l))} · ${U.money(l.tuition)}${pub ? '' : ` <span style="color:#e85686">到手${U.money(bd.takeHome)}</span>`}</div>
-        ${h > 62 ? `<div class="lm">${U.esc(DB.teacherName(l.teacherId))}${l.status === 'done' ? ' · 已完成' : ''}</div>` : ''}
-        ${take}
-      </div>`;
-    }).join('');
+      // 课程名写到各自「非重叠」区域
+      g.forEach(l => {
+        const s = U.t2m(l.start), e = endMin(l);
+        let ovs = [];
+        g.forEach(o => { if (o.id === l.id) return; const os = Math.max(s, U.t2m(o.start)), oe = Math.min(e, endMin(o)); if (oe > os) ovs.push([os, oe]); });
+        ovs.sort((x, y) => x[0] - y[0]);
+        let ex = [[s, e]];
+        ovs.forEach(([a, b]) => {
+          const n = [];
+          ex.forEach(([x0, x1]) => {
+            if (b <= x0 || a >= x1) n.push([x0, x1]);
+            else { if (a > x0) n.push([x0, a]); if (b < x1) n.push([b, x1]); }
+          });
+          ex = n;
+        });
+        ex.sort((x, y) => (y[1] - y[0]) - (x[1] - x[0]));
+        let placed = false;
+        for (const [a, b] of ex) {
+          if (b - a >= 18) { html += `<div class="lesson-namechip" style="top:${a - DAY_START + 1}px;left:5px;right:5px">${nameOf(l)}</div>`; placed = true; break; }
+        }
+        if (!placed) html += `<div class="lesson-namechip solid" style="top:${s - DAY_START + 1}px;left:5px;right:5px">${nameOf(l)}</div>`;
+      });
+    });
+    return html;
   }
 
   function bindWeek(box) {

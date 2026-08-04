@@ -39,6 +39,12 @@ const U = (() => {
     '化学': '#b48ce0', '生物': '#65c7c0', '历史': '#e2a06a', '地理': '#79b36b',
     '政治': '#ef8ea4', '科学': '#6fb7d8', '编程': '#7c8cf0', '其它': '#c0a3b2'
   };
+  /* 周视图课块用的淡色映射（固定莫兰迪淡色，不随主题切换），让周视图更轻盈通透 */
+  const WEEK_MUTED = {
+    '数学': '#c98b94', '语文': '#9fb39a', '英语': '#9fabc4', '物理': '#c9b083',
+    '化学': '#b3a0c4', '生物': '#94bdb6', '历史': '#c4a585', '地理': '#a3b290',
+    '政治': '#c79aa6', '科学': '#9bb6c4', '编程': '#a3a9c4', '其它': '#b6a8ac'
+  };
   const subColor = s => SUBJECT_COLORS[s] || SUBJECT_COLORS['其它'];
 
   /* 重复渲染时避免事件监听器堆叠 */
@@ -168,10 +174,10 @@ const U = (() => {
     const H = 138;
     return `<div style="display:flex;align-items:flex-end;gap:6px;height:${H + 34}px;padding-top:6px">
       ${data.map(d => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0">
-        <div style="font-size:10px;color:#e85686;font-weight:700;white-space:nowrap">${d.value ? (opt.money ? money(d.value) : d.value) : ''}</div>
+        <div style="font-size:10px;color:var(--pink-600);font-weight:700;white-space:nowrap">${d.value ? (opt.money ? money(d.value) : d.value) : ''}</div>
         <div title="${esc(d.label)}: ${opt.money ? money(d.value) : d.value}"
           style="width:100%;max-width:34px;height:${Math.max(2, d.value / max * H)}px;border-radius:6px 6px 3px 3px;
-          background:${d.hl ? 'linear-gradient(180deg,#f9709d,#e85686)' : 'linear-gradient(180deg,#ffc9dc,#ffb6ce)'};transition:height .5s"></div>
+          background:${d.hl ? 'linear-gradient(180deg,var(--pink-400),var(--pink-600))' : 'linear-gradient(180deg,var(--pink-200),var(--pink-300))'};transition:height .5s"></div>
         <div style="font-size:10px;color:#a8899a;white-space:nowrap">${esc(d.label)}</div>
       </div>`).join('')}
     </div>`;

@@ -109,7 +109,7 @@
             ${optsFor(r)}
           </select>
         </td>
-        <td data-label="动作" style="white-space:nowrap;color:${r.matched ? 'var(--green,#2e9e5b)' : 'var(--pink,#e85686)'}">${r.matched ? '✔ 匹配' : '➕ 新建'}</td>
+        <td data-label="动作" style="white-space:nowrap;color:${r.matched ? 'var(--green,#2e9e5b)' : 'var(--pink-600)'}">${r.matched ? '✔ 匹配' : '➕ 新建'}</td>
         <td class="num money in" data-label="抽成"><input class="input" data-comm="${i}" value="${r.commission}" style="width:84px;padding:4px 6px;text-align:right"></td>
         <td data-label="备注" style="color:var(--ink-2);font-size:12px"><input class="input" data-note="${i}" value="${U.esc(r.note || '')}" style="width:100%;min-width:120px;padding:4px 6px"></td>
       </tr>`).join('');
@@ -122,7 +122,7 @@
         body: `<div style="margin:0 0 12px;font-size:13px;line-height:1.7">
           来源文件：<b>${U.esc(res.fileName)}</b><br>
           共解析到 <b>${res.records.length}</b> 条抽成记录，合计 <b class="money in">${U.money(res.totalCommission)}</b> 元。<br>
-          将 <b style="color:var(--green,#2e9e5b)">匹配 ${matchedNames.length}</b> 个现有学员、<b style="color:var(--pink,#e85686)">新建 ${newNames.length}</b> 个学员（${newNames.length ? U.esc(newNames.join('、')) : '无'}）。<br>
+          将 <b style="color:var(--green,#2e9e5b)">匹配 ${matchedNames.length}</b> 个现有学员、<b style="color:var(--pink-600)">新建 ${newNames.length}</b> 个学员（${newNames.length ? U.esc(newNames.join('、')) : '无'}）。<br>
           <span class="muted">导入后按日期记入财务"实际到手"（导入抽成直接作为实际到手，不拆分课酬）；为避免打扰课表，这些记录不会显示在日历周视图（已标记）。请核对下方明细，确认无误再导入。</span>
         </div>
         <div style="overflow:auto;max-height:56vh">

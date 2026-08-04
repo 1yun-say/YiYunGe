@@ -46,7 +46,7 @@ const Dashboard = (() => {
 
   function moduleGreet(ctx) {
     return `
-    <div class="card dash-greet" style="margin-bottom:16px;background:linear-gradient(120deg,#fff,#fff4f8);border-color:var(--pink-200)">
+    <div class="card dash-greet" style="margin-bottom:16px;background:linear-gradient(120deg,#fff,var(--pink-50));border-color:var(--pink-200)">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
         <div>
           <h2 style="font-size:19px">${greet()}，今天有 <span style="color:var(--pink-600)">${ctx.todayLessons.length}</span> 节课、
@@ -108,7 +108,7 @@ const Dashboard = (() => {
                 <div class="t-meta">
                   <span class="tag gray">${U.esc(DB.teacherName(l.teacherId))}</span>
                   <span class="tag">${U.money(l.tuition)}</span>
-                  <span class="tag secret" style="background:#ffe9f1;color:#e85686">到手 ${U.money(DB.lessonBreakdown(l).takeHome)}</span>
+                  <span class="tag secret" style="background:var(--pink-100);color:var(--pink-600)">到手 ${U.money(DB.lessonBreakdown(l).takeHome)}</span>
                   ${l.status === 'done' ? '<span class="tag leaf">已完成</span>' : ''}
                 </div>
               </div>
@@ -224,8 +224,7 @@ const Dashboard = (() => {
     greet:        { title: '今日问候',    render: moduleGreet,        layout: 'full' },
     kpi:          { title: '关键指标',    render: moduleKpi,          layout: 'full' },
     todayLessons: { title: '今日课程',    render: moduleTodayLessons, layout: 'col' },
-    todayTodo:    { title: '今日待办',    render: moduleTodayTodo,    layout: 'col' },
-    templates:    { title: '每日模板库',  render: moduleTemplates,    layout: 'col' }
+    todayTodo:    { title: '今日待办',    render: moduleTodayTodo,    layout: 'col' }
   };
 
   /* ---------- 包装：单个模块外层 + 拖动 handle / 编辑按钮 / 移动端上下移 ---------- */
@@ -305,7 +304,7 @@ const Dashboard = (() => {
           ? '<svg viewBox="0 0 24 24" style="width:12px;height:12px" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"><path d="M6 12h12"/></svg>'
           : '';
       return `<div class="todo-item ${x.status === 'done' ? 'done' : ''} ${x.status === 'blocked' ? 'blocked' : ''}" data-tid="${x.id}" style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line-2);min-height:40px">
-        <div class="chk" data-act="toggleTodo" style="width:20px;height:20px;border:2px solid ${p.color};border-radius:6px;flex:none;cursor:pointer;display:grid;place-items:center;background:${x.status !== 'pending' ? p.color : 'transparent'}">${chkIcon}</div>
+        <div class="chk" data-act="toggleTodo" style="box-sizing:border-box;width:22px;height:22px;border:2px solid ${p.color};border-radius:6px;flex:none;cursor:pointer;display:grid;place-items:center;background:${x.status !== 'pending' ? p.color : 'transparent'}">${chkIcon}</div>
         <div style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${x.status === 'done' ? 'text-decoration:line-through;color:var(--ink-3)' : ''}">${U.esc(x.title)}</div>
         <span class="tag" style="font-size:9px;padding:1px 6px;background:${p.color}1f;color:${p.color};flex:none">${p.short}</span>
       </div>`;
@@ -330,14 +329,6 @@ const Dashboard = (() => {
         <h4>今日待办</h4>
         ${undone.length ? undone.slice(0, 3).map(todoRow).join('') : '<div class="muted" style="font-size:12px;padding:6px 0">今日待办已清空</div>'}
         ${undone.length > 3 ? `<div class="muted" style="font-size:11px;text-align:center;padding-top:6px">还有 ${undone.length - 3} 件</div>` : ''}
-        <div class="muted" style="font-size:11px;margin:12px 0 4px;font-weight:600">模板库</div>
-        ${DB.data.templates.length ? DB.data.templates.slice(0, 3).map(tpl => `
-          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line-2)">
-            <span class="pdot" style="background:${Todo.pInfo(tpl.priority).color}"></span>
-            <span style="flex:1;min-width:0;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(tpl.title)}</span>
-            <button class="btn btn-ghost btn-sm" data-act="useTpl" data-tpl="${tpl.id}">导入</button>
-          </div>`).join('') : '<div class="muted" style="font-size:12px;padding:6px 0">还没有模板</div>'}
-        <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:8px" data-act="importAll">一键导入全部到今天</button>
       </div>
       <div class="dash-mobile-card">
         <h4>今日课程</h4>

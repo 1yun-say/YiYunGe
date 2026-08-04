@@ -124,6 +124,26 @@ const Todo = (() => {
         </div>
       </div>`;
 
+    const mobileTplHTML = isM ? `<div class="card">
+        <div class="card-h"><h3>每日模板库</h3>
+          <button class="btn btn-icon" data-act="addTpl" title="新增模板"><svg class="ico"><use href="#i-plus"/></svg></button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          ${DB.data.templates.length ? DB.data.templates.map(tpl => `
+            <div class="tpl-chip" data-tpl="${tpl.id}">
+              <span class="pdot" style="background:${pInfo(tpl.priority).color}"></span>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(tpl.title)}</div>
+                ${tpl.tag ? `<span class="tag gray" style="margin-top:3px">${U.esc(tpl.tag)}</span>` : ''}
+              </div>
+              <button class="btn btn-icon" data-act="useTpl" title="导入这条"><svg class="ico"><use href="#i-plus"/></svg></button>
+              <button class="btn btn-icon" data-act="editTpl" title="编辑"><svg class="ico"><use href="#i-edit"/></svg></button>
+              <button class="btn btn-icon" data-act="delTpl" title="删除"><svg class="ico"><use href="#i-trash"/></svg></button>
+            </div>`).join('') : `<p class="muted" style="font-size:12px">还没有模板，点右上角 + 添加</p>`}
+        </div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:11px" data-act="importAll">一键导入全部到今天</button>
+      </div>` : '';
+
     root.innerHTML = `
     <div class="grid todo-view" style="grid-template-columns:minmax(0,1fr) 320px">
       <div style="display:flex;flex-direction:column;gap:16px">
@@ -169,6 +189,8 @@ const Todo = (() => {
             <div class="todo-list" id="archBox" style="display:none">${done.map(t => rowHTML(t)).join('')}</div>` : ''}
         </div>
       </div>
+
+      ${mobileTplHTML}
 
       ${rightColHTML}
     </div>`;

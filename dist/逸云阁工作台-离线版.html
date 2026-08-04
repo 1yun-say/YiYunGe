@@ -19,6 +19,7 @@
   --r-s:10px; --r-m:16px; --r-l:22px;
   --sidebar-w:236px;
 }
+
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 body{
@@ -174,6 +175,11 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .tbl td.num,.tbl th.num{text-align:right;font-variant-numeric:tabular-nums}
 
 /* 财务卡片：窄屏下允许横向滚动，避免表格被压扁 */
+.fin-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.fin-dates{display:flex;gap:8px;align-items:center;flex:1;min-width:0}
+.fin-bottom{display:flex;align-items:center;gap:10px}
+.fin-inc{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;flex:none}
+.fin-actions{display:flex;gap:8px;align-items:center;flex:none}
 #finGrid .card{overflow-x:auto}
 #finGrid .card-h{flex-wrap:wrap}
 #finGrid .tbl{min-width:max-content}
@@ -230,6 +236,16 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .tpl-chip{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--line);border-radius:var(--r-s);background:#fff;transition:.18s}
 .tpl-chip:hover{border-color:var(--pink-300)}
 .tpl-chip .pdot{width:9px;height:9px;border-radius:50%;flex:none}
+.t-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:2px}
+.t-card{border:1px solid var(--line-2);border-radius:10px;padding:9px 10px;background:var(--bg-card);display:flex;flex-direction:column;gap:4px;min-width:0}
+.t-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.t-name{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-ops{display:flex;gap:2px;flex:none}
+.t-ops .btn-icon{width:26px;height:26px}
+.t-note{font-size:11px;color:var(--ink-3);line-height:1.4}
+.t-phone{font-size:11.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-stats{display:flex;gap:12px;font-size:11.5px;color:var(--ink-3);margin-top:2px}
+.t-stats i{font-style:normal;color:var(--ink);font-size:13px;font-weight:600;margin-left:3px}
 .archive-head{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;color:var(--ink-3);padding:6px 0;user-select:none}
 .archive-head .caret{transition:.2s}
 .archive-head.open .caret{transform:rotate(90deg)}
@@ -298,6 +314,13 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .lesson.imported b{font-size:10.5px;color:#666}
 .conf-dot{position:absolute;right:3px;top:3px;width:6px;height:6px;border-radius:50%;background:var(--alert)}
 
+/* 周视图重叠：整列占满 + 重叠区半透明渐变覆盖层 + 课程名写在非重叠区 */
+.lesson-overlap{position:absolute;border-radius:6px;pointer-events:none;z-index:5}
+.lesson-namechip{position:absolute;z-index:6;pointer-events:none;font-size:11px;font-weight:700;color:var(--ink-1);
+  background:rgba(255,255,255,.88);border-radius:5px;padding:1px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  box-shadow:0 1px 3px rgba(0,0,0,.14)}
+.lesson-namechip.solid{background:#fff;border:1px solid var(--line-2)}
+
 .month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-m);overflow:hidden}
 .mg-head{background:var(--pink-75);padding:8px;text-align:center;font-size:12px;color:var(--ink-2)}
 .mg-cell{background:#fff;min-height:104px;padding:6px;position:relative}
@@ -361,6 +384,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .bottom-nav,.fab{display:none}
 .only-desk{display:inline-flex}
 .only-mobile{display:none}
+.more-sync-row{display:none}
 
 /* 上次编辑时间行 */
 .edit-time{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-3);
@@ -602,6 +626,17 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   .card.only-mobile{display:block!important}
   .mtile.only-mobile{display:flex!important}
 
+  /* 我的页：导入数据 / 云同步 左右并排 */
+  .more-sync-row{display:flex;gap:12px;margin:16px 0}
+  .more-sync-row .card{flex:1 1 0;min-width:0;margin:0}
+
+  /* 财务顶部：日期 / 「含未上课程」+按钮 分组各占一行，按钮同行不溢出 */
+  .fin-controls{flex-direction:column!important;align-items:stretch!important;gap:10px!important;flex-wrap:nowrap!important}
+  .fin-dates{width:100%}
+  .fin-bottom{width:100%;gap:10px}
+  .fin-actions{flex:1;min-width:0;gap:7px}
+  .fin-actions .btn{font-size:11px;padding:0 8px;white-space:nowrap;flex:1 1 0;min-width:0}
+
   /* 视图底部留出底部导航空间，内容不被遮挡 */
   .view{padding:10px 14px calc(78px + env(safe-area-inset-bottom));overflow-x:hidden}
 
@@ -622,7 +657,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   .sch-toolbar{flex-direction:column;align-items:stretch;gap:10px}
   .sch-toolbar .tabs,.tabs{flex-wrap:wrap}
   .sch-nav{flex-wrap:wrap;justify-content:space-between}
-  .sch-title{min-width:0;flex:1;text-align:left}
+  .sch-title{min-width:0;flex:none;text-align:center}
   .row{flex-wrap:wrap}
   .row>*{flex:1 1 140px}
   .seg .opt{flex:1 1 auto;text-align:center}
@@ -665,13 +700,49 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   table.tbl td::before{content:attr(data-label);color:var(--ink-3);font-size:11.5px;font-weight:600;text-align:left;flex:none}
   table.tbl tfoot{display:none}
 
+  /* 日账单：移动端改成清爽「左来源 / 右金额」两栏，杜绝横向滑动与居中 */
+  table.bill-table{min-width:0!important;width:100%}
+  table.bill-table thead{display:none}
+  table.bill-table tr.bill-day-head td{display:block;padding:0}
+  table.bill-table tr.bill-item{display:flex;align-items:center;gap:12px;padding:10px 2px;border-bottom:1px solid var(--pink-75)}
+  table.bill-table tr.bill-item td{display:block;border:none;padding:0;text-align:left;width:auto}
+  table.bill-table .bill-item td:first-child{flex:1;min-width:0}
+  table.bill-table .bill-item td.bill-amt{flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:5px;text-align:left}
+  table.bill-table td::before{content:none!important}
+
+  /* 明细统计：移动端改成「名称标题 + 两列数值 + 占比条」，去除中间大空白 */
+  .dash-module[data-sec="detail"] table.tbl{display:block;min-width:0;width:100%}
+  .dash-module[data-sec="detail"] table.tbl thead{display:none}
+  .dash-module[data-sec="detail"] table.tbl tfoot{display:none}
+  .dash-module[data-sec="detail"] table.tbl tr{
+    display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;
+    border:1px solid var(--line);border-radius:10px;margin-bottom:8px;padding:8px 10px;background:#fff}
+  .dash-module[data-sec="detail"] table.tbl tr td{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:2px 0;border:none;width:auto;text-align:right}
+  .dash-module[data-sec="detail"] table.tbl tr td:first-child{
+    grid-column:1/-1;justify-content:flex-start;font-weight:700;font-size:13.5px;margin-bottom:2px}
+  .dash-module[data-sec="detail"] table.tbl tr td:first-child::before{content:none}
+  .dash-module[data-sec="detail"] table.tbl tr td:last-child{grid-column:1/-1}
+  .dash-module[data-sec="detail"] table.tbl tr td:last-child::before{content:none}
+  .dash-module[data-sec="detail"] table.tbl td::before{
+    content:attr(data-label);color:var(--ink-3);font-size:11px;font-weight:600;margin-right:8px}
+
   /* 课表工具栏：不要坨在一起，两行更清爽 */
   .sch-toolbar{gap:12px}
   .sch-toolbar .tabs{width:100%;justify-content:center;gap:6px}
   .sch-toolbar .tabs .tab{flex:1;max-width:90px;font-size:13px}
   .sch-nav{width:100%;justify-content:space-between;gap:8px}
-  .sch-title{font-size:16px;flex:1;text-align:center;min-width:0}
+  .sch-title{font-size:16px;flex:none;text-align:center;min-width:0}
   .sch-toolbar > div:last-child{width:100%;justify-content:space-between}
+
+  /* 三端「今天」按钮：移动端保证单行完整、不截断、不换行 */
+  .sch-title-wrap,.cal-title-wrap{flex-wrap:nowrap!important}
+  .sch-title,.cal-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .sch-title-wrap [data-act="today"],.cal-today{
+    flex:none!important;white-space:nowrap!important;min-width:max-content;
+    overflow:visible;padding-left:12px;padding-right:12px}
+  .sch-nav .btn-ghost,.cal-nav .cal-navbtn{flex:none}
 
   /* 课表周视图：仿 iOS，日期头变大、今日高亮为圆点、时间格更清晰 */
   .week-wrap{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-s)}
@@ -807,18 +878,18 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   .dash-mobile-card .todo-item:last-child{border-bottom:none}
   .dash-mobile-card .chk{min-height:18px}
   .dash-mobile-quick{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:4px}
-  .dash-mobile-qb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:13px 6px;background:#fff;border:1px solid var(--line);border-radius:14px;font-size:13.5px;font-weight:600;color:var(--ink-2);cursor:pointer;-webkit-tap-highlight-color:transparent;min-height:82px;box-shadow:0 3px 10px rgba(255,143,179,.10)}
-  .dash-mobile-qb svg{width:38px;height:38px;color:var(--pink-600);background:rgba(255,143,179,.12);border-radius:13px;padding:7px}
+  .dash-mobile-qb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:9px 6px;background:#fff;border:1px solid var(--line);border-radius:14px;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer;-webkit-tap-highlight-color:transparent;min-height:62px;box-shadow:0 3px 10px rgba(255,143,179,.10)}
+  .dash-mobile-qb svg{width:30px;height:30px;color:var(--pink-600);background:rgba(255,143,179,.12);border-radius:10px;padding:5px}
 
   /* 日账单手机端 */
   .bill-table tr{border:none;border-radius:0;margin-bottom:0;padding:0;background:transparent;box-shadow:none}
   .bill-day{display:block;margin-bottom:10px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-s)}
   .bill-day-head td{display:block;padding:0}
-  .bill-day-title{padding:10px 12px;font-size:13px}
+  .bill-day-title{padding:10px 12px;font-size:13px;justify-content:flex-start}
   .bill-item td{display:flex;align-items:center;gap:10px;padding:8px 12px;text-align:left;border-bottom:1px solid var(--pink-75)}
   .bill-item:last-child td{border-bottom:none}
   .bill-icon{padding:0;width:auto}
-  .bill-amt{margin-left:auto;text-align:right}
+  .bill-amt{margin-left:0;text-align:left}
   .bill-main{font-size:12.5px}
   .bill-sub{font-size:11px}
 }
@@ -1124,7 +1195,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T05:11:51.245Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T07:51:06.891Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -1266,6 +1337,12 @@ const U = (() => {
     '化学': '#b48ce0', '生物': '#65c7c0', '历史': '#e2a06a', '地理': '#79b36b',
     '政治': '#ef8ea4', '科学': '#6fb7d8', '编程': '#7c8cf0', '其它': '#c0a3b2'
   };
+  /* 周视图课块用的淡色映射（固定莫兰迪淡色，不随主题切换），让周视图更轻盈通透 */
+  const WEEK_MUTED = {
+    '数学': '#c98b94', '语文': '#9fb39a', '英语': '#9fabc4', '物理': '#c9b083',
+    '化学': '#b3a0c4', '生物': '#94bdb6', '历史': '#c4a585', '地理': '#a3b290',
+    '政治': '#c79aa6', '科学': '#9bb6c4', '编程': '#a3a9c4', '其它': '#b6a8ac'
+  };
   const subColor = s => SUBJECT_COLORS[s] || SUBJECT_COLORS['其它'];
 
   /* 重复渲染时避免事件监听器堆叠 */
@@ -1395,10 +1472,10 @@ const U = (() => {
     const H = 138;
     return `<div style="display:flex;align-items:flex-end;gap:6px;height:${H + 34}px;padding-top:6px">
       ${data.map(d => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0">
-        <div style="font-size:10px;color:#e85686;font-weight:700;white-space:nowrap">${d.value ? (opt.money ? money(d.value) : d.value) : ''}</div>
+        <div style="font-size:10px;color:var(--pink-600);font-weight:700;white-space:nowrap">${d.value ? (opt.money ? money(d.value) : d.value) : ''}</div>
         <div title="${esc(d.label)}: ${opt.money ? money(d.value) : d.value}"
           style="width:100%;max-width:34px;height:${Math.max(2, d.value / max * H)}px;border-radius:6px 6px 3px 3px;
-          background:${d.hl ? 'linear-gradient(180deg,#f9709d,#e85686)' : 'linear-gradient(180deg,#ffc9dc,#ffb6ce)'};transition:height .5s"></div>
+          background:${d.hl ? 'linear-gradient(180deg,var(--pink-400),var(--pink-600))' : 'linear-gradient(180deg,var(--pink-200),var(--pink-300))'};transition:height .5s"></div>
         <div style="font-size:10px;color:#a8899a;white-space:nowrap">${esc(d.label)}</div>
       </div>`).join('')}
     </div>`;
@@ -2539,6 +2616,26 @@ const Todo = (() => {
         </div>
       </div>`;
 
+    const mobileTplHTML = isM ? `<div class="card">
+        <div class="card-h"><h3>每日模板库</h3>
+          <button class="btn btn-icon" data-act="addTpl" title="新增模板"><svg class="ico"><use href="#i-plus"/></svg></button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          ${DB.data.templates.length ? DB.data.templates.map(tpl => `
+            <div class="tpl-chip" data-tpl="${tpl.id}">
+              <span class="pdot" style="background:${pInfo(tpl.priority).color}"></span>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(tpl.title)}</div>
+                ${tpl.tag ? `<span class="tag gray" style="margin-top:3px">${U.esc(tpl.tag)}</span>` : ''}
+              </div>
+              <button class="btn btn-icon" data-act="useTpl" title="导入这条"><svg class="ico"><use href="#i-plus"/></svg></button>
+              <button class="btn btn-icon" data-act="editTpl" title="编辑"><svg class="ico"><use href="#i-edit"/></svg></button>
+              <button class="btn btn-icon" data-act="delTpl" title="删除"><svg class="ico"><use href="#i-trash"/></svg></button>
+            </div>`).join('') : `<p class="muted" style="font-size:12px">还没有模板，点右上角 + 添加</p>`}
+        </div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:11px" data-act="importAll">一键导入全部到今天</button>
+      </div>` : '';
+
     root.innerHTML = `
     <div class="grid todo-view" style="grid-template-columns:minmax(0,1fr) 320px">
       <div style="display:flex;flex-direction:column;gap:16px">
@@ -2584,6 +2681,8 @@ const Todo = (() => {
             <div class="todo-list" id="archBox" style="display:none">${done.map(t => rowHTML(t)).join('')}</div>` : ''}
         </div>
       </div>
+
+      ${mobileTplHTML}
 
       ${rightColHTML}
     </div>`;
@@ -2917,7 +3016,7 @@ const Students = (() => {
       <div class="stu-body">
         ${subs.map(sb => `<div class="kv"><span class="k">${U.esc(sb.grade)}${U.esc(sb.subject)}</span>
           <b class="money">${U.money(sb.tuition)} / ${sb.duration}分</b>
-          <span class="tag secret" style="background:#ffe9f1;color:#e85686">抽${U.money(sb.commission)}</span></div>`).join('')}
+          <span class="tag secret" style="background:var(--pink-100);color:var(--pink-600)">抽${U.money(sb.commission)}</span></div>`).join('')}
         <div class="kv"><span class="k">授课老师</span><b>${U.esc(DB.teacherName(s.teacherId))}</b></div>
         <div class="kv"><span class="k">上课频率</span><b>${U.esc(freqName(s.freq))}</b></div>
         <div class="kv"><span class="k">签约 / 已上</span><b>${U.esc(s.signDate || '-')} · ${stat.done}节</b></div>
@@ -3373,6 +3472,7 @@ const Teachers = (() => {
     const root = U.$('#view');
     if (!root || App.route !== 'teachers') return;
     const d = DB.data;
+    const isM = U.isMobile();
 
     // 老师课时排行（自财务页移来）：按老师汇总已完成课时 / 课酬 / 我的收入
     const tRank = (() => {
@@ -3391,13 +3491,38 @@ const Teachers = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>老师课时排行</h3></div>
-      <table class="tbl"><thead><tr><th>老师</th><th class="num">课时</th><th class="num">课酬</th><th class="num">我的收入</th></tr></thead>
-        <tbody>${tRank.map(t => `<tr><td data-label="老师">${U.esc(t.name)}</td><td class="num" data-label="课时">${t.count}</td><td class="num money out" data-label="课酬">${U.money(t.teacherPay)}</td><td class="num money in" data-label="我的收入">${U.money(t.profit)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted" style="text-align:center;padding:20px">还没有已完成课程</td></tr>'}</tbody></table>
+      ${isM
+        ? (tRank.length ? `<div class="t-grid t-rank-grid">${tRank.map(t => `<div class="t-card">
+            <div class="t-top"><b class="t-name">${U.esc(t.name)}</b></div>
+            <div class="t-stats"><span>课时<i>${t.count}</i></span><span>课酬<i>${U.money(t.teacherPay)}</i></span><span>收入<i>${U.money(t.profit)}</i></span></div>
+          </div>`).join('')}</div>`
+          : '<div class="muted" style="text-align:center;padding:20px">还没有已完成课程</div>')
+        : `<table class="tbl"><thead><tr><th>老师</th><th class="num">课时</th><th class="num">课酬</th><th class="num">我的收入</th></tr></thead>
+          <tbody>${tRank.map(t => `<tr><td data-label="老师">${U.esc(t.name)}</td><td class="num" data-label="课时">${t.count}</td><td class="num money out" data-label="课酬">${U.money(t.teacherPay)}</td><td class="num money in" data-label="我的收入">${U.money(t.profit)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted" style="text-align:center;padding:20px">还没有已完成课程</td></tr>'}</tbody></table>`}
     </div>
     <div class="card">
       <div class="card-h"><h3>老师名册</h3>
         <button class="btn btn-sm btn-primary" data-act="addT"><svg class="ico"><use href="#i-plus"/></svg>添加老师</button></div>
-      <table class="tbl"><thead><tr><th>姓名</th><th>联系方式</th><th class="num">在带学员</th><th class="num">累计课时</th><th></th></tr></thead>
+      ${isM
+        ? (d.teachers.length ? `<div class="t-grid">${d.teachers.map(t => {
+            const stu = d.students.filter(s => s.teacherId === t.id && s.status !== 'ended').length;
+            const les = d.lessons.filter(l => {
+              const lt = l.teacherId || (DB.student(l.studentId) || {}).teacherId || '';
+              return lt === t.id && l.status === 'done' && !l.importedCommission;
+            }).length;
+            return `<div class="t-card" data-tid="${t.id}">
+              <div class="t-top"><b class="t-name">${U.esc(t.name)}</b>
+                <div class="t-ops">
+                  <button class="btn btn-icon" data-act="editT"><svg class="ico"><use href="#i-edit"/></svg></button>
+                  <button class="btn btn-icon" data-act="delT"><svg class="ico"><use href="#i-trash"/></svg></button>
+                </div></div>
+              ${t.note ? `<div class="t-note">${U.esc(t.note)}</div>` : ''}
+              ${t.phone ? `<div class="t-phone">${U.esc(t.phone)}</div>` : ''}
+              <div class="t-stats"><span>在带<i>${stu}</i></span><span>课时<i>${les}</i></span></div>
+            </div>`;
+          }).join('')}</div>`
+          : `<div class="muted" style="text-align:center;padding:20px">还没有老师，先添加一位</div>`)
+        : `<table class="tbl"><thead><tr><th>姓名</th><th>联系方式</th><th class="num">在带学员</th><th class="num">累计课时</th><th></th></tr></thead>
       <tbody>
       ${d.teachers.map(t => {
         const stu = d.students.filter(s => s.teacherId === t.id && s.status !== 'ended').length;
@@ -3414,7 +3539,7 @@ const Teachers = (() => {
             <button class="btn btn-icon" data-act="delT"><svg class="ico"><use href="#i-trash"/></svg></button></td>
         </tr>`;
       }).join('') || `<tr><td colspan="5" class="muted" style="text-align:center;padding:20px">还没有老师，先添加一位</td></tr>`}
-      </tbody></table>
+      </tbody></table>`}
     </div>`;
 
     U.rebind(root, 'teachers', e => {
@@ -3627,7 +3752,7 @@ const Schedule = (() => {
       </div>
     </div>
     <div class="legend">
-      ${Object.entries(U.SUBJECT_COLORS).slice(0, 8).map(([k, v]) => `<span><i style="background:${v}"></i>${k}</span>`).join('')}
+      ${Object.entries(U.SUBJECT_COLORS).slice(0, 8).map(([k, v]) => `<span><i style="background:${U.subColor(k)}"></i>${k}</span>`).join('')}
     </div>`;
 
     bindWeek(box);
@@ -3668,45 +3793,102 @@ const Schedule = (() => {
     </div>`;
   }
 
+  function overlapGroups(ls) {
+    const sorted = ls.slice().sort((a, b) => U.t2m(a.start) - U.t2m(b.start) || a.id.localeCompare(b.id));
+    const groups = []; let g = [], end = -1;
+    sorted.forEach(l => {
+      const s = U.t2m(l.start);
+      if (g.length && s >= end) { groups.push(g); g = []; end = -1; }
+      g.push(l); end = Math.max(end, endMin(l));
+    });
+    if (g.length) groups.push(g);
+    return groups;
+  }
+
+  /* 周视图课块颜色：固定淡色（轻盈通透），导入课用中性灰 */
+  function morandiColor(l){
+    if(l.importedCommission) return '#b0b0b0';
+    const sub=currentSub(l);
+    return U.WEEK_MUTED[sub.subject] || U.WEEK_MUTED['其它'];
+  }
+
+  function nameOf(l) {
+    const s = DB.student(l.studentId) || { parentName: '已删除' };
+    const sub = currentSub(l);
+    return `${U.esc(s.parentName)} · ${U.esc(sub.subject || '未设科目')}`;
+  }
+
+  function lessonBar(l, conflict, isM, pub) {
+    const s = DB.student(l.studentId) || { parentName: '已删除' };
+    const isImp = !!l.importedCommission;
+    const bd = DB.lessonBreakdown(l);
+    const top = U.t2m(l.start) - DAY_START;
+    const h = Math.max(24, +l.duration || 60);
+    const sub = currentSub(l);
+    const timeLine = `<div class="lm">${l.start}-${U.m2t(endMin(l))} · ${U.money(l.tuition)}${pub ? '' : ` <span style="color:var(--pink-600)">到手${U.money(bd.takeHome)}</span>`}</div>`;
+    if (isImp) {
+      return `<div class="lesson imported ${conflict ? 'conflict' : ''} ${l.status}" draggable="false" data-lid="${l.id}"
+        style="top:${top}px;height:${h}px;left:2px;width:calc(100% - 4px);z-index:${conflict ? 3 : 2};
+        border-left-color:#b9b2a8;background:${conflict ? 'rgba(185,178,168,.62)' : 'rgba(245,245,245,.85)'};color:#666">
+        ${conflict ? '' : `<b>${U.esc(s.parentName)}</b>`}
+        ${timeLine}
+        ${conflict ? '' : `<div class="lm take">到手 ${U.money(bd.takeHome)}${l.incomeNote ? ' · 批注：' + U.esc(l.incomeNote) : ''}</div>`}
+      </div>`;
+    }
+    const c = morandiColor(l);
+    const bg = conflict ? c + '78' : c + '40';
+    return `<div class="lesson ${l.status} ${conflict ? 'conflict' : ''}" draggable="${isM ? 'false' : 'true'}" data-lid="${l.id}"
+      style="top:${top}px;height:${h}px;left:2px;width:calc(100% - 4px);z-index:${conflict ? 3 : 2};
+      border-left-color:${c};background:${bg}">
+      ${conflict ? '' : `<b>${U.esc(s.parentName)}</b>`}
+      ${conflict ? '' : timeLine + (h > 62 ? `<div class="lm">${U.esc(DB.teacherName(l.teacherId))}${l.status === 'done' ? ' · 已完成' : ''}</div>` : '') + `<div class="lm take">到手 ${U.money(bd.takeHome)}${l.incomeNote ? ' · 批注：' + U.esc(l.incomeNote) : ''}</div>`}
+    </div>`;
+  }
+
   function dayLessonsHTML(date) {
     const ls = DB.data.lessons.filter(l => l.date === date && includeLesson(l));
-    const lay = layout(ls);
     const isM = U.isMobile();
     const pub = App.isPublic();
-    return ls.map(l => {
-      const s = DB.student(l.studentId) || { parentName: '已删除' };
-      const isImp = !!l.importedCommission;
-      const info = lay[l.id] || { cols: 1, idx: 0 };
-      const top = U.t2m(l.start) - DAY_START;
-      const h = Math.max(24, +l.duration || 60);
-      const bd = DB.lessonBreakdown(l);
-      const take = `<div class="lm take">到手 ${U.money(bd.takeHome)}${l.incomeNote ? ' · 批注：' + U.esc(l.incomeNote) : ''}</div>`;
-      // 重叠时：列宽按 cols 等分，每节占一段（并列 / side-by-side），文字不再相互压住
-      const conflict = info.cols > 1;
-      const left = conflict ? `calc(2px + (100% - 4px) * ${info.idx} / ${info.cols})` : '2px';
-      const width = conflict ? `calc((100% - 4px) / ${info.cols} - 2px)` : 'calc(100% - 4px)';
-      const z = 2 + info.idx;
-      const badge = conflict ? '<span class="conflict-tag">重叠</span>' : '';
-      if (isImp) {
-        return `<div class="lesson imported ${conflict ? 'conflict' : ''}" draggable="false" data-lid="${l.id}"
-          style="top:${top}px;height:${h}px;left:${left};width:${width};z-index:${z};
-          border-left-color:#b0b0b0;background:#f5f5f5;color:#666">
-          <b>${U.esc(s.parentName)}</b>
-          ${take}
-        </div>`;
+    const groups = overlapGroups(ls);
+    let html = '';
+    groups.forEach(g => {
+      if (g.length === 1) { html += lessonBar(g[0], false, isM, pub); return; }
+      // 每节课占满整列（莫兰迪色，半透明）
+      g.forEach(l => { html += lessonBar(l, true, isM, pub); });
+      // 重叠区：两两之间画竖直渐变（上方课色 → 下方课色），形成三色过渡
+      for (let i = 0; i < g.length; i++) for (let j = i + 1; j < g.length; j++) {
+        const a = g[i], b = g[j];
+        const s = Math.max(U.t2m(a.start), U.t2m(b.start));
+        const e = Math.min(endMin(a), endMin(b));
+        if (e > s) {
+          const ca = morandiColor(a), cb = morandiColor(b);
+          html += `<div class="lesson-overlap" style="top:${s - DAY_START}px;height:${e - s}px;left:2px;width:calc(100% - 4px);background:linear-gradient(to bottom, ${ca}b3, ${cb}b3)"></div>`;
+        }
       }
-      const sub = currentSub(l);
-      const c = U.subColor(sub.subject);
-      return `<div class="lesson ${l.status} ${conflict ? 'conflict' : ''}" draggable="${isM ? 'false' : 'true'}" data-lid="${l.id}"
-        style="top:${top}px;height:${h}px;left:${left};width:${width};z-index:${z};
-        border-left-color:${c};background:${c}14">
-        <b>${U.esc(s.parentName)}</b>
-        ${badge}
-        <div class="lm">${l.start}-${U.m2t(endMin(l))} · ${U.money(l.tuition)}${pub ? '' : ` <span style="color:#e85686">到手${U.money(bd.takeHome)}</span>`}</div>
-        ${h > 62 ? `<div class="lm">${U.esc(DB.teacherName(l.teacherId))}${l.status === 'done' ? ' · 已完成' : ''}</div>` : ''}
-        ${take}
-      </div>`;
-    }).join('');
+      // 课程名写到各自「非重叠」区域
+      g.forEach(l => {
+        const s = U.t2m(l.start), e = endMin(l);
+        let ovs = [];
+        g.forEach(o => { if (o.id === l.id) return; const os = Math.max(s, U.t2m(o.start)), oe = Math.min(e, endMin(o)); if (oe > os) ovs.push([os, oe]); });
+        ovs.sort((x, y) => x[0] - y[0]);
+        let ex = [[s, e]];
+        ovs.forEach(([a, b]) => {
+          const n = [];
+          ex.forEach(([x0, x1]) => {
+            if (b <= x0 || a >= x1) n.push([x0, x1]);
+            else { if (a > x0) n.push([x0, a]); if (b < x1) n.push([b, x1]); }
+          });
+          ex = n;
+        });
+        ex.sort((x, y) => (y[1] - y[0]) - (x[1] - x[0]));
+        let placed = false;
+        for (const [a, b] of ex) {
+          if (b - a >= 18) { html += `<div class="lesson-namechip" style="top:${a - DAY_START + 1}px;left:5px;right:5px">${nameOf(l)}</div>`; placed = true; break; }
+        }
+        if (!placed) html += `<div class="lesson-namechip solid" style="top:${s - DAY_START + 1}px;left:5px;right:5px">${nameOf(l)}</div>`;
+      });
+    });
+    return html;
   }
 
   function bindWeek(box) {
@@ -4447,12 +4629,12 @@ const Finance = (() => {
 <html><head><meta charset="utf-8"><title>逸云阁对账单</title>
 <style>
   body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;font-size:13px;color:#4a2c3c;padding:24px;max-width:760px;margin:0 auto}
-  h1{font-size:22px;color:#e85686;margin-bottom:6px}
+  h1{font-size:22px;color:var(--pink-600);margin-bottom:6px}
   .sub{color:#7b5b6b;font-size:12px;margin-bottom:18px}
   .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
   .sum-item{background:#fff8fb;border:1px solid #ffd2e2;border-radius:12px;padding:12px;text-align:center}
   .sum-item .lab{font-size:11px;color:#7b5b6b}
-  .sum-item .val{font-size:18px;font-weight:700;color:#e85686;margin-top:4px}
+  .sum-item .val{font-size:18px;font-weight:700;color:var(--pink-600);margin-top:4px}
   table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
   th{background:#fff0f5;border-bottom:2px solid #ffd2e2;padding:8px;text-align:left;font-weight:600}
   td{padding:8px;border-bottom:1px solid #ffe9f1}
@@ -4525,23 +4707,27 @@ const Finance = (() => {
           ${[['month', '本月'], ['lastMonth', '上月'], ['30d', '近30天'], ['year', '本年'], ['custom', '自定义']]
         .map(([k, n]) => `<div class="opt ${range === k ? 'on' : ''}" data-r="${k}">${n}</div>`).join('')}
         </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <input type="date" class="input" id="f_from" value="${from}" style="width:150px;padding:6px 9px">
-          <span class="muted">至</span>
-          <input type="date" class="input" id="f_to" value="${to}" style="width:150px;padding:6px 9px">
-          <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);cursor:pointer;padding:6px 8px;border-radius:8px;background:var(--pink-50)">
-            <input type="checkbox" id="f_inc" ${includeScheduled ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--pink-600)"> 含未上课程
-          </label>
-          <span style="display:flex;gap:8px;margin-left:auto">
-          <button class="btn btn-ghost btn-sm" data-act="importCommission">导入抽成表</button>
-          ${U.isMobile() ? '' : '<button class="btn btn-ghost btn-sm" data-act="editHist">历史收入</button>'}
-          <button class="btn btn-ghost btn-sm" data-act="exportPng">导出图片</button>
-          ${U.isMobile() ? '' : '<button class="btn btn-ghost btn-sm" data-act="exportPdf">导出PDF</button>'}
-          <button class="btn ${editMode ? 'btn-primary' : 'btn-ghost'} btn-sm" data-act="toggleEdit">
-              <svg class="ico"><use href="#${editMode ? 'i-check' : 'i-gear'}"/></svg>
-              ${editMode ? '完成编辑' : '编辑模块'}
-            </button>
-          </span>
+        <div class="fin-controls" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <div class="fin-dates">
+            <input type="date" class="input" id="f_from" value="${from}" style="flex:1;min-width:0;padding:6px 9px">
+            <span class="muted">至</span>
+            <input type="date" class="input" id="f_to" value="${to}" style="flex:1;min-width:0;padding:6px 9px">
+          </div>
+          <div class="fin-bottom">
+            <label class="fin-inc" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);cursor:pointer;padding:6px 8px;border-radius:8px;background:var(--pink-50)">
+              <input type="checkbox" id="f_inc" ${includeScheduled ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--pink-600)"> 含未上课程
+            </label>
+            <span class="fin-actions">
+              <button class="btn btn-ghost btn-sm" data-act="importCommission">导入抽成表</button>
+              ${U.isMobile() ? '' : '<button class="btn btn-ghost btn-sm" data-act="editHist">历史收入</button>'}
+              <button class="btn btn-ghost btn-sm" data-act="exportPng">导出图片</button>
+              ${U.isMobile() ? '' : '<button class="btn btn-ghost btn-sm" data-act="exportPdf">导出PDF</button>'}
+              <button class="btn ${editMode ? 'btn-primary' : 'btn-ghost'} btn-sm" data-act="toggleEdit">
+                <svg class="ico"><use href="#${editMode ? 'i-check' : 'i-gear'}"/></svg>
+                ${editMode ? '完成编辑' : '编辑模块'}
+              </button>
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -4958,7 +5144,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             ${optsFor(r)}
           </select>
         </td>
-        <td data-label="动作" style="white-space:nowrap;color:${r.matched ? 'var(--green,#2e9e5b)' : 'var(--pink,#e85686)'}">${r.matched ? '✔ 匹配' : '➕ 新建'}</td>
+        <td data-label="动作" style="white-space:nowrap;color:${r.matched ? 'var(--green,#2e9e5b)' : 'var(--pink-600)'}">${r.matched ? '✔ 匹配' : '➕ 新建'}</td>
         <td class="num money in" data-label="抽成"><input class="input" data-comm="${i}" value="${r.commission}" style="width:84px;padding:4px 6px;text-align:right"></td>
         <td data-label="备注" style="color:var(--ink-2);font-size:12px"><input class="input" data-note="${i}" value="${U.esc(r.note || '')}" style="width:100%;min-width:120px;padding:4px 6px"></td>
       </tr>`).join('');
@@ -4971,7 +5157,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         body: `<div style="margin:0 0 12px;font-size:13px;line-height:1.7">
           来源文件：<b>${U.esc(res.fileName)}</b><br>
           共解析到 <b>${res.records.length}</b> 条抽成记录，合计 <b class="money in">${U.money(res.totalCommission)}</b> 元。<br>
-          将 <b style="color:var(--green,#2e9e5b)">匹配 ${matchedNames.length}</b> 个现有学员、<b style="color:var(--pink,#e85686)">新建 ${newNames.length}</b> 个学员（${newNames.length ? U.esc(newNames.join('、')) : '无'}）。<br>
+          将 <b style="color:var(--green,#2e9e5b)">匹配 ${matchedNames.length}</b> 个现有学员、<b style="color:var(--pink-600)">新建 ${newNames.length}</b> 个学员（${newNames.length ? U.esc(newNames.join('、')) : '无'}）。<br>
           <span class="muted">导入后按日期记入财务"实际到手"（导入抽成直接作为实际到手，不拆分课酬）；为避免打扰课表，这些记录不会显示在日历周视图（已标记）。请核对下方明细，确认无误再导入。</span>
         </div>
         <div style="overflow:auto;max-height:56vh">
@@ -5521,7 +5707,7 @@ const Dashboard = (() => {
 
   function moduleGreet(ctx) {
     return `
-    <div class="card dash-greet" style="margin-bottom:16px;background:linear-gradient(120deg,#fff,#fff4f8);border-color:var(--pink-200)">
+    <div class="card dash-greet" style="margin-bottom:16px;background:linear-gradient(120deg,#fff,var(--pink-50));border-color:var(--pink-200)">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
         <div>
           <h2 style="font-size:19px">${greet()}，今天有 <span style="color:var(--pink-600)">${ctx.todayLessons.length}</span> 节课、
@@ -5583,7 +5769,7 @@ const Dashboard = (() => {
                 <div class="t-meta">
                   <span class="tag gray">${U.esc(DB.teacherName(l.teacherId))}</span>
                   <span class="tag">${U.money(l.tuition)}</span>
-                  <span class="tag secret" style="background:#ffe9f1;color:#e85686">到手 ${U.money(DB.lessonBreakdown(l).takeHome)}</span>
+                  <span class="tag secret" style="background:var(--pink-100);color:var(--pink-600)">到手 ${U.money(DB.lessonBreakdown(l).takeHome)}</span>
                   ${l.status === 'done' ? '<span class="tag leaf">已完成</span>' : ''}
                 </div>
               </div>
@@ -5699,8 +5885,7 @@ const Dashboard = (() => {
     greet:        { title: '今日问候',    render: moduleGreet,        layout: 'full' },
     kpi:          { title: '关键指标',    render: moduleKpi,          layout: 'full' },
     todayLessons: { title: '今日课程',    render: moduleTodayLessons, layout: 'col' },
-    todayTodo:    { title: '今日待办',    render: moduleTodayTodo,    layout: 'col' },
-    templates:    { title: '每日模板库',  render: moduleTemplates,    layout: 'col' }
+    todayTodo:    { title: '今日待办',    render: moduleTodayTodo,    layout: 'col' }
   };
 
   /* ---------- 包装：单个模块外层 + 拖动 handle / 编辑按钮 / 移动端上下移 ---------- */
@@ -5780,7 +5965,7 @@ const Dashboard = (() => {
           ? '<svg viewBox="0 0 24 24" style="width:12px;height:12px" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"><path d="M6 12h12"/></svg>'
           : '';
       return `<div class="todo-item ${x.status === 'done' ? 'done' : ''} ${x.status === 'blocked' ? 'blocked' : ''}" data-tid="${x.id}" style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line-2);min-height:40px">
-        <div class="chk" data-act="toggleTodo" style="width:20px;height:20px;border:2px solid ${p.color};border-radius:6px;flex:none;cursor:pointer;display:grid;place-items:center;background:${x.status !== 'pending' ? p.color : 'transparent'}">${chkIcon}</div>
+        <div class="chk" data-act="toggleTodo" style="box-sizing:border-box;width:22px;height:22px;border:2px solid ${p.color};border-radius:6px;flex:none;cursor:pointer;display:grid;place-items:center;background:${x.status !== 'pending' ? p.color : 'transparent'}">${chkIcon}</div>
         <div style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${x.status === 'done' ? 'text-decoration:line-through;color:var(--ink-3)' : ''}">${U.esc(x.title)}</div>
         <span class="tag" style="font-size:9px;padding:1px 6px;background:${p.color}1f;color:${p.color};flex:none">${p.short}</span>
       </div>`;
@@ -5805,14 +5990,6 @@ const Dashboard = (() => {
         <h4>今日待办</h4>
         ${undone.length ? undone.slice(0, 3).map(todoRow).join('') : '<div class="muted" style="font-size:12px;padding:6px 0">今日待办已清空</div>'}
         ${undone.length > 3 ? `<div class="muted" style="font-size:11px;text-align:center;padding-top:6px">还有 ${undone.length - 3} 件</div>` : ''}
-        <div class="muted" style="font-size:11px;margin:12px 0 4px;font-weight:600">模板库</div>
-        ${DB.data.templates.length ? DB.data.templates.slice(0, 3).map(tpl => `
-          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line-2)">
-            <span class="pdot" style="background:${Todo.pInfo(tpl.priority).color}"></span>
-            <span style="flex:1;min-width:0;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(tpl.title)}</span>
-            <button class="btn btn-ghost btn-sm" data-act="useTpl" data-tpl="${tpl.id}">导入</button>
-          </div>`).join('') : '<div class="muted" style="font-size:12px;padding:6px 0">还没有模板</div>'}
-        <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:8px" data-act="importAll">一键导入全部到今天</button>
       </div>
       <div class="dash-mobile-card">
         <h4>今日课程</h4>
@@ -6545,7 +6722,7 @@ const More = (() => {
     }
     const connected = s.token && s.gistId;
     if (!connected) {
-      return `<div class="card only-mobile" style="background:linear-gradient(120deg,#fff,#fff4f8);border-color:var(--pink-200)">
+      return `<div class="card only-mobile" style="background:linear-gradient(120deg,#fff,var(--pink-50));border-color:var(--pink-200)">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
           <div><b style="font-size:14px">☁ 云同步</b></div>
           <button class="btn btn-primary btn-sm" data-go="settings">去连接</button>
@@ -6571,7 +6748,7 @@ const More = (() => {
     if (!root || App.route !== 'more') return;
     root.innerHTML = `
     <div class="more-view">
-      <div class="card brand-card" style="margin-bottom:12px;background:linear-gradient(120deg,#fff,#fff4f8);border-color:var(--pink-200)">
+      <div class="card brand-card" style="margin-bottom:12px;background:linear-gradient(120deg,#fff,var(--pink-50));border-color:var(--pink-200)">
         <div style="display:flex;align-items:center;gap:10px">
           <div class="brand-mark" style="width:36px;height:36px;color:var(--pink-400)">
             <svg viewBox="0 0 40 40"><g fill="currentColor">
@@ -6593,12 +6770,14 @@ const More = (() => {
           <div class="ic"><svg class="ico"><use href="#${t.ic}"/></svg></div>
           <b>${t.name}</b><small>${t.desc}</small></div>`).join('')}
       </div>
-      <div class="card only-mobile" style="margin:16px 0">
-        <div class="card-h"><h3>导入数据</h3></div>
-        <button class="btn btn-primary btn-sm" data-act="m-import">选择备份文件导入</button>
-        <input type="file" id="mFileIn" accept="application/json" style="display:none">
+      <div class="more-sync-row">
+        <div class="card" style="margin:0">
+          <div class="card-h"><h3>导入数据</h3></div>
+          <button class="btn btn-primary btn-sm" data-act="m-import">选择备份文件导入</button>
+          <input type="file" id="mFileIn" accept="application/json" style="display:none">
+        </div>
+        ${syncCardHTML()}
       </div>
-      ${syncCardHTML()}
     </div>`;
     U.rebind(root, 'more', e => {
       const tile = e.target.closest('[data-go],[data-act]'); if (!tile) return;
@@ -6835,6 +7014,11 @@ const Changelog = (() => {
     root.innerHTML = `
     <div class="card">
       <div class="card-h"><h3>更新日志</h3></div>
+      <div class="log-ver">v1.8.2</div><div class="log-date">2026-08-04</div>
+      <ul class="log-list">
+        <li><b>手机端布局整改（用户反馈 8 项）</b>：① 主页彻底删除模板库，模板库改放到导航第 3 个「待办」页「今日待办」下方；② 手机端老师名册改为一行 2 个卡片、卡片内部去空白更紧凑；③ 三端日历 / 课表「今天」按钮强制单行完整显示、不截断不换行；④ 手机端「我的」页「导入数据 / 云同步」由上下两块改为左右并排；⑤ 财务顶部「含未上课程」复选框与按钮保持同一行且不超出屏幕；⑥ 财务账单列表去除横向滑动、去除居中布局；⑦ 手机端明细统计卡片中间空白收紧；⑧ 三端周视图重叠课程恢复横条占满整列，重叠区域改用半透明渐变叠加过渡，课程名显示在各自非重叠区域。</li>
+      </ul>
+      <div class="divider"></div>
       <div class="log-ver">v1.8.1</div><div class="log-date">2026-08-04</div>
       <ul class="log-list">
         <li><b>v1.8.0 遗留项补全整改</b>：① 三端日历 / 课表「今天」按钮与日期标题严格同一行；② 手机端月视图课程右下角金额不再与课程重叠（改为正常文档流 + 移动端单格最多 2 条课程）；③ 财务列表无批注的项不再显示「批注：导入抽成」，且去除头像列；④ 三端周视图重叠课程改为并列错开、互不压字；⑤ 手机端周视图按 iOS 风格重做为按天议程清单。</li>

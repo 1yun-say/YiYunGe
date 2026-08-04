@@ -12,6 +12,7 @@
   --r-s:10px; --r-m:16px; --r-l:22px;
   --sidebar-w:236px;
 }
+
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 body{
@@ -167,6 +168,11 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .tbl td.num,.tbl th.num{text-align:right;font-variant-numeric:tabular-nums}
 
 /* 财务卡片：窄屏下允许横向滚动，避免表格被压扁 */
+.fin-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.fin-dates{display:flex;gap:8px;align-items:center;flex:1;min-width:0}
+.fin-bottom{display:flex;align-items:center;gap:10px}
+.fin-inc{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;flex:none}
+.fin-actions{display:flex;gap:8px;align-items:center;flex:none}
 #finGrid .card{overflow-x:auto}
 #finGrid .card-h{flex-wrap:wrap}
 #finGrid .tbl{min-width:max-content}
@@ -223,6 +229,16 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .tpl-chip{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--line);border-radius:var(--r-s);background:#fff;transition:.18s}
 .tpl-chip:hover{border-color:var(--pink-300)}
 .tpl-chip .pdot{width:9px;height:9px;border-radius:50%;flex:none}
+.t-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:2px}
+.t-card{border:1px solid var(--line-2);border-radius:10px;padding:9px 10px;background:var(--bg-card);display:flex;flex-direction:column;gap:4px;min-width:0}
+.t-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.t-name{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-ops{display:flex;gap:2px;flex:none}
+.t-ops .btn-icon{width:26px;height:26px}
+.t-note{font-size:11px;color:var(--ink-3);line-height:1.4}
+.t-phone{font-size:11.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-stats{display:flex;gap:12px;font-size:11.5px;color:var(--ink-3);margin-top:2px}
+.t-stats i{font-style:normal;color:var(--ink);font-size:13px;font-weight:600;margin-left:3px}
 .archive-head{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;color:var(--ink-3);padding:6px 0;user-select:none}
 .archive-head .caret{transition:.2s}
 .archive-head.open .caret{transform:rotate(90deg)}
@@ -291,6 +307,13 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .lesson.imported b{font-size:10.5px;color:#666}
 .conf-dot{position:absolute;right:3px;top:3px;width:6px;height:6px;border-radius:50%;background:var(--alert)}
 
+/* 周视图重叠：整列占满 + 重叠区半透明渐变覆盖层 + 课程名写在非重叠区 */
+.lesson-overlap{position:absolute;border-radius:6px;pointer-events:none;z-index:5}
+.lesson-namechip{position:absolute;z-index:6;pointer-events:none;font-size:11px;font-weight:700;color:var(--ink-1);
+  background:rgba(255,255,255,.88);border-radius:5px;padding:1px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  box-shadow:0 1px 3px rgba(0,0,0,.14)}
+.lesson-namechip.solid{background:#fff;border:1px solid var(--line-2)}
+
 .month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-m);overflow:hidden}
 .mg-head{background:var(--pink-75);padding:8px;text-align:center;font-size:12px;color:var(--ink-2)}
 .mg-cell{background:#fff;min-height:104px;padding:6px;position:relative}
@@ -354,6 +377,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .bottom-nav,.fab{display:none}
 .only-desk{display:inline-flex}
 .only-mobile{display:none}
+.more-sync-row{display:none}
 
 /* 上次编辑时间行 */
 .edit-time{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-3);
@@ -595,6 +619,17 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   .card.only-mobile{display:block!important}
   .mtile.only-mobile{display:flex!important}
 
+  /* 我的页：导入数据 / 云同步 左右并排 */
+  .more-sync-row{display:flex;gap:12px;margin:16px 0}
+  .more-sync-row .card{flex:1 1 0;min-width:0;margin:0}
+
+  /* 财务顶部：日期 / 「含未上课程」+按钮 分组各占一行，按钮同行不溢出 */
+  .fin-controls{flex-direction:column!important;align-items:stretch!important;gap:10px!important;flex-wrap:nowrap!important}
+  .fin-dates{width:100%}
+  .fin-bottom{width:100%;gap:10px}
+  .fin-actions{flex:1;min-width:0;gap:7px}
+  .fin-actions .btn{font-size:11px;padding:0 8px;white-space:nowrap;flex:1 1 0;min-width:0}
+
   /* 视图底部留出底部导航空间，内容不被遮挡 */
   .view{padding:10px 14px calc(78px + env(safe-area-inset-bottom));overflow-x:hidden}
 
@@ -615,7 +650,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   .sch-toolbar{flex-direction:column;align-items:stretch;gap:10px}
   .sch-toolbar .tabs,.tabs{flex-wrap:wrap}
   .sch-nav{flex-wrap:wrap;justify-content:space-between}
-  .sch-title{min-width:0;flex:1;text-align:left}
+  .sch-title{min-width:0;flex:none;text-align:center}
   .row{flex-wrap:wrap}
   .row>*{flex:1 1 140px}
   .seg .opt{flex:1 1 auto;text-align:center}
@@ -658,13 +693,49 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   table.tbl td::before{content:attr(data-label);color:var(--ink-3);font-size:11.5px;font-weight:600;text-align:left;flex:none}
   table.tbl tfoot{display:none}
 
+  /* 日账单：移动端改成清爽「左来源 / 右金额」两栏，杜绝横向滑动与居中 */
+  table.bill-table{min-width:0!important;width:100%}
+  table.bill-table thead{display:none}
+  table.bill-table tr.bill-day-head td{display:block;padding:0}
+  table.bill-table tr.bill-item{display:flex;align-items:center;gap:12px;padding:10px 2px;border-bottom:1px solid var(--pink-75)}
+  table.bill-table tr.bill-item td{display:block;border:none;padding:0;text-align:left;width:auto}
+  table.bill-table .bill-item td:first-child{flex:1;min-width:0}
+  table.bill-table .bill-item td.bill-amt{flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:5px;text-align:left}
+  table.bill-table td::before{content:none!important}
+
+  /* 明细统计：移动端改成「名称标题 + 两列数值 + 占比条」，去除中间大空白 */
+  .dash-module[data-sec="detail"] table.tbl{display:block;min-width:0;width:100%}
+  .dash-module[data-sec="detail"] table.tbl thead{display:none}
+  .dash-module[data-sec="detail"] table.tbl tfoot{display:none}
+  .dash-module[data-sec="detail"] table.tbl tr{
+    display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;
+    border:1px solid var(--line);border-radius:10px;margin-bottom:8px;padding:8px 10px;background:#fff}
+  .dash-module[data-sec="detail"] table.tbl tr td{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:2px 0;border:none;width:auto;text-align:right}
+  .dash-module[data-sec="detail"] table.tbl tr td:first-child{
+    grid-column:1/-1;justify-content:flex-start;font-weight:700;font-size:13.5px;margin-bottom:2px}
+  .dash-module[data-sec="detail"] table.tbl tr td:first-child::before{content:none}
+  .dash-module[data-sec="detail"] table.tbl tr td:last-child{grid-column:1/-1}
+  .dash-module[data-sec="detail"] table.tbl tr td:last-child::before{content:none}
+  .dash-module[data-sec="detail"] table.tbl td::before{
+    content:attr(data-label);color:var(--ink-3);font-size:11px;font-weight:600;margin-right:8px}
+
   /* 课表工具栏：不要坨在一起，两行更清爽 */
   .sch-toolbar{gap:12px}
   .sch-toolbar .tabs{width:100%;justify-content:center;gap:6px}
   .sch-toolbar .tabs .tab{flex:1;max-width:90px;font-size:13px}
   .sch-nav{width:100%;justify-content:space-between;gap:8px}
-  .sch-title{font-size:16px;flex:1;text-align:center;min-width:0}
+  .sch-title{font-size:16px;flex:none;text-align:center;min-width:0}
   .sch-toolbar > div:last-child{width:100%;justify-content:space-between}
+
+  /* 三端「今天」按钮：移动端保证单行完整、不截断、不换行 */
+  .sch-title-wrap,.cal-title-wrap{flex-wrap:nowrap!important}
+  .sch-title,.cal-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .sch-title-wrap [data-act="today"],.cal-today{
+    flex:none!important;white-space:nowrap!important;min-width:max-content;
+    overflow:visible;padding-left:12px;padding-right:12px}
+  .sch-nav .btn-ghost,.cal-nav .cal-navbtn{flex:none}
 
   /* 课表周视图：仿 iOS，日期头变大、今日高亮为圆点、时间格更清晰 */
   .week-wrap{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-s)}
@@ -800,18 +871,18 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   .dash-mobile-card .todo-item:last-child{border-bottom:none}
   .dash-mobile-card .chk{min-height:18px}
   .dash-mobile-quick{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:4px}
-  .dash-mobile-qb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:13px 6px;background:#fff;border:1px solid var(--line);border-radius:14px;font-size:13.5px;font-weight:600;color:var(--ink-2);cursor:pointer;-webkit-tap-highlight-color:transparent;min-height:82px;box-shadow:0 3px 10px rgba(255,143,179,.10)}
-  .dash-mobile-qb svg{width:38px;height:38px;color:var(--pink-600);background:rgba(255,143,179,.12);border-radius:13px;padding:7px}
+  .dash-mobile-qb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:9px 6px;background:#fff;border:1px solid var(--line);border-radius:14px;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer;-webkit-tap-highlight-color:transparent;min-height:62px;box-shadow:0 3px 10px rgba(255,143,179,.10)}
+  .dash-mobile-qb svg{width:30px;height:30px;color:var(--pink-600);background:rgba(255,143,179,.12);border-radius:10px;padding:5px}
 
   /* 日账单手机端 */
   .bill-table tr{border:none;border-radius:0;margin-bottom:0;padding:0;background:transparent;box-shadow:none}
   .bill-day{display:block;margin-bottom:10px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-s)}
   .bill-day-head td{display:block;padding:0}
-  .bill-day-title{padding:10px 12px;font-size:13px}
+  .bill-day-title{padding:10px 12px;font-size:13px;justify-content:flex-start}
   .bill-item td{display:flex;align-items:center;gap:10px;padding:8px 12px;text-align:left;border-bottom:1px solid var(--pink-75)}
   .bill-item:last-child td{border-bottom:none}
   .bill-icon{padding:0;width:auto}
-  .bill-amt{margin-left:auto;text-align:right}
+  .bill-amt{margin-left:0;text-align:left}
   .bill-main{font-size:12.5px}
   .bill-sub{font-size:11px}
 }
