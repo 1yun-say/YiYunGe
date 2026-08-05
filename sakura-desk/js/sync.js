@@ -159,14 +159,14 @@ window.Sync = (() => {
 
     // 0) 容错：把粘贴的链接 / 多余空格规整成纯 ID（仅当确实能提取时才改写）
     const norm = normalizeGistId(s.gistId);
-    if (norm && norm !== s.gistId) { s.gistId = norm; DB.save(); }
+    if (norm && norm !== s.gistId) { s.gistId = norm; DB.save({ preserveSavedAt: true }); }
 
     // 1) 格式校验：手动填的 ID 必须符合服务商格式，否则视为「留空」，自动新建。
     // 这是为了防止用户填自定义名（如 20260802）导致各端各自新建、无法同步同一份数据。
     // 关键修复：此前 GitHub 误用 20 位固定长度正则，会把正确的 32 位 ID 判为「格式非法」而清空新建。
     if (s.gistId && !idRe.test(s.gistId)) {
       s.gistId = '';
-      DB.save();
+      DB.save({ preserveSavedAt: true });
     }
 
     // 2) 用户填了真实有效的 ID：尝试连接并验证，失败时报错，但绝不擅自丢弃该 ID。
@@ -177,7 +177,8 @@ window.Sync = (() => {
         const chk = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
         if (chk.ok) {
           s.baseSavedAt = DB.data.__savedAt || Date.now();
-          DB.save();
+          // preserveSavedAt：仅登记 baseSavedAt，不刷新 __savedAt，否则会被冲突检测误判为「本机有改动」
+          DB.save({ preserveSavedAt: true });
           status('已连接到现有空间');
           return s.gistId;
         }
@@ -208,7 +209,7 @@ window.Sync = (() => {
     const j = await res.json();
     s.gistId = j.id;
     s.baseSavedAt = DB.data.__savedAt || Date.now();
-    DB.save();
+    DB.save({ preserveSavedAt: true });
     status('加密同步空间已创建');
     return j.id;
   }
@@ -228,7 +229,11 @@ window.Sync = (() => {
           const rc = cj.files && cj.files[FNAME] && cj.files[FNAME].content;
           const remote = await readRemote(rc, s.token);
           const remoteBase = remote && (remote.__savedAt || 0);
-          if (remote && !force && s.baseSavedAt && remoteBase !== s.baseSavedAt) {
+          // 仅当「本机确有未上传改动」且「远端时间戳与我的基线不一致」才算冲突。
+          // 否则若本机无改动(localDirty=false)而被旧的 baseSavedAt 错位误判为冲突，会自动上传被卡死；
+          // 加上 localDirty 前提后，无改动的设备永远不会被冲突拦截，自动同步得以持续。
+          const localDirty = (DB.data.__savedAt || 0) > (s.baseSavedAt || 0);
+          if (remote && !force && s.baseSavedAt && localDirty && remoteBase !== s.baseSavedAt) {
             status('云端已有其他设备更新，请先「下载同步」避免覆盖', 'warn');
             throw new Error('conflict');
           }
@@ -287,17 +292,18 @@ window.Sync = (() => {
       // 复用 readRemote：能解密则返回数据；token 不匹配/数据损坏（envelope 解不开）或格式错误均返回 null，绝不把加密信封当真实数据导入覆盖本地
       const data = await readRemote(content, s.token);
       if (!data) throw new Error('解密失败：若更换过 Token，请用原 Token 下载，或本地重新连接');
-      DB.importJSON(JSON.stringify(data));                 // 内部会 save()
-      // 关键修复：下载后必须保留远端时间戳，否则 importJSON 会刷新 __savedAt 为当前时间，
-      // 导致 baseSavedAt 与远端不一致，下一次同步又被误判为冲突，「请手动下载同步」提示永不消失。
       const remoteBase = data.__savedAt || 0;
+      // 关键修复：用「保留远端时间戳 + 静默(不触发自动上传)」一次性导入。
+      // 之前先无参 importJSON(刷新 __savedAt 并触发自动上传)，再二次导入，最后又用普通 save 把 __savedAt 抹成当前时间，
+      // 导致 baseSavedAt 与 __savedAt 永远对不上 → 每次被误判冲突、自动同步被 stopAutoPull 关掉、小字消不掉。
       DB.importJSON(JSON.stringify(data), { preserveSavedAt: true, silent: true });
 
       // importJSON 会替换整个 DB.data，同步配置对象也变了，需要重新取并更新 baseSavedAt
       const s2 = cfg();
       s2.baseSavedAt = remoteBase;
       s2.lastSync = Date.now();
-      DB.save({ silent: true });
+      // 务必 preserveSavedAt：保证 __savedAt === baseSavedAt === remoteBase，闭环不再误判冲突
+      DB.save({ preserveSavedAt: true, silent: true });
 
       if (App && App.boot) App.boot();
       status((quiet ? '已自动同步' : '已下载同步') + ' · ' + U.fmtTime(s2.lastSync));

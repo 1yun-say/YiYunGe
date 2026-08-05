@@ -1233,7 +1233,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-05T05:24:48.750Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-05T05:49:31.910Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -2639,14 +2639,14 @@ window.Sync = (() => {
 
     // 0) 容错：把粘贴的链接 / 多余空格规整成纯 ID（仅当确实能提取时才改写）
     const norm = normalizeGistId(s.gistId);
-    if (norm && norm !== s.gistId) { s.gistId = norm; DB.save(); }
+    if (norm && norm !== s.gistId) { s.gistId = norm; DB.save({ preserveSavedAt: true }); }
 
     // 1) 格式校验：手动填的 ID 必须符合服务商格式，否则视为「留空」，自动新建。
     // 这是为了防止用户填自定义名（如 20260802）导致各端各自新建、无法同步同一份数据。
     // 关键修复：此前 GitHub 误用 20 位固定长度正则，会把正确的 32 位 ID 判为「格式非法」而清空新建。
     if (s.gistId && !idRe.test(s.gistId)) {
       s.gistId = '';
-      DB.save();
+      DB.save({ preserveSavedAt: true });
     }
 
     // 2) 用户填了真实有效的 ID：尝试连接并验证，失败时报错，但绝不擅自丢弃该 ID。
@@ -2657,7 +2657,8 @@ window.Sync = (() => {
         const chk = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
         if (chk.ok) {
           s.baseSavedAt = DB.data.__savedAt || Date.now();
-          DB.save();
+          // preserveSavedAt：仅登记 baseSavedAt，不刷新 __savedAt，否则会被冲突检测误判为「本机有改动」
+          DB.save({ preserveSavedAt: true });
           status('已连接到现有空间');
           return s.gistId;
         }
@@ -2688,7 +2689,7 @@ window.Sync = (() => {
     const j = await res.json();
     s.gistId = j.id;
     s.baseSavedAt = DB.data.__savedAt || Date.now();
-    DB.save();
+    DB.save({ preserveSavedAt: true });
     status('加密同步空间已创建');
     return j.id;
   }
@@ -2708,7 +2709,11 @@ window.Sync = (() => {
           const rc = cj.files && cj.files[FNAME] && cj.files[FNAME].content;
           const remote = await readRemote(rc, s.token);
           const remoteBase = remote && (remote.__savedAt || 0);
-          if (remote && !force && s.baseSavedAt && remoteBase !== s.baseSavedAt) {
+          // 仅当「本机确有未上传改动」且「远端时间戳与我的基线不一致」才算冲突。
+          // 否则若本机无改动(localDirty=false)而被旧的 baseSavedAt 错位误判为冲突，会自动上传被卡死；
+          // 加上 localDirty 前提后，无改动的设备永远不会被冲突拦截，自动同步得以持续。
+          const localDirty = (DB.data.__savedAt || 0) > (s.baseSavedAt || 0);
+          if (remote && !force && s.baseSavedAt && localDirty && remoteBase !== s.baseSavedAt) {
             status('云端已有其他设备更新，请先「下载同步」避免覆盖', 'warn');
             throw new Error('conflict');
           }
@@ -2767,17 +2772,18 @@ window.Sync = (() => {
       // 复用 readRemote：能解密则返回数据；token 不匹配/数据损坏（envelope 解不开）或格式错误均返回 null，绝不把加密信封当真实数据导入覆盖本地
       const data = await readRemote(content, s.token);
       if (!data) throw new Error('解密失败：若更换过 Token，请用原 Token 下载，或本地重新连接');
-      DB.importJSON(JSON.stringify(data));                 // 内部会 save()
-      // 关键修复：下载后必须保留远端时间戳，否则 importJSON 会刷新 __savedAt 为当前时间，
-      // 导致 baseSavedAt 与远端不一致，下一次同步又被误判为冲突，「请手动下载同步」提示永不消失。
       const remoteBase = data.__savedAt || 0;
+      // 关键修复：用「保留远端时间戳 + 静默(不触发自动上传)」一次性导入。
+      // 之前先无参 importJSON(刷新 __savedAt 并触发自动上传)，再二次导入，最后又用普通 save 把 __savedAt 抹成当前时间，
+      // 导致 baseSavedAt 与 __savedAt 永远对不上 → 每次被误判冲突、自动同步被 stopAutoPull 关掉、小字消不掉。
       DB.importJSON(JSON.stringify(data), { preserveSavedAt: true, silent: true });
 
       // importJSON 会替换整个 DB.data，同步配置对象也变了，需要重新取并更新 baseSavedAt
       const s2 = cfg();
       s2.baseSavedAt = remoteBase;
       s2.lastSync = Date.now();
-      DB.save({ silent: true });
+      // 务必 preserveSavedAt：保证 __savedAt === baseSavedAt === remoteBase，闭环不再误判冲突
+      DB.save({ preserveSavedAt: true, silent: true });
 
       if (App && App.boot) App.boot();
       status((quiet ? '已自动同步' : '已下载同步') + ' · ' + U.fmtTime(s2.lastSync));
@@ -7928,6 +7934,8 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.0.2`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>热修复：云同步自动实时同步彻底修复（小字反复出现 / 必须手动点下载的根因）</b>：v2.0.1 的修复仍残留一处时间戳污染——<code>doPull</code> 收尾的 <code>DB.save({silent:true})</code> 未传 <code>preserveSavedAt</code>，把刚保留的远端时间戳抹成当前时间，导致 <code>__savedAt</code> 与 <code>baseSavedAt</code> 永久错位；<code>ensureGist</code> 每次 <code>DB.save()</code> 也无参、刷新 <code>__savedAt</code>，使自动上传被「本机有改动」误判为冲突而拒绝。本版：① <code>doPull</code> 一次性 <code>importJSON(preserveSavedAt+silent)</code> 后，收尾保存也 <code>preserveSavedAt</code>，保证 <code>__savedAt === baseSavedAt === 远端</code> 闭环；② <code>ensureGist</code> 全部 <code>DB.save</code> 改 <code>preserveSavedAt</code>，消除误判冲突；③ <code>push</code> 冲突检测加「本机确有未上传改动(localDirty)」前提，无改动设备永不被冲突拦截。现电脑端改完自动上传、平板端 20 秒内自动拉取，且「请手动下载同步」提示在真正下载后消失、不再反复出现。新增 <code>sync-fix-test.js</code>（11 断言全绿）回归锁死该闭环。`] },
     { ver: `v2.0.1`, date: `2026-08-05`, held: false, divider: false,
       items: [`<b>热修复：课时导入恢复 Excel 直传 + 云同步真正自动实时同步</b>：针对上线后你反馈的两个阻塞性问题紧急修复。`,
         `<b>修复：课时导入被改成 CSV 后乱码 / 识别差</b>——原先「从 Excel / CSV 导入课时」只接受 <code>.csv</code> 且用 UTF-8 读取，Excel 默认另存的 CSV 在中文 Windows 上是 GBK/GB18030，导致中文乱码；同时不支持直接传 <code>.xlsx</code>。现改为：① 文件选择同时支持 <b>.xlsx / .xls / .csv / .txt</b>；② Excel 用 XLSX 库解析并转成制表符分隔文本；③ CSV/TXT 做 UTF-8 → GB18030 → GBK 自动编码探测；④ 保留粘贴框。`,

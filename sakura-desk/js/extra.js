@@ -368,6 +368,8 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.0.2`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>热修复：云同步自动实时同步彻底修复（小字反复出现 / 必须手动点下载的根因）</b>：v2.0.1 的修复仍残留一处时间戳污染——<code>doPull</code> 收尾的 <code>DB.save({silent:true})</code> 未传 <code>preserveSavedAt</code>，把刚保留的远端时间戳抹成当前时间，导致 <code>__savedAt</code> 与 <code>baseSavedAt</code> 永久错位；<code>ensureGist</code> 每次 <code>DB.save()</code> 也无参、刷新 <code>__savedAt</code>，使自动上传被「本机有改动」误判为冲突而拒绝。本版：① <code>doPull</code> 一次性 <code>importJSON(preserveSavedAt+silent)</code> 后，收尾保存也 <code>preserveSavedAt</code>，保证 <code>__savedAt === baseSavedAt === 远端</code> 闭环；② <code>ensureGist</code> 全部 <code>DB.save</code> 改 <code>preserveSavedAt</code>，消除误判冲突；③ <code>push</code> 冲突检测加「本机确有未上传改动(localDirty)」前提，无改动设备永不被冲突拦截。现电脑端改完自动上传、平板端 20 秒内自动拉取，且「请手动下载同步」提示在真正下载后消失、不再反复出现。新增 <code>sync-fix-test.js</code>（11 断言全绿）回归锁死该闭环。`] },
     { ver: `v2.0.1`, date: `2026-08-05`, held: false, divider: false,
       items: [`<b>热修复：课时导入恢复 Excel 直传 + 云同步真正自动实时同步</b>：针对上线后你反馈的两个阻塞性问题紧急修复。`,
         `<b>修复：课时导入被改成 CSV 后乱码 / 识别差</b>——原先「从 Excel / CSV 导入课时」只接受 <code>.csv</code> 且用 UTF-8 读取，Excel 默认另存的 CSV 在中文 Windows 上是 GBK/GB18030，导致中文乱码；同时不支持直接传 <code>.xlsx</code>。现改为：① 文件选择同时支持 <b>.xlsx / .xls / .csv / .txt</b>；② Excel 用 XLSX 库解析并转成制表符分隔文本；③ CSV/TXT 做 UTF-8 → GB18030 → GBK 自动编码探测；④ 保留粘贴框。`,
