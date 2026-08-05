@@ -156,6 +156,12 @@ window.Sync = (() => {
      - __savedAt 取两端较大值，保证时间戳单调、基线对得上。
   */
   const SYNC_ARRAYS = ['students', 'teachers', 'lessons', 'todos', 'events', 'templates', 'phrases'];
+  // 墓碑结构空壳（与 store.blankDeleted 的键保持一致），避免合并时漏字段
+  function emptyDeleted() {
+    const o = {};
+    for (const c of SYNC_ARRAYS) o[c] = {};
+    return o;
+  }
   function mergeDocs(local, remote, direction) {
     const merged = Object.assign({}, local);           // 浅拷贝：保留本机 settings 等所有字段
     const r = remote || {};
@@ -177,6 +183,39 @@ window.Sync = (() => {
       }
       merged[key] = out;
     }
+    // ---- 墓碑（tombstone）合并：让「删除」也能跨端传播 ----
+    // 两端各集合的 deleted 按 id 取较大 delAt（删除时间更新者胜出，避免复活后又被旧删除时间误删）；
+    // 再据此剔除非复活的记录，使 A 端删的记录在 B/C 端合并时同样消失。
+    const ld = (local && local.deleted) || {};
+    const rd = (remote && remote.deleted) || {};
+    const mergedDeleted = emptyDeleted();
+    for (const col of SYNC_ARRAYS) {
+      const lm = (ld[col] && typeof ld[col] === 'object') ? ld[col] : {};
+      const rm = (rd[col] && typeof rd[col] === 'object') ? rd[col] : {};
+      for (const id of Object.keys(lm).concat(Object.keys(rm))) {
+        const a = lm[id] || 0, b = rm[id] || 0;
+        mergedDeleted[col][id] = Math.max(a, b);
+      }
+    }
+    // 应用墓碑：被删除的记录从合并结果剔除，除非该记录比删除时间更新
+    // （误删后、同步前又改动，或重新录入使 createdAt/ _mt 大于 delAt → 复活并移除墓碑）。
+    for (const col of SYNC_ARRAYS) {
+      const delMap = mergedDeleted[col] || {};
+      const out = [];
+      for (const it of (merged[col] || [])) {
+        if (!it || it.id == null) { out.push(it); continue; }
+        const delAt = delMap[String(it.id)] || 0;
+        if (!delAt) { out.push(it); continue; }
+        const bornAt = it._mt || it.createdAt || 0;
+        if (bornAt > delAt) {
+          delete mergedDeleted[col][String(it.id)];   // 复活：移除墓碑，保留记录
+          out.push(it);
+        }
+        // 否则（已删除）剔除
+      }
+      merged[col] = out;
+    }
+    merged.deleted = mergedDeleted;
     const li = (local && local.histIncome && typeof local.histIncome === 'object') ? local.histIncome : {};
     const ri = (r && r.histIncome && typeof r.histIncome === 'object') ? r.histIncome : {};
     const hi = Object.assign({}, li);

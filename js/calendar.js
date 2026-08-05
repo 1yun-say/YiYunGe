@@ -290,7 +290,7 @@ const Calendar = (() => {
       else if (a.dataset.act === 'delEvent') {
         const id = a.closest('[data-eid]').dataset.eid;
         U.confirm('删除这条日程？', () => {
-          DB.data.events = DB.data.events.filter(y => y.id !== id); DB.save(); render(); U.toast('已删除日程');
+          DB.removeRecord('events', id); DB.save(); render(); U.toast('已删除日程');
         }, '删除');
       }
     });

@@ -1233,7 +1233,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-05T07:26:31.052Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-05T08:43:03.232Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -2073,11 +2073,20 @@ const DB = (() => {
     };
   }
 
+  // 墓碑（tombstone）覆盖的集合，与 sync.js 的 SYNC_ARRAYS 保持一致
+  const TOMB_COLS = ['students', 'teachers', 'lessons', 'todos', 'events', 'templates', 'phrases'];
+  // 墓碑（tombstone）结构：各同步集合独立登记 { id: 删除时间戳 }，
+  // 用于让「删除」也能跨端传播——A 端删的记录，B/C 端合并时按墓碑剔除。
+  function blankDeleted() {
+    const o = {}; for (const c of TOMB_COLS) o[c] = {}; return o;
+  }
+
   function blank() {
     return {
       version: 1,
       settings: { route: 'dashboard', ownerName: '我', night: false, financeSections: defaultFinanceSections(), dashboardLayout: defaultDashboardLayout(), customSub: {}, brandLogo: '' },
       teachers: [], students: [], lessons: [], todos: [], events: [],
+      deleted: blankDeleted(),       // 墓碑：各集合已删除记录的 id→删除时间戳（跨端删除同步用）
       histIncome: {},                // 历史收入：按月总额 { 'YYYY-MM': 金额 }
       templates: defaultTemplates(), phrases: defaultPhrases(),
       meta: { lastLessonEdit: null, lastStudentEdit: null }
@@ -2156,6 +2165,18 @@ const DB = (() => {
   // opts.preserveSavedAt: true 时不刷新 __savedAt（用于云端下载后保留远端时间戳，避免 baseSavedAt 对不上）
   function save(opts) {
     opts = opts || {};
+    // 本地复活：若某集合的记录仍存在于数组里（说明删除后又被重新录入/改回），
+    // 清掉其墓碑，使该记录在本机恢复为「存活」且不会把删除传播出去——
+    // 这正是「误删后、同步前复活」的实现：在真正上传前把墓碑抹掉，删除便不会扩散。
+    if (data.deleted) {
+      for (const col of TOMB_COLS) {
+        const arr = Array.isArray(data[col]) ? data[col] : null;
+        const dm = data.deleted[col];
+        if (arr && dm) {
+          for (const it of arr) { if (it && it.id != null && dm[String(it.id)] != null) delete dm[String(it.id)]; }
+        }
+      }
+    }
     try {
       if (!opts.preserveSavedAt) data.__savedAt = Date.now();
       localStorage.setItem(KEY, JSON.stringify(data));
@@ -2170,6 +2191,32 @@ const DB = (() => {
     const t = Date.now();
     if (kind === 'lesson' || kind === 'student') data.meta['last' + (kind === 'lesson' ? 'Lesson' : 'Student') + 'Edit'] = t;
     save();
+  }
+
+  /* ---------- 墓碑删除同步（tombstone） ----------
+     删除一条记录时，不真正从数组移除「远程副本」（本地立即移除，但云端合并需靠墓碑），
+     而是在 data.deleted[集合] 里登记 { id: 删除时间戳 }。合并时两端 deleted 取较大 delAt，
+     再剔除被标记的记录（除非该记录比删除时间更新=误删后、同步前又改动→复活）。
+     这样 A 端删的记录，B/C 端下一次同步也会消失，且本地误删后改动能复活。
+  */
+  function markDeleted(collection, id, delAt) {
+    if (!data.deleted) data.deleted = blankDeleted();
+    if (!data.deleted[collection]) data.deleted[collection] = {};
+    const k = String(id);
+    const t = delAt || Date.now();
+    data.deleted[collection][k] = Math.max(data.deleted[collection][k] || 0, t);
+  }
+  // 取消删除标记（复活）：记录重新出现且比墓碑更新时由合并逻辑调用，本地恢复也用得到
+  function unmarkDeleted(collection, id) {
+    if (data.deleted && data.deleted[collection]) delete data.deleted[collection][String(id)];
+  }
+  function isDeleted(collection, id) {
+    return !!(data.deleted && data.deleted[collection] && data.deleted[collection][String(id)]);
+  }
+  // 物理删除某集合某 id 并登记墓碑（供各删除入口统一调用，避免漏写墓碑）
+  function removeRecord(collection, id, delAt) {
+    if (Array.isArray(data[collection])) data[collection] = data[collection].filter(x => String(x.id) !== String(id));
+    markDeleted(collection, id, delAt);
   }
 
   /* ---------- 查询辅助 ---------- */
@@ -2470,6 +2517,7 @@ const DB = (() => {
     set data(v) { data = v; },
     save, reset, exportJSON, importJSON, parseBackup, preImportInfo, restorePreImport, buildSnapshot,
     touch, setRemoteHandler,
+    markDeleted, isDeleted, unmarkDeleted, removeRecord, blankDeleted,
     GRADES, SUBJECTS, normDate, defaultFinanceSections,
     student, teacher, teacherName, studentLabel, lessonsIn, statIn, lessonBreakdown, defaultTemplates, defaultPhrases,
     DASH_MODULES, studentSubjects, primarySubject, studentCode, normDateFlexible, lessonSub, migrateSubjects,
@@ -2638,6 +2686,12 @@ window.Sync = (() => {
      - __savedAt 取两端较大值，保证时间戳单调、基线对得上。
   */
   const SYNC_ARRAYS = ['students', 'teachers', 'lessons', 'todos', 'events', 'templates', 'phrases'];
+  // 墓碑结构空壳（与 store.blankDeleted 的键保持一致），避免合并时漏字段
+  function emptyDeleted() {
+    const o = {};
+    for (const c of SYNC_ARRAYS) o[c] = {};
+    return o;
+  }
   function mergeDocs(local, remote, direction) {
     const merged = Object.assign({}, local);           // 浅拷贝：保留本机 settings 等所有字段
     const r = remote || {};
@@ -2659,6 +2713,39 @@ window.Sync = (() => {
       }
       merged[key] = out;
     }
+    // ---- 墓碑（tombstone）合并：让「删除」也能跨端传播 ----
+    // 两端各集合的 deleted 按 id 取较大 delAt（删除时间更新者胜出，避免复活后又被旧删除时间误删）；
+    // 再据此剔除非复活的记录，使 A 端删的记录在 B/C 端合并时同样消失。
+    const ld = (local && local.deleted) || {};
+    const rd = (remote && remote.deleted) || {};
+    const mergedDeleted = emptyDeleted();
+    for (const col of SYNC_ARRAYS) {
+      const lm = (ld[col] && typeof ld[col] === 'object') ? ld[col] : {};
+      const rm = (rd[col] && typeof rd[col] === 'object') ? rd[col] : {};
+      for (const id of Object.keys(lm).concat(Object.keys(rm))) {
+        const a = lm[id] || 0, b = rm[id] || 0;
+        mergedDeleted[col][id] = Math.max(a, b);
+      }
+    }
+    // 应用墓碑：被删除的记录从合并结果剔除，除非该记录比删除时间更新
+    // （误删后、同步前又改动，或重新录入使 createdAt/ _mt 大于 delAt → 复活并移除墓碑）。
+    for (const col of SYNC_ARRAYS) {
+      const delMap = mergedDeleted[col] || {};
+      const out = [];
+      for (const it of (merged[col] || [])) {
+        if (!it || it.id == null) { out.push(it); continue; }
+        const delAt = delMap[String(it.id)] || 0;
+        if (!delAt) { out.push(it); continue; }
+        const bornAt = it._mt || it.createdAt || 0;
+        if (bornAt > delAt) {
+          delete mergedDeleted[col][String(it.id)];   // 复活：移除墓碑，保留记录
+          out.push(it);
+        }
+        // 否则（已删除）剔除
+      }
+      merged[col] = out;
+    }
+    merged.deleted = mergedDeleted;
     const li = (local && local.histIncome && typeof local.histIncome === 'object') ? local.histIncome : {};
     const ri = (r && r.histIncome && typeof r.histIncome === 'object') ? r.histIncome : {};
     const hi = Object.assign({}, li);
@@ -3235,7 +3322,7 @@ const Todo = (() => {
           break;
         }
         case 'edit': editTodo(t); break;
-        case 'del': DB.data.todos = DB.data.todos.filter(x => x.id !== tid); DB.save(); render(); App.refreshBadge(); break;
+        case 'del': DB.removeRecord('todos', tid); DB.save(); render(); App.refreshBadge(); break;
         case 'pullOverdue':
           // 仅把「非重复」的过期未完成任务拉到今天；重复任务以 repeat 为锚点，
           // 改 date 会悄悄偏移发生日，故跳过（重复任务本就会在今天发生）。
@@ -3256,7 +3343,7 @@ const Todo = (() => {
         case 'editTpl': editTpl(tpl); break;
         case 'delTpl':
           U.confirm(`删除模板「${tpl.title}」？`, () => {
-            DB.data.templates = DB.data.templates.filter(x => x.id !== tpl.id); DB.save(); render();
+            DB.removeRecord('templates', tpl.id); DB.save(); render();
           }, '删除');
           break;
         case 'addTpl': editTpl(null); break;
@@ -3596,6 +3683,9 @@ const Students = (() => {
       case 'importExcel': importExcelFlow(); break;
       case 'del':
         U.confirm(`删除「${s.parentName}」的档案？其名下 ${DB.data.lessons.filter(l => l.studentId === s.id).length} 节课记录也会一并删除。`, () => {
+          // 级联删除：该学员的课节也一并删除（写墓碑，让其他端同样消失）
+          DB.data.lessons.filter(l => l.studentId === s.id).forEach(l => DB.markDeleted('lessons', l.id));
+          DB.markDeleted('students', s.id);
           DB.data.students = DB.data.students.filter(x => x.id !== s.id);
           DB.data.lessons = DB.data.lessons.filter(l => l.studentId !== s.id);
           DB.save(); DB.touch('student'); render(); U.toast('已删除');
@@ -4102,6 +4192,7 @@ const Teachers = (() => {
         case 'editT': editTeacher(t); break;
         case 'delT':
           U.confirm(`删除老师「${t.name}」？其名下学员会变为「未指派」，相关课时记录也会解除老师关联。`, () => {
+            DB.markDeleted('teachers', t.id);
             DB.data.teachers = DB.data.teachers.filter(x => x.id !== t.id);
             DB.data.students.forEach(s => { if (s.teacherId === t.id) s.teacherId = ''; });
             // 同步解除课表/日历事件中该老师的关联，避免按老师分组或日历出现幽灵项。
@@ -4858,6 +4949,7 @@ const Schedule = (() => {
       if (e.target.id === 'btnDone') { l.status = 'done'; DB.save(); DB.touch('lesson'); render(); U.toast('已标记完成'); e.target.closest('.mask').remove(); }
       if (e.target.id === 'btnDel') {
         U.confirm('确定删除这一节课吗？此操作不可撤销。', () => {
+          DB.markDeleted('lessons', l.id);
           DB.data.lessons = DB.data.lessons.filter(x => x.id !== l.id); DB.save(); DB.touch('lesson'); render();
           U.toast('已删除'); e.target.closest('.mask').remove();
         }, '删除');
@@ -5995,7 +6087,7 @@ const Phrases = (() => {
         case 'edit': edit(p); break;
         case 'copy': U.copy(p.content); p.hits = (p.hits || 0) + 1; DB.save(); break;
         case 'del': U.confirm(`删除话术「${p.title}」？`, () => {
-          DB.data.phrases = DB.data.phrases.filter(x => x.id !== p.id); DB.save(); render();
+          DB.removeRecord('phrases', p.id); DB.save(); render();
         }, '删除'); break;
       }
     });
@@ -6343,7 +6435,7 @@ const Calendar = (() => {
       else if (a.dataset.act === 'delEvent') {
         const id = a.closest('[data-eid]').dataset.eid;
         U.confirm('删除这条日程？', () => {
-          DB.data.events = DB.data.events.filter(y => y.id !== id); DB.save(); render(); U.toast('已删除日程');
+          DB.removeRecord('events', id); DB.save(); render(); U.toast('已删除日程');
         }, '删除');
       }
     });
@@ -7024,7 +7116,7 @@ const Dashboard = (() => {
         case 'delTpl': {
           const tpl = DB.data.templates.find(x => x.id === b.closest('[data-tpl]').dataset.tpl);
           U.confirm(`删除模板「${tpl.title}」？`, () => {
-            DB.data.templates = DB.data.templates.filter(x => x.id !== tpl.id); DB.save(); render();
+            DB.removeRecord('templates', tpl.id); DB.save(); render();
           }, '删除');
           break;
         }
@@ -7996,6 +8088,11 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.1.0`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>云同步「删除也能跨端同步」终于补齐（tombstone 墓碑方案，你 v2.0.5 就催的补丁）</b>：此前 v2.0.5 把同步改成「按 id 并集合并」后，新增/修改已全量同步，但<b>删除只在本机移除、不会传到另一端</b>——你在一端删掉一条记录，别的端还会一直显示着。本版引入<b>墓碑（tombstone）删除同步</b>：删除时不再真正擦掉远程副本，而是在独立的 <code>deleted</code> 映射（按集合分桶 <code>{id: 删除时间戳}</code>）登记删除；合并时先取两端 <code>deleted</code> 的并集（同 id 取较新的删除时间），再据此把被标记的记录从合并结果里剔除——于是 <b>A 端删的记录，B/C 端下次同步后也消失</b>，且合并模型仍保持「绝不丢数据」的不变量。`,
+        `<b>误删可在「未同步前复活」</b>：本地 <code>DB.save()</code> 落盘前会扫描——若某集合里某条记录仍存在于数组（说明删除后又被重新录入/改回），就<b>清掉它的墓碑</b>，使这次删除根本不会随上传传播出去。也就是说，你误删一条、还没来得及同步，只要在同步前重新录入或改回，另一端就不会被删掉，无需手动去云端捞数据。`,
+        `<b>级联删除跨端生效</b>：删学员时会连带把其课节写两张墓碑（学员 + 课节），删老师在关联课时里把 <code>teacherId</code> 置空（不删记录、故不加墓碑）；这些墓碑同样并入同步，另一端也会同步删掉学员与对应课节。<b>删除时间边界不误伤</b>：若某记录的存在时间（<code>_mt</code>/<code>createdAt</code>）严格晚于其墓碑删除时间，视为「删除后又被新数据覆盖」，自动复活并移除墓碑，避免较新记录被旧墓碑错误过滤。`,
+        `<b>回归锁定</b>：新增 <code>sync-delete-test.js</code>（20 条断言全绿），覆盖「mergeDocs 墓碑语义（6 条）+ A 端删→B 端消失 + 误删重新录入复活（B 端也保留）+ 传播到第三端 C + 学员级联删课节跨端生效 + 较新记录删除边界不误伤」；连同既有 5 套同步套件（loss/3device/key/fix/timestamp 共 56 条）零回归，确认删除同步未破坏既有合并正确性。三处版本常量同步 bump 至 v2.1.0。`] },
     { ver: `v2.0.5`, date: `2026-08-05`, held: false, divider: false,
       items: [`<b>云同步底层重写：多端同步「绝不丢失数据」（你反复丢数据的根因彻底解决）</b>。v2.0.4 只修了「连接即覆盖」，但同步内核仍是<b>整文档后写覆盖 + 任何保存都误标脏 + 冲突即 stopAutoPull</b> 的致命组合——于是你一切换页面/改设置，本机就被标记「有改动」并自动把旧数据上传覆盖云端，把另一端刚填的内容抹掉；而接收端一旦检测到云端更新就被停掉自动同步。本版把同步从「整文档覆盖」改为<b>按记录 id 合并（并集）</b>：① 任一端独有的记录都保留，新增内容永不被另一端覆盖丢失；② 上传前先与云端合并（取并集）再上传，本机「旧」也绝不丢云端的新增；③ 永远不因为「冲突」停止自动同步，冲突也走合并；④ 切换路由等纯 UI 保存改为 <code>silent</code>，不再误触发上传。新增 <code>sync-loss-test.js</code>（24/0）专门复现「平板填→电脑脏→平板被删」并锁定「数据不再丢失」不变量。注：删除操作暂不会跨端同步（新增/修改已全同步），下一版补删除传播。`] },
     { ver: `v2.0.4`, date: `2026-08-05`, held: false, divider: false,

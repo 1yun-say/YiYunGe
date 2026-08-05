@@ -59,7 +59,7 @@ const Phrases = (() => {
         case 'edit': edit(p); break;
         case 'copy': U.copy(p.content); p.hits = (p.hits || 0) + 1; DB.save(); break;
         case 'del': U.confirm(`删除话术「${p.title}」？`, () => {
-          DB.data.phrases = DB.data.phrases.filter(x => x.id !== p.id); DB.save(); render();
+          DB.removeRecord('phrases', p.id); DB.save(); render();
         }, '删除'); break;
       }
     });

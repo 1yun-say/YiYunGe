@@ -316,7 +316,7 @@ const Todo = (() => {
           break;
         }
         case 'edit': editTodo(t); break;
-        case 'del': DB.data.todos = DB.data.todos.filter(x => x.id !== tid); DB.save(); render(); App.refreshBadge(); break;
+        case 'del': DB.removeRecord('todos', tid); DB.save(); render(); App.refreshBadge(); break;
         case 'pullOverdue':
           // 仅把「非重复」的过期未完成任务拉到今天；重复任务以 repeat 为锚点，
           // 改 date 会悄悄偏移发生日，故跳过（重复任务本就会在今天发生）。
@@ -337,7 +337,7 @@ const Todo = (() => {
         case 'editTpl': editTpl(tpl); break;
         case 'delTpl':
           U.confirm(`删除模板「${tpl.title}」？`, () => {
-            DB.data.templates = DB.data.templates.filter(x => x.id !== tpl.id); DB.save(); render();
+            DB.removeRecord('templates', tpl.id); DB.save(); render();
           }, '删除');
           break;
         case 'addTpl': editTpl(null); break;

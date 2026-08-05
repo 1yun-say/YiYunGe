@@ -186,6 +186,9 @@ const Students = (() => {
       case 'importExcel': importExcelFlow(); break;
       case 'del':
         U.confirm(`删除「${s.parentName}」的档案？其名下 ${DB.data.lessons.filter(l => l.studentId === s.id).length} 节课记录也会一并删除。`, () => {
+          // 级联删除：该学员的课节也一并删除（写墓碑，让其他端同样消失）
+          DB.data.lessons.filter(l => l.studentId === s.id).forEach(l => DB.markDeleted('lessons', l.id));
+          DB.markDeleted('students', s.id);
           DB.data.students = DB.data.students.filter(x => x.id !== s.id);
           DB.data.lessons = DB.data.lessons.filter(l => l.studentId !== s.id);
           DB.save(); DB.touch('student'); render(); U.toast('已删除');

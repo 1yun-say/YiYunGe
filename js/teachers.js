@@ -85,6 +85,7 @@ const Teachers = (() => {
         case 'editT': editTeacher(t); break;
         case 'delT':
           U.confirm(`删除老师「${t.name}」？其名下学员会变为「未指派」，相关课时记录也会解除老师关联。`, () => {
+            DB.markDeleted('teachers', t.id);
             DB.data.teachers = DB.data.teachers.filter(x => x.id !== t.id);
             DB.data.students.forEach(s => { if (s.teacherId === t.id) s.teacherId = ''; });
             // 同步解除课表/日历事件中该老师的关联，避免按老师分组或日历出现幽灵项。

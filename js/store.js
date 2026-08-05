@@ -213,11 +213,20 @@ const DB = (() => {
     };
   }
 
+  // 墓碑（tombstone）覆盖的集合，与 sync.js 的 SYNC_ARRAYS 保持一致
+  const TOMB_COLS = ['students', 'teachers', 'lessons', 'todos', 'events', 'templates', 'phrases'];
+  // 墓碑（tombstone）结构：各同步集合独立登记 { id: 删除时间戳 }，
+  // 用于让「删除」也能跨端传播——A 端删的记录，B/C 端合并时按墓碑剔除。
+  function blankDeleted() {
+    const o = {}; for (const c of TOMB_COLS) o[c] = {}; return o;
+  }
+
   function blank() {
     return {
       version: 1,
       settings: { route: 'dashboard', ownerName: '我', night: false, financeSections: defaultFinanceSections(), dashboardLayout: defaultDashboardLayout(), customSub: {}, brandLogo: '' },
       teachers: [], students: [], lessons: [], todos: [], events: [],
+      deleted: blankDeleted(),       // 墓碑：各集合已删除记录的 id→删除时间戳（跨端删除同步用）
       histIncome: {},                // 历史收入：按月总额 { 'YYYY-MM': 金额 }
       templates: defaultTemplates(), phrases: defaultPhrases(),
       meta: { lastLessonEdit: null, lastStudentEdit: null }
@@ -296,6 +305,18 @@ const DB = (() => {
   // opts.preserveSavedAt: true 时不刷新 __savedAt（用于云端下载后保留远端时间戳，避免 baseSavedAt 对不上）
   function save(opts) {
     opts = opts || {};
+    // 本地复活：若某集合的记录仍存在于数组里（说明删除后又被重新录入/改回），
+    // 清掉其墓碑，使该记录在本机恢复为「存活」且不会把删除传播出去——
+    // 这正是「误删后、同步前复活」的实现：在真正上传前把墓碑抹掉，删除便不会扩散。
+    if (data.deleted) {
+      for (const col of TOMB_COLS) {
+        const arr = Array.isArray(data[col]) ? data[col] : null;
+        const dm = data.deleted[col];
+        if (arr && dm) {
+          for (const it of arr) { if (it && it.id != null && dm[String(it.id)] != null) delete dm[String(it.id)]; }
+        }
+      }
+    }
     try {
       if (!opts.preserveSavedAt) data.__savedAt = Date.now();
       localStorage.setItem(KEY, JSON.stringify(data));
@@ -310,6 +331,32 @@ const DB = (() => {
     const t = Date.now();
     if (kind === 'lesson' || kind === 'student') data.meta['last' + (kind === 'lesson' ? 'Lesson' : 'Student') + 'Edit'] = t;
     save();
+  }
+
+  /* ---------- 墓碑删除同步（tombstone） ----------
+     删除一条记录时，不真正从数组移除「远程副本」（本地立即移除，但云端合并需靠墓碑），
+     而是在 data.deleted[集合] 里登记 { id: 删除时间戳 }。合并时两端 deleted 取较大 delAt，
+     再剔除被标记的记录（除非该记录比删除时间更新=误删后、同步前又改动→复活）。
+     这样 A 端删的记录，B/C 端下一次同步也会消失，且本地误删后改动能复活。
+  */
+  function markDeleted(collection, id, delAt) {
+    if (!data.deleted) data.deleted = blankDeleted();
+    if (!data.deleted[collection]) data.deleted[collection] = {};
+    const k = String(id);
+    const t = delAt || Date.now();
+    data.deleted[collection][k] = Math.max(data.deleted[collection][k] || 0, t);
+  }
+  // 取消删除标记（复活）：记录重新出现且比墓碑更新时由合并逻辑调用，本地恢复也用得到
+  function unmarkDeleted(collection, id) {
+    if (data.deleted && data.deleted[collection]) delete data.deleted[collection][String(id)];
+  }
+  function isDeleted(collection, id) {
+    return !!(data.deleted && data.deleted[collection] && data.deleted[collection][String(id)]);
+  }
+  // 物理删除某集合某 id 并登记墓碑（供各删除入口统一调用，避免漏写墓碑）
+  function removeRecord(collection, id, delAt) {
+    if (Array.isArray(data[collection])) data[collection] = data[collection].filter(x => String(x.id) !== String(id));
+    markDeleted(collection, id, delAt);
   }
 
   /* ---------- 查询辅助 ---------- */
@@ -610,6 +657,7 @@ const DB = (() => {
     set data(v) { data = v; },
     save, reset, exportJSON, importJSON, parseBackup, preImportInfo, restorePreImport, buildSnapshot,
     touch, setRemoteHandler,
+    markDeleted, isDeleted, unmarkDeleted, removeRecord, blankDeleted,
     GRADES, SUBJECTS, normDate, defaultFinanceSections,
     student, teacher, teacherName, studentLabel, lessonsIn, statIn, lessonBreakdown, defaultTemplates, defaultPhrases,
     DASH_MODULES, studentSubjects, primarySubject, studentCode, normDateFlexible, lessonSub, migrateSubjects,

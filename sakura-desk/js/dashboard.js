@@ -468,7 +468,7 @@ const Dashboard = (() => {
         case 'delTpl': {
           const tpl = DB.data.templates.find(x => x.id === b.closest('[data-tpl]').dataset.tpl);
           U.confirm(`删除模板「${tpl.title}」？`, () => {
-            DB.data.templates = DB.data.templates.filter(x => x.id !== tpl.id); DB.save(); render();
+            DB.removeRecord('templates', tpl.id); DB.save(); render();
           }, '删除');
           break;
         }
