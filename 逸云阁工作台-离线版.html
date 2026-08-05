@@ -316,7 +316,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .wh-cell.today b{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--pink-500);color:#fff;margin-top:2px}
 .week-body{display:grid;grid-template-columns:56px repeat(7,1fr);position:relative;max-height:calc(100vh - 300px);overflow:auto}
 .time-col{border-right:1px solid var(--line)}
-.time-slot{height:30px;font-size:10.5px;color:var(--ink-3);text-align:right;padding-right:6px;position:relative;top:-7px}
+.time-slot{height:30px;font-size:10.5px;color:var(--ink-3);text-align:right;padding-right:6px;display:flex;align-items:center;justify-content:flex-end;line-height:30px;box-sizing:border-box}
 .day-col{border-left:1px solid var(--line);position:relative}
 .day-col.today{background:rgba(255,232,241,.4)}
 .slot{height:30px;border-bottom:1px dashed var(--pink-75)}
@@ -353,8 +353,9 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-m);overflow:hidden}
 .mg-head{background:var(--pink-75);padding:8px;text-align:center;font-size:12px;color:var(--ink-2)}
 .mg-cell{background:#fff;min-height:104px;padding:6px;position:relative}
-.mg-cell.out{background:var(--pink-50);opacity:.6}
+.mg-cell.out{background:#faf6f7;color:var(--ink-3)}
 .mg-cell.today{background:var(--pink-100)}
+.mg-cell.out .mg-date{color:var(--ink-3)}
 .mg-date{font-size:12px;color:var(--ink-2);font-weight:600;margin-bottom:4px}
 .mg-item{font-size:10.5px;padding:2px 5px;border-radius:5px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;border-left:3px solid}
 .mg-item.imported{font-style:italic;color:#666}
@@ -500,10 +501,11 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .link-rel svg{width:12px;height:12px}
 
 /* 更新日志 */
-.log-ver{font-size:12px;color:var(--pink-600);font-weight:700;margin-bottom:3px}
-.log-date{font-size:11px;color:var(--ink-3);margin-bottom:8px}
+.log-head{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+.log-ver{font-size:13px;color:var(--pink-600);font-weight:700}
+.log-date{font-size:11px;color:var(--ink-3)}
 .log-list{margin:0;padding-left:18px}
-.log-list li{font-size:13px;margin-bottom:5px;line-height:1.6}
+.log-list li{font-size:13px;margin-bottom:9px;line-height:1.7;color:var(--ink-1);word-break:break-word;overflow-wrap:anywhere}
 
 /* 财务板块管理 */
 .fm-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-s);background:#fff;margin-bottom:8px}
@@ -620,11 +622,11 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .cal-month-cell{background:#fff;border:1px solid var(--line);border-radius:10px;padding:5px 5px 4px;min-height:84px;display:flex;flex-direction:column;gap:3px;cursor:pointer;position:relative;transition:.15s}
 .cal-month-cell:hover{border-color:var(--pink-300)}
 .cal-month-cell.out{background:#faf6f7;color:var(--ink-3)}
-.cal-month-cell.today{outline:2px solid var(--pink-500);outline-offset:-2px}
+.cal-month-cell.today{background:linear-gradient(135deg,#fff,#fff1f6);border:2px solid var(--pink-400);box-shadow:0 3px 12px rgba(249,112,157,.20);padding:6px 6px 5px}
 .cal-month-cell.sel{background:linear-gradient(135deg,#ffe1eb,#ffd0e0);border-color:var(--pink-400)}
 .cal-month-dn{font-size:13.5px;font-weight:700;color:var(--ink-1)}
 .cal-month-cell.out .cal-month-dn{color:var(--ink-3)}
-.cal-month-cell.today .cal-month-dn{color:var(--pink-600)}
+.cal-month-cell.today .cal-month-dn{color:var(--pink-600);font-size:15px}
 .cal-month-events{flex:1;display:flex;flex-direction:column;gap:2px;overflow:hidden}
 .cal-month-ev{display:flex;align-items:center;gap:4px;font-size:10.5px;background:var(--pink-50);border-radius:4px;padding:1px 5px;min-width:0;cursor:pointer;height:18px}
 .cal-month-ev i{width:6px;height:6px;border-radius:50%;flex:none}
@@ -640,7 +642,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .cal-year-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 .cal-year-cell{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 12px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:.15s}
 .cal-year-cell:hover{border-color:var(--pink-400)}
-.cal-year-cell.today{background:linear-gradient(135deg,#fff,#fff4f8);border-color:var(--pink-400)}
+.cal-year-cell.today{background:linear-gradient(135deg,#fff,#fff1f6);border:2px solid var(--pink-400);box-shadow:0 3px 12px rgba(249,112,157,.18)}
 .cal-year-h{font-size:15px;font-weight:700}
 .cal-year-bar{width:32px;background:linear-gradient(180deg,var(--pink-300),var(--pink-500));border-radius:6px}
 .cal-year-meta{font-size:11px;color:var(--ink-3)}
@@ -795,7 +797,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   .wh-cell.today{color:var(--pink-600)}
   .wh-cell.today b{background:var(--pink-500);color:#fff;box-shadow:0 2px 8px rgba(249,112,157,.35)}
   .time-col{border-right:1px solid var(--line-2)}
-  .time-slot{height:30px;font-size:9.5px;color:var(--ink-3);display:flex;align-items:flex-start;justify-content:flex-end;padding-right:5px;padding-top:2px}
+  .time-slot{height:30px;font-size:9.5px;color:var(--ink-3);display:flex;align-items:center;justify-content:flex-end;padding-right:5px}
   .time-slot:empty{border-bottom:none}
   .slot{border-bottom:1px dashed var(--pink-75)}
   .slot:nth-child(2n){border-bottom-color:var(--line-2)}
@@ -1049,8 +1051,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   .switch-row input{width:22px;height:22px}
 }
 
-/* ===== 财务模块修改日志 ===== */
-.log-list{max-height:52vh;overflow:auto;display:flex;flex-direction:column;gap:2px}
+/* ===== 财务模块修改日志（独立 .log-row 体系，注意不要与更新日志 .log-list 冲突） ===== */
 .log-row{
   display:grid;grid-template-columns:auto auto 1fr;gap:10px;align-items:baseline;
   padding:9px 10px;border-radius:8px;background:var(--pink-50);font-size:13px;line-height:1.5
@@ -1171,6 +1172,9 @@ body.night .dash-stat,
 body.night .dash-actions button:hover,
 body.night .dash-hidden-row,
 body.night .lock-card{ background:var(--card); }
+/* 非本月格子：日历沿用 v2.2.1 浅底；课表改为中性灰（日夜间均弱于本月/今天） */
+body.night .mg-cell.out{background:var(--card);color:var(--ink-3)}
+body.night .mg-cell.out .mg-date{color:var(--ink-3)}
 /* 选中的小标签/分页：用浅粉底+深字，保证对比 */
 body.night .tab.active,
 body.night .cal-tab.on{ background:var(--pink-300); color:#2a1622; }
@@ -1240,7 +1244,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-05T10:32:05.640Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-05T14:20:00.353Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -2002,19 +2006,19 @@ const DB = (() => {
         teacherId, status, note, trialDate: '', createdAt: Date.now(),
         grade: subjects[0].grade, subject: subjects[0].subject,
         tuition: subjects[0].tuition, commission: subjects[0].commission, duration: subjects[0].duration,
-        subjects: subjects.map(s => ({ id: U.uid('sbj'), grade: s.grade, subject: s.subject, tuition: s.tuition, commission: s.commission, duration: s.duration, fixed: s.fixed || [] }))
+        subjects: subjects.map(s => ({ id: U.uid('sbj'), grade: s.grade, subject: s.subject, tuition: s.tuition, commission: s.commission, duration: s.duration, teacherId: s.teacherId || '', freq: s.freq || '', fixed: s.fixed || [] }))
       }, extra);
     };
     const students = [
       mk(normDateFlexible('240815') || U.addDays(t, -30), '李明', '', 'tc_wang', '妈妈很关注细节，每节课后一定要文字反馈；孩子基础中等偏上，函数薄弱。', 'active',
         [{ grade: '高二', subject: '数学', tuition: 300, commission: 50, duration: 90 }], { freq: '1w3' }),
       mk(normDateFlexible('250302') || U.addDays(t, -20), '张昊', '', 'tc_chen', '爸爸做生意比较忙，微信回复慢；中考目标 110+。', 'active',
-        [{ grade: '初三', subject: '英语', tuition: 240, commission: 60, duration: 120 },
-         { grade: '初三', subject: '数学', tuition: 260, commission: 55, duration: 120 }], { freq: '1w2' }),
+        [{ grade: '初三', subject: '英语', tuition: 240, commission: 60, duration: 120, teacherId: 'tc_chen', freq: '1w1' },
+         { grade: '初三', subject: '数学', tuition: 260, commission: 55, duration: 120, teacherId: 'tc_wang', freq: '1w1' }], { freq: '1w2' }),
       mk(normDateFlexible('250520') || U.addDays(t, -10), '王思', '', 'tc_wang', '冲刺阶段，要求老师准时；一个孩子在这上语数英三科。', 'active',
-        [{ grade: '高三', subject: '物理', tuition: 380, commission: 80, duration: 120 },
-         { grade: '高三', subject: '数学', tuition: 350, commission: 70, duration: 120 },
-         { grade: '高三', subject: '英语', tuition: 300, commission: 60, duration: 120 }], { freq: '1w4' }),
+        [{ grade: '高三', subject: '物理', tuition: 380, commission: 80, duration: 120, teacherId: 'tc_wang', freq: '1w2' },
+         { grade: '高三', subject: '数学', tuition: 350, commission: 70, duration: 120, teacherId: 'tc_wang', freq: '1w1' },
+         { grade: '高三', subject: '英语', tuition: 300, commission: 60, duration: 120, teacherId: 'tc_chen', freq: '1w1' }], { freq: '1w4' }),
       mk(normDateFlexible('250610') || U.addDays(t, -5), '刘洋', '', 'tc_me', '孩子注意力短，建议 60 分钟一节；家长在意性价比。', 'trial',
         [{ grade: '五年级', subject: '数学', tuition: 200, commission: 40, duration: 60 }], { trialDate: U.addDays(t, -1), freq: '1w1' })
     ];
@@ -2095,6 +2099,8 @@ const DB = (() => {
       teachers: [], students: [], lessons: [], todos: [], events: [],
       deleted: blankDeleted(),       // 墓碑：各集合已删除记录的 id→删除时间戳（跨端删除同步用）
       histIncome: {},                // 历史收入：按月总额 { 'YYYY-MM': 金额 }
+      histIncomeMt: {},              // 历史收入按月「最后写入时间」(LWW 合并用，避免改小的值被云端旧大值顶掉)
+      histIncomeDel: {},             // 历史收入按月「删除墓碑」(删除也能跨端传播)
       templates: defaultTemplates(), phrases: defaultPhrases(),
       meta: { lastLessonEdit: null, lastStudentEdit: null }
     };
@@ -2134,6 +2140,7 @@ const DB = (() => {
         migrateHistIncome(d);
         migrateLessonTeacher(d);
         migrateRecurrence(d);
+        migrateMT(d);
         return d;
       }
     } catch (e) {
@@ -2260,7 +2267,7 @@ const DB = (() => {
       if (!Array.isArray(s.subjects) || !s.subjects.length) {
         s.subjects = [{ id: (s.id || 'stu') + '_legacy', grade: s.grade || '', subject: s.subject || '其它', tuition: s.tuition || 0, commission: s.commission || 0, duration: s.duration || 60, fixed: [] }];
       }
-      s.subjects.forEach(sb => { if (!sb.id) sb.id = U.uid('sbj'); if (!Array.isArray(sb.fixed)) sb.fixed = []; });
+      s.subjects.forEach(sb => { if (!sb.id) sb.id = U.uid('sbj'); if (!Array.isArray(sb.fixed)) sb.fixed = []; if (sb.teacherId === undefined) sb.teacherId = ''; if (sb.freq === undefined) sb.freq = ''; });
       if (!s.parentName && s.subjects[0]) s.parentName = s.subjects[0].parentName || s.parentName;
       if (!s.code) s.code = studentCode(s);
       if (s.freq === undefined) s.freq = '';
@@ -2295,6 +2302,14 @@ const DB = (() => {
     } else if (typeof d.histIncome === 'number') {
       d.histIncome = {};
     }
+    // 回填写入时间戳：老数据没有 histIncomeMt，给每个已填月份打一个「足够新」的时间戳，
+    // 使升级后第一轮同步时本机当前值被视为权威（不会被云端旧副本覆盖）。
+    if (d.histIncome && typeof d.histIncome === 'object' && !d.histIncomeMt) {
+      const seed = d.__savedAt || Date.now();
+      d.histIncomeMt = {};
+      Object.keys(d.histIncome).forEach(m => { if (d.histIncome[m]) d.histIncomeMt[m] = seed; });
+    }
+    if (!d.histIncomeDel) d.histIncomeDel = {};
     return d;
   }
 
@@ -2319,6 +2334,31 @@ const DB = (() => {
     if (Array.isArray(d.events)) d.events.forEach(e => {
       if (e.repeat === undefined || e.repeat === null) e.repeat = 'never';
       if (!Array.isArray(e.completedDates)) e.completedDates = [];
+    });
+    return d;
+  }
+
+  // 数据迁移：给所有同步集合的每条记录补「修改时间戳 _mt」。
+  // 这是 v2.3.1 的关键修复——解决「老数据（从未在写入侧打过 _mt）同步时被旧副本整体覆盖」。
+  // 根因：v2.3.0 之前写入侧从不打 _mt，冲突时 mergeDocs 只能退化为「按方向硬判」
+  // （拉取取远端、上传取本机），于是最后一台同步的设备用它的旧副本把云端正确值整条顶掉。
+  // 修复分两层：① 写入侧（students.js 等）所有本机改动都打 _mt（v2.3.0 已做）；
+  //          ② 本迁移给「历史遗留、从未被改动过」的记录补一个种子 _mt，
+  //             使任何一端只要 open 过 v2.3.1，全部记录都带 _mt，冲突一律走 LWW 时间胜出，
+  //             旧数据再也无法靠「方向硬判」偷袭正确数据。
+  // 种子策略：优先保留已有 _mt；其余用「记录自身创建时间(createdAt)」>「本机基线(__savedAt)」>「当前时间」，
+  // 这样即便两批老数据彼此冲突，也能按"谁更早/更晚"合理胜出，而不是随机按方向。
+  function migrateMT(d) {
+    if (!d || typeof d !== 'object') return d;
+    const seed = (d.__savedAt || Date.now());
+    const COLS = ['students', 'teachers', 'lessons', 'todos', 'events', 'templates', 'phrases'];
+    COLS.forEach(col => {
+      if (!Array.isArray(d[col])) return;
+      d[col].forEach(it => {
+        if (!it || it.id == null) return;
+        if (it._mt && typeof it._mt === 'number') return;   // 已有则保留
+        it._mt = (typeof it.createdAt === 'number' && it.createdAt > 0) ? it.createdAt : seed;
+      });
     });
     return d;
   }
@@ -2408,6 +2448,7 @@ const DB = (() => {
       data[col] = [];                 // 清空数组，但墓碑已登记，删除会随上传传播
     }
     data.histIncome = {};             // 聚合统计一并清空（非按记录、无墓碑；三端都清空则合并后自然为空）
+    data.histIncomeMt = {}; data.histIncomeDel = {};   // 时间戳/删除墓碑一同清空
     data.meta = { lastLessonEdit: null, lastStudentEdit: null };
     save();
   }
@@ -2485,6 +2526,7 @@ const DB = (() => {
     migrateHistIncome(d);
     migrateLessonTeacher(d);
     migrateRecurrence(d);
+    migrateMT(d);
     return d;
   }
 
@@ -2532,6 +2574,8 @@ const DB = (() => {
       // （migrateRecurrence 等），否则旧结构数据会绕过 repeat/completedDates/flag 等字段补齐，
       // 导致重复/完成逻辑在本页错乱。
       data = adoptData(d);
+      // 跨标签页数据同样需要补 _mt，否则本页合并/上传时缺时间戳会被方向硬判顶掉（v2.3.1）
+      migrateMT(data);
       if (remoteHandler) remoteHandler();
     } catch (e) { /* 忽略损坏数据 */ }
   }
@@ -2713,7 +2757,7 @@ window.Sync = (() => {
      - 各数据集合（学员/老师/课节/提醒/日程/模板/话术）按记录 id 合并：
        两端都有的 id 取「修改时间(_mt)较新者」；都没有 _mt 则按方向（拉取取远端、上传取本机）；
        任一侧独有的 id 都保留 → 一端新增、另一端绝不会被覆盖丢失。
-     - histIncome / meta 按月/字段取较大值。
+     - histIncome 按月「最后修改时间」胜出(LWW) + 按月删除墓碑（不再取较大值，避免改小的值被云端旧大值顶掉）；meta 按字段取较大值。
      - settings 整段保留本机（含 token/gistId 等连接信息），绝不从云端覆盖，避免一端连接被另一端清空。
      - __savedAt 取两端较大值，保证时间戳单调、基线对得上。
   */
@@ -2778,11 +2822,38 @@ window.Sync = (() => {
       merged[col] = out;
     }
     merged.deleted = mergedDeleted;
+    // ---- 历史收入：按月「最后修改时间胜出(LWW)」+ 按月删除墓碑 ----
+    // 旧实现按月份取 Math.max，导致「把某月收入改小」会被云端旧的大值覆盖（改了又回来）。
+    // 现改为：同一个月比较两端写入时间戳，较新者胜；删除标记若比两端值都新，则该月真正移除（跨端删除也生效）。
     const li = (local && local.histIncome && typeof local.histIncome === 'object') ? local.histIncome : {};
     const ri = (r && r.histIncome && typeof r.histIncome === 'object') ? r.histIncome : {};
-    const hi = Object.assign({}, li);
-    for (const m in ri) hi[m] = Math.max(hi[m] || 0, ri[m] || 0);
+    const lmt = (local && local.histIncomeMt && typeof local.histIncomeMt === 'object') ? local.histIncomeMt : {};
+    const rmt = (r && r.histIncomeMt && typeof r.histIncomeMt === 'object') ? r.histIncomeMt : {};
+    const ldel = (local && local.histIncomeDel && typeof local.histIncomeDel === 'object') ? local.histIncomeDel : {};
+    const rdel = (r && r.histIncomeDel && typeof r.histIncomeDel === 'object') ? r.histIncomeDel : {};
+    const hi = {}, himt = {}, hidel = {};
+    const months = new Set([...Object.keys(li), ...Object.keys(ri), ...Object.keys(ldel), ...Object.keys(rdel)]);
+    for (const m of months) {
+      const lv = (m in li) ? li[m] : null, rv = (m in ri) ? ri[m] : null;
+      const lt = lmt[m] || 0, rt = rmt[m] || 0;
+      const ldt = ldel[m] || 0, rdt = rdel[m] || 0;
+      // 删除墓碑：任一侧删除时间晚于两侧所有值写入时间 → 该月真正移除（跨端删除也生效）
+      const delAt = Math.max(ldt, rdt);
+      if (delAt > 0 && delAt > Math.max(lt, rt)) { hidel[m] = delAt; continue; }
+      // 值按最后修改时间(LWW)择优；时间相同则按方向（push 取本机、pull 取远端）
+      let val, ts;
+      if (lv != null && rv != null) {
+        if (lt > rt) { val = lv; ts = lt; }
+        else if (rt > lt) { val = rv; ts = rt; }
+        else { val = (direction === 'push') ? lv : rv; ts = lt; }
+      } else if (lv != null) { val = lv; ts = lt; }
+      else if (rv != null) { val = rv; ts = rt; }
+      else { continue; }   // 只有删除标记（已被上方 continue 处理），无值可留
+      if (val) { hi[m] = val; himt[m] = ts; }   // 0/空视为无收入，不入表（与填写端一致）
+    }
     merged.histIncome = hi;
+    merged.histIncomeMt = himt;
+    merged.histIncomeDel = hidel;
     const lm = (local && local.meta && typeof local.meta === 'object') ? local.meta : {};
     const rm = (r && r.meta && typeof r.meta === 'object') ? r.meta : {};
     const mt = Object.assign({}, lm);
@@ -3604,9 +3675,12 @@ const Students = (() => {
 
   function ensureOrder() {
     const sts = DB.data.students;
-    if (sts.length && sts.every(s => typeof s.order === 'number')) return;
-    const sorted = sts.slice().sort((a, b) => freqRank(b.freq) - freqRank(a.freq) || (b.signDate || '').localeCompare(a.signDate || ''));
-    sorted.forEach((s, i) => { s.order = i; });
+    if (!sts.length) return;
+    // 关键修复：只有「全部已有 order」才跳过；否则只给缺 order 的追加到末尾，
+    // 绝不再主动全量重排（否则会把用户手动拖好的顺序冲掉）。
+    if (sts.every(s => typeof s.order === 'number')) return;
+    let maxOrder = sts.reduce((m, x) => Math.max(m, typeof x.order === 'number' ? x.order : -1), -1);
+    sts.forEach(s => { if (typeof s.order !== 'number') s.order = ++maxOrder; });
     DB.save();
   }
   function reorder(s, dir) {
@@ -3615,12 +3689,15 @@ const Students = (() => {
     const j = idx + dir;
     if (j < 0 || j >= sts.length) return;
     [sts[idx], sts[j]] = [sts[j], sts[idx]];
+    const now = Date.now();
     sts.forEach((x, i) => { x.order = i; });
+    sts[idx]._mt = now; sts[j]._mt = now;   // 交换的两位顺序变了 → 打时间戳，跨端同步按新者胜
     DB.save(); DB.touch('student'); render();
   }
   function sortByFreq() {
     const sts = DB.data.students.slice().sort((a, b) => freqRank(b.freq) - freqRank(a.freq) || (b.signDate || '').localeCompare(a.signDate || ''));
-    sts.forEach((x, i) => { x.order = i; });
+    const now = Date.now();
+    sts.forEach((x, i) => { x.order = i; x._mt = now; });   // 主动重排：全部打时间戳
     DB.save(); DB.touch('student'); render();
     U.toast('已按上课频率重排', 'ok');
   }
@@ -3715,9 +3792,12 @@ const Students = (() => {
       <div class="stu-body">
         ${subs.map(sb => `<div class="kv"><span class="k">${U.esc(sb.grade)}${U.esc(sb.subject)}</span>
           <b class="money">${U.money(sb.tuition)} / ${sb.duration}分</b>
-          <span class="tag secret" style="background:var(--pink-100);color:var(--pink-600)">抽${U.money(sb.commission)}</span></div>`).join('')}
-        <div class="kv"><span class="k">授课老师</span><b>${U.esc(DB.teacherName(s.teacherId))}</b></div>
-        <div class="kv"><span class="k">上课频率</span><b>${U.esc(freqName(s.freq))}</b></div>
+          <span class="tag secret" style="background:var(--pink-100);color:var(--pink-600)">抽${U.money(sb.commission)}</span>
+          ${sb.teacherId ? `<span class="tag sky">${U.esc(DB.teacherName(sb.teacherId))}</span>` : ''}
+          ${sb.freq ? `<span class="tag gray">${U.esc(freqName(sb.freq))}</span>` : ''}</div>`).join('')}
+        ${subs.length > 1 ? `<div class="kv muted" style="font-size:11px"><span class="k">多学科</span><b>每科老师/频率见上方各科目行</b></div>` : ''}
+        ${(!subs.some(sb => sb.teacherId) && s.teacherId) ? `<div class="kv"><span class="k">授课老师</span><b>${U.esc(DB.teacherName(s.teacherId))}</b></div>` : ''}
+        ${(!subs.some(sb => sb.freq) && s.freq) ? `<div class="kv"><span class="k">上课频率</span><b>${U.esc(freqName(s.freq))}</b></div>` : ''}
         <div class="kv"><span class="k">签约 / 已上</span><b>${U.esc(s.signDate || '-')} · ${stat.done}节</b></div>
         ${s.status === 'trial' && s.trialDate ? `<div class="kv"><span class="k">试课日期</span><b class="tag gold">${U.cnDate(s.trialDate)}（次日回访）</b></div>` : ''}
         <div class="kv secret"><span class="k">累计抽成</span><b class="money in">${U.money(stat.profit)}</b></div>
@@ -3756,7 +3836,7 @@ const Students = (() => {
       case 'edit': edit(s); break;
       case 'book': Schedule.bookFor(s.id, () => render()); break;
       case 'detail': detail(s); break;
-      case 'toActive': s.status = 'active'; DB.save(); DB.touch('student'); render(); U.toast(`${s.parentName} 已转为正式学员`); break;
+      case 'toActive': s.status = 'active'; s._mt = Date.now(); DB.save(); DB.touch('student'); render(); U.toast(`${s.parentName} 已转为正式学员`); break;
       case 'moveUp': reorder(s, -1); break;
       case 'moveDown': reorder(s, +1); break;
       case 'sortFreq': sortByFreq(); break;
@@ -3777,12 +3857,17 @@ const Students = (() => {
   /* ---------- 新建 / 编辑 ---------- */
   function subjRowHTML(sb) {
     // 年级 / 学科：下拉建议 + 允许手填自定义（datalist 由弹窗内 <datalist> 提供）
+    // 每科可独立选老师与上课频率（支持一个学员多学科、每科老师/频率不同）
+    const teachers = DB.data.teachers;
+    const sbt = sb.teacherId || '';
     return `<div class="subj-row" data-sid="${sb.id}">
       <input class="input sg" list="dl-grades" placeholder="年级（可自填）" value="${U.esc(sb.grade || '')}">
       <input class="input sj" list="dl-subjects" placeholder="学科（可自填）" value="${U.esc(sb.subject || '')}">
       <input class="input fee" type="number" min="0" placeholder="课时费" value="${sb.tuition || ''}">
       <input class="input com" type="number" min="0" placeholder="抽成" value="${sb.commission || ''}">
       <input class="input dur" type="number" min="15" step="15" placeholder="时长分" value="${sb.duration || ''}">
+      <select class="input stj">${teachers.map(t => `<option value="${t.id}" ${t.id === sbt ? 'selected' : ''}>${U.esc(t.name)}</option>`).join('')}${sbt ? '' : '<option value="" selected>老师（可空）</option>'}</select>
+      <select class="input sfq">${FREQ.map(f => `<option value="${f.v}" ${f.v === (sb.freq || '') ? 'selected' : ''}>${f.name}</option>`).join('')}</select>
       <button class="btn btn-icon delSubj" title="删除该学科"><svg class="ico"><use href="#i-trash"/></svg></button>
     </div>`;
   }
@@ -3862,11 +3947,13 @@ const Students = (() => {
       const tuition = +((r.querySelector('.fee') || {}).value || 0);
       const commission = +((r.querySelector('.com') || {}).value || 0);
       const duration = +((r.querySelector('.dur') || {}).value || 0);
+      const subTeacherId = (r.querySelector('.stj') || {}).value || '';
+      const subFreq = (r.querySelector('.sfq') || {}).value || '';
       if (!grade && !subject && !tuition && !commission && !duration) continue; // 跳过空行
       if (!grade || !subject) { U.toast('学科行需填写年级与学科', 'warn'); return { ok: false }; }
       if (commission > tuition) { U.toast(`${grade}${subject}：抽成不能大于课时费`, 'warn'); return { ok: false }; }
       DB.rememberGradesSubjects(grade, subject);
-      subjects.push({ id: r.dataset.sid || U.uid('sbj'), grade, subject, tuition, commission, duration: duration || 60, fixed: ((DB.student(s ? s.id : '') || {}).subjects || []).find(x => x.id === r.dataset.sid)?.fixed || [] });
+      subjects.push({ id: r.dataset.sid || U.uid('sbj'), grade, subject, tuition, commission, duration: duration || 60, teacherId: subTeacherId, freq: subFreq, fixed: ((DB.student(s ? s.id : '') || {}).subjects || []).find(x => x.id === r.dataset.sid)?.fixed || [] });
     }
     if (!subjects.length) { U.toast('请至少填写一个学科', 'warn'); return { ok: false }; }
     // 自定义字段：收集非空的 label+value
@@ -3892,9 +3979,10 @@ const Students = (() => {
       if (dup && !window.confirm(`已存在同名学员「${dup.parentName}」，确定要再新建一个吗？\n若其实是同一人，建议直接编辑原档案即可。`)) {
         return { ok: false };
       }
-      DB.data.students.push(Object.assign({ id: U.uid('stu'), createdAt: Date.now() }, o));
+      const maxOrder = DB.data.students.reduce((m, x) => Math.max(m, x.order || 0), -1);
+      DB.data.students.push(Object.assign({ id: U.uid('stu'), createdAt: Date.now(), order: maxOrder + 1, _mt: Date.now() }, o));
     }
-    else Object.assign(s, o);
+    else { Object.assign(s, o); s._mt = Date.now(); }
     DB.save(); DB.touch('student');
     if (typeof Todo !== 'undefined' && Todo.checkAuto) { try { Todo.checkAuto(); } catch (_) {} }
     if (typeof App !== 'undefined' && App.refreshBadge) { try { App.refreshBadge(); } catch (_) {} }
@@ -3998,12 +4086,13 @@ const Students = (() => {
     const grade = r.grade || '未分级', subject = r.subject || '其它';
     // 仅提供「抽成」而无「课时费」时，课时费留空(0)，不把抽成误填为课时费（否则 takeHome=0 且统计失真）。
     const hasTuition = (r.tuition !== undefined && r.tuition !== null && r.tuition !== '');
-    const sub = { id: U.uid('sbj'), grade, subject, tuition: hasTuition ? r.tuition : 0, commission: r.commission || 0, duration: r.duration || 60, fixed: [] };
+    const sub = { id: U.uid('sbj'), grade, subject, tuition: hasTuition ? r.tuition : 0, commission: r.commission || 0, duration: r.duration || 60, teacherId: '', freq: '', fixed: [] };
+    const maxOrder = DB.data.students.reduce((m, x) => Math.max(m, x.order || 0), -1);
     const st = {
       id: U.uid('stu'), code: '', signDate: r.date, parentName: r.name, studentName: '',
-      teacherId: '', status: 'active', note: '', trialDate: '', createdAt: Date.now(),
+      teacherId: '', status: 'active', note: '', trialDate: '', createdAt: Date.now(), _mt: Date.now(),
       grade: sub.grade, subject: sub.subject, tuition: sub.tuition, commission: sub.commission, duration: sub.duration,
-      subjects: [sub], freq: '', custom: [], order: DB.data.students.length
+      subjects: [sub], freq: '', custom: [], order: maxOrder + 1
     };
     st.code = DB.studentCode(st);
     DB.data.students.push(st);
@@ -5662,6 +5751,14 @@ const Finance = (() => {
             const m = inp.dataset.m, v = +inp.value || 0;
             if (v) collected[m] = v;
           });
+          // 写入时间戳：填了值的月份记「最后写入时间」，被删掉的月份记「删除墓碑」，
+          // 让同步按 LWW 合并——改小的值不会被云端旧大值顶掉，删除也能跨端生效。
+          const now = Date.now();
+          if (!data.histIncomeMt) data.histIncomeMt = {};
+          if (!data.histIncomeDel) data.histIncomeDel = {};
+          const before = Object.keys(data.histIncome || {});
+          before.forEach(m => { if (!(m in collected)) data.histIncomeDel[m] = now; });  // 删掉的月份
+          Object.keys(collected).forEach(m => { data.histIncomeMt[m] = now; });          // 填了值的月份
           data.histIncome = collected;
           DB.save(); render();
           U.toast('已保存历史收入', 'ok');
@@ -8168,6 +8265,25 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.3.1`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>修复：老学员数据「从未打过修改时间戳」导致同步被旧副本整体覆盖</b>：v2.3.0 只修了「写入侧」（新建/编辑才打 _mt），但那些<b>从没被改动过的老记录</b> _mt 仍是空，冲突时 mergeDocs 只能退化成「按上传/下载方向硬判」——于是你这次撞上：电脑上传后，平板旧数据又经某步回灌云端、电脑再拉回来，结果电脑变成了平板的旧数据。<b>现新增 store.migrateMT()</b>：在「本机启动 / 导入备份 / 跨标签页同步 / 云端合并」全链路，给所有同步集合（学员/老师/课节/提醒/日程/模板/话术）的每条记录补种子 _mt（优先保留已有值，否则用 createdAt > 本机基线 __savedAt > 当前时间）。补完后所有记录都有时间戳，冲突一律走「谁后改谁赢(LWW)」，旧数据再也无法靠方向偷袭正确数据。`,
+        `<b>防翻车操作纪律（重要）</b>：三端都升到 v2.3.1 后，<b>只让一台当「权威端」上传一次，其他端只下载</b>，且任意端在「还没升到 2.3.1」前<b>不要</b>去新建/编辑/拖排序（旧版不写 _mt 且不补时间戳，仍可能污染云端）。自动同步开关建议在你正手动操作时临时关掉，避免后台把旧数据推上去。`] },
+    { ver: `v2.3.0`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>修复：学员档案跨端同步「结课状态 / 上课频率 / Excel 导入细节」丢失</b>：根因是学员记录从未写入「修改时间戳 _mt」，同步冲突时只能按「上传/下载方向」硬判，导致最后推送的设备其旧副本把云端正确值整条顶掉（与之前历史收入回潮同源）。现所有本机改动学员的路径（新建/编辑保存、转正式、上下移排序、按频率重排、Excel 导入自动建）都写入 <code>_mt=Date.now()</code>；合并逻辑早已支持按 _mt「谁后改谁赢」，双向同步不再被方向误判。现在电脑端设的「已结课」、各学员的频率、Excel 导入填的细节，到手机/平板都不再被覆盖。`,
+        `<b>修复：手动排好的学员顺序「新建档案后乱掉」</b>：旧逻辑在发现有人缺 order 字段时会全量按「频率+签约日」重排，把手动拖好的顺序冲掉。现改为「只补全缺 order 的、绝不主动全量重排」；新建档案追加到末尾（不再触发重排），上下移/拖拽/按频率重排都显式打 _mt 跨端生效。`,
+        `<b>新功能：学员支持多学科、每科独立老师与上课频率</b>：之前只有学员级一个老师/一个频率，无法满足「一个学员上多科、每科老师不同、每科频率不同」。现在每个学科行可单独选授课老师与上课频率（下拉可选、与老师名册联动），卡片按科目展示各自的老师标签与频率标签；老数据升级自动补 <code>teacherId</code>/<code>freq</code> 字段，学员级旧值仍作回退展示。`] },
+    { ver: `v2.2.4`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>优化：可视化课表月视图「非本月」配色对齐独立日历页</b>：上版（v2.2.3）把课表非本月改成了中性灰 #f4f3f5，本次按你的要求改为与日历非本月一致——底色 #faf6f7、日期数字 var(--ink-3)，两处页面观感统一；今天仍为粉色高亮，非本月与今天的区分保持不变（夜览模式也同步参照日历，非本月用 var(--card)、数字 var(--ink-3)）。`] },
+    { ver: `v2.2.3`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>回退 + 修复：上版本（v2.2.2）误把样式改到了独立的「日历」页</b>，本次纠正：① 独立日历页「非本月」颜色已恢复到 v2.2.1 原样（#faf6f7 浅底）；② 真正要改的是<b>可视化课表月视图</b>——它的非本月格子 <code>.mg-cell.out</code> 原本是粉色 <code>var(--pink-50)</code> 加半透明，和今天的粉色 <code>.mg-cell.today</code> 太接近。现把课表非本月改为中性浅灰 #f4f3f5、日期数字调淡，今天的粉色高亮得以突出；夜览模式同步加了中性暗灰弱化。日历页与课表页现已各归各位。`] },
+    { ver: `v2.2.2`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>（已回退）本版本本意修复「可视化课表月视图非本月与今天颜色太像」，但误将改动写到了独立「日历」页的全局样式，导致日历页被误改。该改动已在 v2.2.3 回退，正确修复也已在 v2.2.3 落到可视化课表。</b>`] },
+    { ver: `v2.2.1`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>修复：财务「历史收入」改了又回来（同步回潮，最关键的 bug）</b>：历史收入是按月总额 <code>histIncome</code>，旧合并对同月取 <code>Math.max</code>——你把某月改小后上传，云端旧的大值会在下次合并时把它覆盖回去，于是「一转头又回来了」。现改为<b>按月 LWW（最后写入时间胜出）</b>：新增 <code>histIncomeMt</code>（按月写入时间戳）与 <code>histIncomeDel</code>（按月删除墓碑），合并时同月取时间戳较新的一方、删掉的月份用墓碑真正移除，<b>不再比大小</b>。老数据升级后第一轮同步本机当前值被视为权威（给已填月份打「足够新」时间戳）。<code>wipeSynced()</code> 清空时也一并清理这三项。`,
+        `<b>修复：可视化课表周视图 8:00 时间轴显示不全</b>：时间槽的 <code>top:-7px</code> 负偏移被周视图滚动容器顶部裁切，现改为 flex 垂直居中、移除负偏移，8:00 完整显示。`,
+        `<b>修复：日历「今天」方框太小、看着紧巴巴</b>：月视图 today 由细 <code>outline</code> 内收描边改为粉色填充 + 2px 实边 + 轻投影、内边距加大、日期字号调大；年视图 today 也加同款实边与投影，整体更大气。`,
+        `<b>修复：更新日志记录莫名换行、排版丑</b>：列表样式 <code>.log-list</code> 被一处「财务模块死样式」重复定义并污染了更新日志（它从未在 JS 中使用），现删除该冲突规则；版本号与日期合并成一行表头 <code>.log-head</code>，条目加 <code>word-break:break-word</code> 与舒适行距，长行不再乱折。`,
+        `<b>回归锁定</b>：<code>sync-delete-test.js</code> 扩到 47 条断言全绿，新增场景 11（改小的 3000 胜出旧云端 5000，不回潮）、场景 12（删除墓碑使该月真正移除）、场景 13（pull/push 均取较新一方）、场景 14（复刻现场：H1 改小 3000 上传后 H2 拉取得到 3000）；<code>sync-loss-test.js</code> 改为断言 LWW 并补「较小但较新胜出」锁定（26/0）。连同 3device/key/fix/timestamp 共 6 套 105 条断言 0 失败，三处版本常量同步 bump 至 v2.2.1。`] },
     { ver: `v2.2.0`, date: `2026-08-05`, held: false, divider: false,
       items: [`<b>每日模板库新增「批量删除」</b>：模板多了想一次清掉几条？点模板库标题右侧的 <b>✓ 批量删除</b> 进入选择模式，逐条点选（或点「全选」），再点「删除选中」即可一次删多条；删除一样走墓碑（tombstone）机制，<b>删除会跨端同步</b>——A 端批量删的模板，B/C 端下次同步后也消失，其余模板保留。误删可在同步前退出选择模式取消，或在同步前重新录入覆盖。桌面端（提醒事项页右侧）与手机端（提醒事项页底部卡片）均已支持。`] },
     { ver: `v2.1.1`, date: `2026-08-05`, held: false, divider: false,
@@ -8393,7 +8509,7 @@ const Changelog = (() => {
       const held = e.held
         ? '<div style="margin:2px 0 10px;font-size:12px;color:#b06;font-weight:600">⏳ 待发布 · 待你确认无误后上线</div>'
         : '';
-      return '<div class="log-ver">' + e.ver + '</div><div class="log-date">' + e.date + '</div>' + held +
+      return '<div class="log-head"><span class="log-ver">' + e.ver + '</span><span class="log-date">' + e.date + '</span></div>' + held +
         '<ul class="log-list">' + e.items.join('') + '</ul>';
     };
     const parts = [];

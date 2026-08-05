@@ -269,6 +269,7 @@ const DB = (() => {
         migrateHistIncome(d);
         migrateLessonTeacher(d);
         migrateRecurrence(d);
+        migrateMT(d);
         return d;
       }
     } catch (e) {
@@ -466,6 +467,31 @@ const DB = (() => {
     return d;
   }
 
+  // 数据迁移：给所有同步集合的每条记录补「修改时间戳 _mt」。
+  // 这是 v2.3.1 的关键修复——解决「老数据（从未在写入侧打过 _mt）同步时被旧副本整体覆盖」。
+  // 根因：v2.3.0 之前写入侧从不打 _mt，冲突时 mergeDocs 只能退化为「按方向硬判」
+  // （拉取取远端、上传取本机），于是最后一台同步的设备用它的旧副本把云端正确值整条顶掉。
+  // 修复分两层：① 写入侧（students.js 等）所有本机改动都打 _mt（v2.3.0 已做）；
+  //          ② 本迁移给「历史遗留、从未被改动过」的记录补一个种子 _mt，
+  //             使任何一端只要 open 过 v2.3.1，全部记录都带 _mt，冲突一律走 LWW 时间胜出，
+  //             旧数据再也无法靠「方向硬判」偷袭正确数据。
+  // 种子策略：优先保留已有 _mt；其余用「记录自身创建时间(createdAt)」>「本机基线(__savedAt)」>「当前时间」，
+  // 这样即便两批老数据彼此冲突，也能按"谁更早/更晚"合理胜出，而不是随机按方向。
+  function migrateMT(d) {
+    if (!d || typeof d !== 'object') return d;
+    const seed = (d.__savedAt || Date.now());
+    const COLS = ['students', 'teachers', 'lessons', 'todos', 'events', 'templates', 'phrases'];
+    COLS.forEach(col => {
+      if (!Array.isArray(d[col])) return;
+      d[col].forEach(it => {
+        if (!it || it.id == null) return;
+        if (it._mt && typeof it._mt === 'number') return;   // 已有则保留
+        it._mt = (typeof it.createdAt === 'number' && it.createdAt > 0) ? it.createdAt : seed;
+      });
+    });
+    return d;
+  }
+
   function lessonsIn(a, b, opt = {}) {
     return data.lessons.filter(l => l.date >= a && l.date <= b && (opt.withCancelled || l.status !== 'cancelled'));
   }
@@ -629,6 +655,7 @@ const DB = (() => {
     migrateHistIncome(d);
     migrateLessonTeacher(d);
     migrateRecurrence(d);
+    migrateMT(d);
     return d;
   }
 
@@ -676,6 +703,8 @@ const DB = (() => {
       // （migrateRecurrence 等），否则旧结构数据会绕过 repeat/completedDates/flag 等字段补齐，
       // 导致重复/完成逻辑在本页错乱。
       data = adoptData(d);
+      // 跨标签页数据同样需要补 _mt，否则本页合并/上传时缺时间戳会被方向硬判顶掉（v2.3.1）
+      migrateMT(data);
       if (remoteHandler) remoteHandler();
     } catch (e) { /* 忽略损坏数据 */ }
   }
