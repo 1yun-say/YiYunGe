@@ -3,6 +3,8 @@ window.Views = window.Views || {};
 
 const Schedule = (() => {
   const DAY_START = 8 * 60, DAY_END = 23 * 60;   // 8:00 - 23:00，1 分钟 = 1px
+  const LESSON_ALPHA_DEFAULT = 0.32;             // 普通课块默认不透明度
+  const DEFAULT_LESSON_DURATION = 60;            // 默认课时长（分钟）
   // 电脑端默认月视图（最常用），手机端默认周视图（一眼看一周）
   let mode = U.isMobile() ? 'week' : 'month';
   let anchor = U.today();
@@ -12,7 +14,7 @@ const Schedule = (() => {
      导致 U.t2m 抛异常、renderWeek 整体失败。以下辅助函数用于过滤/容错。 */
   function validStart(l) { return typeof l.start === 'string' && /^\d{1,2}:\d{2}$/.test(l.start); }
   function safeT2m(l) { return validStart(l) ? U.t2m(l.start) : DAY_START; }
-  function safeEndMin(l) { return safeT2m(l) + (+l.duration || 60); }
+  function safeEndMin(l) { return safeT2m(l) + (+l.duration || DEFAULT_LESSON_DURATION); }
   const endMin = safeEndMin; // 兼容旧调用
 
   function includeLesson(l) {
@@ -263,7 +265,7 @@ const Schedule = (() => {
   }
   function lessonAlpha(l, conflict) {
     if (typeof l.alpha === 'number' && l.alpha >= 0 && l.alpha <= 1) return l.alpha;
-    return conflict ? 0.55 : 0.32;
+    return conflict ? 0.55 : LESSON_ALPHA_DEFAULT;
   }
   function overlapCfg() {
     const s = DB.data.settings;
@@ -301,8 +303,13 @@ const Schedule = (() => {
     const s = DB.student(l.studentId) || { parentName: '已删除' };
     const isImp = !!l.importedCommission;
     const bd = DB.lessonBreakdown(l);
-    const st = safeT2m(l), h = Math.max(24, +l.duration || 60);
+    const st = safeT2m(l), h = Math.max(24, +l.duration || DEFAULT_LESSON_DURATION);
     const top = st - DAY_START;
+    // 防溢出：周视图时间轴固定 8:00–23:00（高 900px）。晚课/超长课若超出轴底，截断显示高度并标「跨夜」，
+    // 真实课时长（l.duration）与数据不变，仅视觉截断，避免压住底部图例。
+    const axisBottom = DAY_END - DAY_START;
+    let hh = h, crossesNight = false;
+    if (top + h > axisBottom) { hh = Math.max(24, axisBottom - top); crossesNight = true; }
     const c = isImp ? '#b0b0b0' : lessonColorHex(l);
     const alpha = isImp ? (conflict ? 0.62 : 0.85) : lessonAlpha(l, conflict);
     // 标签放在「非重叠」区段，避免被同组另一节课盖住；无空档则贴顶
@@ -314,16 +321,17 @@ const Schedule = (() => {
       else { tight = true; }
     }
     // 空间不足时只显示名字（重叠课小课块常见）
-    const availH = conflict && group ? (segs[0] ? (segs[0][1] - segs[0][0]) : h) : h;
+    const availH = conflict && group ? (segs[0] ? (segs[0][1] - segs[0][0]) : hh) : hh;
     const minimal = availH < 52;
     const timeLine = minimal ? '' : `<div class="lm">${l.start}-${U.m2t(st + h)} · ${U.money(l.tuition)}${pub ? '' : ` <span style="color:var(--pink-600)">到手${U.money(bd.takeHome)}</span>`}</div>`;
-    const teacherLine = minimal ? '' : (h > 62 ? `<div class="lm">${U.esc(DB.teacherName(l.teacherId))}${l.status === 'done' ? ' · 已完成' : ''}</div>` : '');
+    const teacherLine = minimal ? '' : (hh > 62 ? `<div class="lm">${U.esc(DB.teacherName(l.teacherId))}${l.status === 'done' ? ' · 已完成' : ''}</div>` : '');
     const takeLine = minimal ? '' : `<div class="lm take">到手 ${U.money(bd.takeHome)}${l.incomeNote ? ' · 批注：' + U.esc(l.incomeNote) : ''}</div>`;
+    const nightBadge = crossesNight ? ' <span class="lm" style="color:#e0533d">· 跨夜↧</span>' : '';
     const label = `<div class="lesson-label ${tight ? 'tight' : ''} ${minimal ? 'minimal' : ''}" style="top:${labelTop}px;left:6px;right:6px">
-      <b>${nameOf(l)}</b>${timeLine}${conflict ? '' : teacherLine}${conflict ? '' : takeLine}
+      <b>${nameOf(l)}</b>${timeLine}${conflict ? '' : teacherLine}${conflict ? '' : takeLine}${nightBadge}
     </div>`;
     return `<div class="lesson ${l.status} ${conflict ? 'conflict' : ''} ${isImp ? 'imported' : ''}" draggable="${isM ? 'false' : 'true'}" data-lid="${l.id}"
-      style="top:${top}px;height:${h}px;left:2px;width:calc(100% - 4px);z-index:${conflict ? 3 : 2};
+      style="top:${top}px;height:${hh}px;left:2px;width:calc(100% - 4px);z-index:${conflict ? 3 : 2};
       border-left-color:${c};background:${rgba(c, alpha)}">
       ${label}
     </div>`;
@@ -502,6 +510,90 @@ const Schedule = (() => {
     return out.sort();
   }
 
+  function commitBook(b, stu, sub, done) {
+    if (!sub) { U.toast('请选择学科', 'warn'); return false; }
+    const d0 = U.$('#f_d', b).value, t0 = U.$('#f_t', b).value;
+    const len = +U.$('#f_len', b).value || sub.duration || DEFAULT_LESSON_DURATION;
+    const mode = U.$('#f_rep', b).value;
+    if (!d0 || !t0) { U.toast('请填写日期与时间', 'warn'); return false; }
+    let wds = [], weeks = 1;
+    if (mode === 'week' || mode === 'biweek') {
+      wds = Array.from(b.querySelectorAll('.wd-chk')).filter(c => c.checked).map(c => +c.value);
+      if (!wds.length) { U.toast('请至少勾选一个上课星期', 'warn'); return false; }
+      weeks = +U.$('#f_weeks', b).value || 12;
+    } else if (mode === 'contig') {
+      weeks = +U.$('#f_weeks', b).value || 12;
+    }
+    const dates = genDates(mode, wds, d0, weeks);
+    const seriesId = (mode !== 'none' && dates.length > 1) ? U.uid('ser') : null;
+    const incomeNote = U.$('#f_inote', b).value.trim();
+    let conf = 0;
+    const bcolor = U.$('#f_color', b).value, balpha = +U.$('#f_alpha', b).value || LESSON_ALPHA_DEFAULT;
+    dates.forEach(date => {
+      const l = {
+        id: U.uid('les'), studentId: stu.id, subjectId: sub.id,
+        grade: sub.grade, subject: sub.subject,
+        date, start: t0, duration: len,
+        tuition: sub.tuition, commission: sub.commission, teacherId: stu.teacherId,
+        status: U.$('#f_st', b).value, note: U.$('#f_n', b).value.trim(), seriesId,
+        incomeNote, color: bcolor, alpha: balpha
+      };
+      if (overlaps(l).length) conf++;
+      DB.data.lessons.push(l);
+    });
+    if (U.$('#f_fixed', b).checked && (mode === 'week' || mode === 'biweek')) {
+      sub.fixed = wds.map(wd => ({ wd, start: t0, duration: len }));
+    }
+    DB.save(); DB.touch('lesson'); render(); if (done) done();
+    U.toast(conf ? `已排 ${dates.length} 节课，其中 ${conf} 节与其它课时间重叠` : `已排 ${dates.length} 节课`, conf ? 'warn' : 'ok');
+  }
+  function wireBookChange(m) {
+    m.body.addEventListener('change', e => {
+      const rep = U.$('#f_rep'), wdWrap = U.$('#wdWrap'), weeksWrap = U.$('#weeksWrap');
+      if (e.target.id === 'f_s') {
+        const stu = DB.student(e.target.value);
+        const sb = DB.studentSubjects(stu)[0] || {};
+        U.$('#f_sub').innerHTML = DB.studentSubjects(stu).map(x => `<option value="${x.id}">${U.esc(x.grade + x.subject)} · ${U.money(x.tuition)}/${x.duration}分</option>`).join('');
+        const fx = sb.fixed || [];
+        if (fx.length) {
+          rep.value = 'week';
+          U.$('#wdWrap').querySelectorAll('.wd-chk').forEach(c => c.checked = fx.some(f => +f.wd === +c.value));
+          U.$('#f_fixed').checked = true;
+          U.$('#f_t').value = fx[0].start; U.$('#f_len').value = fx[0].duration;
+        } else {
+          U.$('#f_fixed').checked = false;
+          U.$('#f_len').value = sb.duration || DEFAULT_LESSON_DURATION;
+          const ls0 = lastStartFor(stu.id);
+          if (ls0) U.$('#f_t').value = ls0;
+        }
+      }
+      if (rep) {
+        const showWd = rep.value === 'week' || rep.value === 'biweek';
+        if (wdWrap) wdWrap.style.display = showWd ? 'flex' : 'none';
+        if (weeksWrap) weeksWrap.style.display = (rep.value === 'week' || rep.value === 'biweek' || rep.value === 'contig') ? 'flex' : 'none';
+      }
+    });
+  }
+  function commitEditLesson(b, l, future) {
+    const scope = future.length ? (b.querySelector('input[name="scope"]:checked') || {}).value || 'once' : 'once';
+    const set = scope === 'future' ? [l, ...future] : [l];
+    const date = U.$('#f_d', b).value, start = U.$('#f_t', b).value;
+    const dur = +U.$('#f_len', b).value || l.duration;
+    const fee = +U.$('#f_fee', b).value || 0;
+    const com = +U.$('#f_com', b).value || 0;
+    const incomeNote = U.$('#f_inote', b).value.trim();
+    const st = U.$('#f_st', b).value, tid = U.$('#f_tid', b).value, note = U.$('#f_n', b).value.trim();
+    const color = U.$('#f_color', b).value, alpha = +U.$('#f_alpha', b).value;
+    set.forEach(x => {
+      x.start = start; x.duration = dur; x.tuition = fee; x.commission = com; x.status = st; x.teacherId = tid; x.note = note;
+      x.incomeNote = incomeNote; x.color = color; x.alpha = alpha;
+      if (scope === 'once') { x.date = date; x.seriesId = null; }  // 仅此一次：日期也改，并脱离系列
+    });
+    const ocEl = U.$('#f_oc', b), oaEl = U.$('#f_oa', b);
+    if (ocEl && oaEl) { DB.data.settings.overlapColor = ocEl.value; DB.data.settings.overlapAlpha = +oaEl.value; }
+    DB.save(); DB.touch('lesson'); render(); U.toast(scope === 'future' ? '已应用到此后所有同一重复课程' : '已保存');
+  }
+
   function book(studentId, preset = {}, done) {
     const stus = DB.data.students.filter(s => s.status !== 'ended');
     if (!stus.length) { U.toast('请先创建学员档案', 'warn'); return; }
@@ -514,7 +606,7 @@ const Schedule = (() => {
     const presetWds = fixed0.map(f => f.wd);
     const initMode = fixed0.length ? 'week' : 'none';
     const initStart = preset.start || (fixed0.length ? fixed0[0].start : (lastStartFor(sid) || '19:00'));
-    U.modal({
+    const m = U.modal({
       title: '排课', okText: '确认排课',
       body: `
       <div class="field"><label>学员</label>
@@ -557,67 +649,10 @@ const Schedule = (() => {
       onOk: b => {
         const stu = DB.student(U.$('#f_s', b).value);
         const sub = (stu.subjects || []).find(x => x.id === U.$('#f_sub', b).value) || DB.studentSubjects(stu)[0];
-        if (!sub) { U.toast('请选择学科', 'warn'); return false; }
-        const d0 = U.$('#f_d', b).value, t0 = U.$('#f_t', b).value;
-        const len = +U.$('#f_len', b).value || sub.duration || 60;
-        const mode = U.$('#f_rep', b).value;
-        if (!d0 || !t0) { U.toast('请填写日期与时间', 'warn'); return false; }
-        let wds = [], weeks = 1;
-        if (mode === 'week' || mode === 'biweek') {
-          wds = Array.from(b.querySelectorAll('.wd-chk')).filter(c => c.checked).map(c => +c.value);
-          if (!wds.length) { U.toast('请至少勾选一个上课星期', 'warn'); return false; }
-          weeks = +U.$('#f_weeks', b).value || 12;
-        } else if (mode === 'contig') {
-          weeks = +U.$('#f_weeks', b).value || 12;
-        }
-        const dates = genDates(mode, wds, d0, weeks);
-        const seriesId = (mode !== 'none' && dates.length > 1) ? U.uid('ser') : null;
-        const incomeNote = U.$('#f_inote', b).value.trim();
-        let conf = 0;
-        const bcolor = U.$('#f_color', b).value, balpha = +U.$('#f_alpha', b).value || 0.32;
-        dates.forEach(date => {
-          const l = {
-            id: U.uid('les'), studentId: stu.id, subjectId: sub.id,
-            grade: sub.grade, subject: sub.subject,
-            date, start: t0, duration: len,
-            tuition: sub.tuition, commission: sub.commission, teacherId: stu.teacherId,
-            status: U.$('#f_st', b).value, note: U.$('#f_n', b).value.trim(), seriesId,
-            incomeNote, color: bcolor, alpha: balpha
-          };
-          if (overlaps(l).length) conf++;
-          DB.data.lessons.push(l);
-        });
-        if (U.$('#f_fixed', b).checked && (mode === 'week' || mode === 'biweek')) {
-          sub.fixed = wds.map(wd => ({ wd, start: t0, duration: len }));
-        }
-        DB.save(); DB.touch('lesson'); render(); if (done) done();
-        U.toast(conf ? `已排 ${dates.length} 节课，其中 ${conf} 节与其它课时间重叠` : `已排 ${dates.length} 节课`, conf ? 'warn' : 'ok');
-      }
-    }).body.addEventListener('change', e => {
-      const rep = U.$('#f_rep'), wdWrap = U.$('#wdWrap'), weeksWrap = U.$('#weeksWrap');
-      if (e.target.id === 'f_s') {
-        const stu = DB.student(e.target.value);
-        const sb = DB.studentSubjects(stu)[0] || {};
-        U.$('#f_sub').innerHTML = DB.studentSubjects(stu).map(x => `<option value="${x.id}">${U.esc(x.grade + x.subject)} · ${U.money(x.tuition)}/${x.duration}分</option>`).join('');
-        const fx = sb.fixed || [];
-        if (fx.length) {
-          rep.value = 'week';
-          U.$('#wdWrap').querySelectorAll('.wd-chk').forEach(c => c.checked = fx.some(f => +f.wd === +c.value));
-          U.$('#f_fixed').checked = true;
-          U.$('#f_t').value = fx[0].start; U.$('#f_len').value = fx[0].duration;
-        } else {
-          U.$('#f_fixed').checked = false;
-          U.$('#f_len').value = sb.duration || 60;
-          const ls0 = lastStartFor(stu.id);
-          if (ls0) U.$('#f_t').value = ls0;
-        }
-      }
-      if (rep) {
-        const showWd = rep.value === 'week' || rep.value === 'biweek';
-        if (wdWrap) wdWrap.style.display = showWd ? 'flex' : 'none';
-        if (weeksWrap) weeksWrap.style.display = (rep.value === 'week' || rep.value === 'biweek' || rep.value === 'contig') ? 'flex' : 'none';
+        return commitBook(b, stu, sub, done);
       }
     });
+    wireBookChange(m);
   }
 
   function bookFor(sid, cb) { book(sid, {}, cb); }
@@ -629,7 +664,7 @@ const Schedule = (() => {
     const sub = currentSub(l);
     const ov = overlaps(l);
     const future = l.seriesId ? DB.data.lessons.filter(x => x.seriesId === l.seriesId && x.date >= l.date && x.id !== l.id) : [];
-    const mm = U.modal({
+    const modal = U.modal({
       title: `${sub.grade}${sub.subject} · ${s.parentName}`,
       body: `
       ${future.length ? `<div class="field" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
@@ -675,27 +710,9 @@ const Schedule = (() => {
         <button class="btn btn-ghost btn-sm" id="btnDone">标记完成</button>
         <button class="btn btn-danger btn-sm" id="btnDel">删除这节课</button>
       </div>`,
-      onOk: b => {
-        const scope = future.length ? (b.querySelector('input[name="scope"]:checked') || {}).value || 'once' : 'once';
-        const set = scope === 'future' ? [l, ...future] : [l];
-        const date = U.$('#f_d', b).value, start = U.$('#f_t', b).value;
-        const dur = +U.$('#f_len', b).value || l.duration;
-        const fee = +U.$('#f_fee', b).value || 0;
-        const com = +U.$('#f_com', b).value || 0;
-        const incomeNote = U.$('#f_inote', b).value.trim();
-        const st = U.$('#f_st', b).value, tid = U.$('#f_tid', b).value, note = U.$('#f_n', b).value.trim();
-        const color = U.$('#f_color', b).value, alpha = +U.$('#f_alpha', b).value;
-        set.forEach(x => {
-          x.start = start; x.duration = dur; x.tuition = fee; x.commission = com; x.status = st; x.teacherId = tid; x.note = note;
-          x.incomeNote = incomeNote; x.color = color; x.alpha = alpha;
-          if (scope === 'once') { x.date = date; x.seriesId = null; }  // 仅此一次：日期也改，并脱离系列
-        });
-        const ocEl = U.$('#f_oc', b), oaEl = U.$('#f_oa', b);
-        if (ocEl && oaEl) { DB.data.settings.overlapColor = ocEl.value; DB.data.settings.overlapAlpha = +oaEl.value; }
-        DB.save(); DB.touch('lesson'); render(); U.toast(scope === 'future' ? '已应用到此后所有同一重复课程' : '已保存');
-      }
+      onOk: b => commitEditLesson(b, l, future),
     });
-    mm.body.addEventListener('click', e => {
+    modal.body.addEventListener('click', e => {
       if (e.target.id === 'btnDone') { l.status = 'done'; DB.save(); DB.touch('lesson'); render(); U.toast('已标记完成'); e.target.closest('.mask').remove(); }
       if (e.target.id === 'btnDel') {
         U.confirm('确定删除这一节课吗？此操作不可撤销。', () => {
@@ -704,13 +721,13 @@ const Schedule = (() => {
         }, '删除');
       }
     });
-    mm.body.addEventListener('input', e => {
-      if (e.target.id === 'f_alpha') { const v = U.$('#f_alpha_v', mm.body); if (v) v.textContent = Math.round(+e.target.value * 100) + '%'; }
-      if (e.target.id === 'f_oa') { const v = U.$('#f_oa_v', mm.body); if (v) v.textContent = Math.round(+e.target.value * 100) + '%'; }
+    modal.body.addEventListener('input', e => {
+      if (e.target.id === 'f_alpha') { const v = U.$('#f_alpha_v', modal.body); if (v) v.textContent = Math.round(+e.target.value * 100) + '%'; }
+      if (e.target.id === 'f_oa') { const v = U.$('#f_oa_v', modal.body); if (v) v.textContent = Math.round(+e.target.value * 100) + '%'; }
     });
     // 选「从此以后」时禁用日期（保持各节原日期），仅改时间/费用
-    if (future.length) mm.body.addEventListener('change', e => {
-      if (e.target.name === 'scope') { const d = U.$('#f_d', mm.body); if (d) d.disabled = (e.target.value === 'future'); }
+    if (future.length) modal.body.addEventListener('change', e => {
+      if (e.target.name === 'scope') { const d = U.$('#f_d', modal.body); if (d) d.disabled = (e.target.value === 'future'); }
     });
   }
 

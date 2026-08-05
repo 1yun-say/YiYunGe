@@ -85,34 +85,27 @@ const Todo = (() => {
   }
 
   /* --- 渲染 --- */
-  function render() {
-    const root = U.$('#view');
-    if (!root || App.route !== 'todo') return;
-    const list = ofDate(curDate);
-    const sortFn = (a, b) => (b.flag ? 1 : 0) - (a.flag ? 1 : 0)   // 旗标置顶
-      || a.priority - b.priority
-      || (a.time || '99:59').localeCompare(b.time || '99:59')
-      || a.createdAt - b.createdAt;
-    const undone = list.filter(t => t.status !== 'done').sort(sortFn);
-    const done = list.filter(t => t.status === 'done').sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
-    const shown = filter < 0 ? undone : undone.filter(t => t.priority === filter);
-    // 与 dashboard 一致的遗留判定：仅“非重复且过去日期未完成”的旧任务算遗留。
-    // 重复任务从不计入遗留——它们按发生日由 ofDate 在当天列表里自然出现，避免重复/错位。
+  function computeOverdue() {
     const today = U.today();
-    const overdue = DB.data.todos.filter(t => {
+    return DB.data.todos.filter(t => {
       if (t.status === 'done') return false;
       const r = U.recurRuleOf(t.repeat, t.date);
       if (r && r.type !== 'never') return false;   // 重复任务不进遗留
       return t.date < today;
     });
-    const isM = U.isMobile();
-    const segHTML = isM ? '' : `<div class="seg" style="margin-bottom:12px">
+  }
+  function buildSegHTML(isM, undone) {
+    if (isM) return '';
+    return `<div class="seg" style="margin-bottom:12px">
             <div class="opt ${filter < 0 ? 'on' : ''}" data-f="-1">全部</div>
             ${P.map(p => `<div class="opt ${filter === p.v ? 'on' : ''}" data-f="${p.v}">
               <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${p.color};margin-right:5px"></span>${p.name}
               <b style="margin-left:4px;color:inherit;opacity:.6">${undone.filter(t => t.priority === p.v).length}</b></div>`).join('')}
           </div>`;
-    const rightColHTML = isM ? '' : `<div style="display:flex;flex-direction:column;gap:16px">
+  }
+  function buildRightColHTML(isM) {
+    if (isM) return '';
+    return `<div style="display:flex;flex-direction:column;gap:16px">
         <div class="card">
           <div class="card-h"><h3>每日模板库</h3>
             <button class="btn btn-icon" data-act="addTpl" title="新增模板"><svg class="ico"><use href="#i-plus"/></svg></button>
@@ -145,8 +138,10 @@ const Todo = (() => {
           <div class="divider"></div>
         </div>
       </div>`;
-
-    const mobileTplHTML = isM ? `<div class="card">
+  }
+  function buildMobileTplHTML(isM) {
+    if (!isM) return '';
+    return `<div class="card">
         <div class="card-h"><h3>每日模板库</h3>
           <button class="btn btn-icon" data-act="addTpl" title="新增模板"><svg class="ico"><use href="#i-plus"/></svg></button>
         </div>
@@ -164,7 +159,26 @@ const Todo = (() => {
             </div>`).join('') : `<p class="muted" style="font-size:12px">还没有模板，点右上角 + 添加</p>`}
         </div>
         <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:11px" data-act="importAll">一键导入全部到今天</button>
-      </div>` : '';
+      </div>`;
+  }
+
+  function render() {
+    const root = U.$('#view');
+    if (!root || App.route !== 'todo') return;
+    const list = ofDate(curDate);
+    const sortFn = (a, b) => (b.flag ? 1 : 0) - (a.flag ? 1 : 0)   // 旗标置顶
+      || a.priority - b.priority
+      || (a.time || '99:59').localeCompare(b.time || '99:59')
+      || a.createdAt - b.createdAt;
+    const undone = list.filter(t => t.status !== 'done').sort(sortFn);
+    const done = list.filter(t => t.status === 'done').sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+    const shown = filter < 0 ? undone : undone.filter(t => t.priority === filter);
+    const overdue = computeOverdue();
+    const isM = U.isMobile();
+    const segHTML = buildSegHTML(isM, undone);
+    const rightColHTML = buildRightColHTML(isM);
+
+    const mobileTplHTML = buildMobileTplHTML(isM);
 
     root.innerHTML = `
     <div class="grid todo-view" style="grid-template-columns:minmax(0,1fr) 320px">

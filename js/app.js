@@ -142,7 +142,7 @@ const App = (() => {
 
   function backupGuard() {
     const last = DB.data.settings.lastBackupAt || 0;
-    const days = (Date.now() - last) / 86400000;
+    const days = (Date.now() - last) / U.MS_PER_DAY;
     // 每周自动静默备份一次（浏览器可能拦截自动下载，失败不打扰）
     if (days >= 7) {
       try {

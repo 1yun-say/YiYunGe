@@ -396,90 +396,8 @@ const Dashboard = (() => {
   }
 
   /* ---------- 顶层 render：拆 left/right 列 + 单列 full ---------- */
-  function render() {
-    const root = U.$('#view');
-    if (!root || App.route !== 'dashboard') return;
-    const t = U.today(), pub = App.isPublic();
-    // 主页抽成口径：默认只统计「已上课」的实际抽成；开启开关后把待上课也计入
-    const inc = !!DB.data.settings.dashIncScheduled;
-    const todayLessons = DB.data.lessons.filter(l => l.date === t && l.status !== 'cancelled')
-      .sort((a, b) => U.safeT2m(a) - U.safeT2m(b));
-    const todosAll = Todo.ofDate(t);
-    const undone = todosAll.filter(x => x.status !== 'done').sort((a, b) => a.priority - b.priority);
-    // 遗留未完成：真正「过期」的任务——基准日早于今天，且今天不再发生（重复任务若今天仍要发生，
-    // 已计入今日 undone，不能再算遗留）。重复任务今天已勾掉（completedDates 含今天）也不算遗留。
-    const overdue = DB.data.todos.filter(x => {
-      if (x.status === 'done') return false;
-      if (x.date >= t) return false;                       // 今天或未来才发生，不是遗留
-      const r = U.recurRuleOf(x.repeat, x.date);
-      if (U.recurOccursOn(t, r)) return false;             // 今天仍要发生 → 归今日，不算遗留
-      if (Array.isArray(x.completedDates) && x.completedDates.includes(t)) return false;
-      return true;
-    });
-    const mFrom = U.monthFirst(t), mTo = U.monthLast(t);
-    const mStat = DB.statIn(mFrom, mTo, { includeScheduled: inc });
-    const mDone = DB.statIn(mFrom, mTo);
-    const prevM = U.addMonths(mFrom, -1);
-    const prevStat = DB.statIn(U.monthFirst(prevM), U.monthLast(prevM), { includeScheduled: inc });
-    const mom = prevStat.profit ? Math.round((mStat.profit - prevStat.profit) / prevStat.profit * 100) : null;
-    const week = U.weekDays(t);
-    const wStat = DB.statIn(week[0], week[6], { includeScheduled: inc });
-    const trials = DB.data.students.filter(s => s.status === 'trial');
-    const conflictDays = week.filter(d => {
-      const ls = DB.data.lessons.filter(l => l.date === d && l.status !== 'cancelled');
-      const lay = Schedule.layout(ls);
-      return Object.values(lay).some(v => v.conflict);
-    });
-    const months = Array.from({ length: 6 }, (_, i) => {
-      const m = U.monthFirst(U.addMonths(mFrom, i - 5));
-      const s = DB.statIn(m, U.monthLast(m), { includeScheduled: inc });
-      return { label: +m.slice(5, 7) + '月', value: s.profit, hl: i === 5 };
-    });
-    const byGrade = Finance.group(DB.statIn(mFrom, mTo, { includeScheduled: inc }).lessons, 'grade');
-
-    const ctx = { t, pub, todayLessons, todosAll, undone, overdue, mStat, mDone, wStat, trials, conflictDays, months, byGrade, inc, prevStat, mom };
-    if (U.isMobile()) { root.innerHTML = renderMobile(ctx); bindMobile(root, ctx); return; }
-
-    const layout = getLayout();
-    const visible = layout.order.filter(k => !layout.hidden.includes(k));
-
-    /* 布局：full 独占整行，其余按 2 列网格自动排布（无空白列、无大段留白） */
-    let html = '';
-    visible.forEach(k => {
-      const mod = MODULES[k];
-      if (!mod) return;
-      html += wrapModule(k, mod.render(ctx), mod.layout === 'full');
-    });
-
-    root.innerHTML = `
-    <div class="dash-toolbar">
-      <span class="muted" style="font-size:12px">共 ${visible.length}/${layout.order.length} 个模块</span>
-      <button class="btn ${inc ? 'btn-primary' : 'btn-ghost'} btn-sm" data-act="toggleInc" title="主页抽成默认只统计已上课；开启后把待上课也计入抽成">
-        ${inc ? '抽成含未上课' : '抽成仅已上课'}</button>
-      <button class="btn btn-ghost btn-sm" data-act="backup" title="把当前全部数据导出成一个 JSON 文件存到本机，换设备/清缓存后可用它恢复">
-        <svg class="ico"><use href="#i-download"/></svg>备份数据</button>
-      <button class="btn ${editMode ? 'btn-primary' : 'btn-ghost'} btn-sm" data-act="toggleEdit" style="margin-left:auto">
-        <svg class="ico"><use href="#${editMode ? 'i-check' : 'i-gear'}"/></svg>
-        ${editMode ? '完成编辑' : '编辑模块'}
-      </button>
-    </div>
-    ${editMode ? renderHiddenPanel(layout.hidden) : ''}
-    <div class="dash-grid ${editMode ? 'edit-mode' : ''}">
-      ${html}
-    </div>
-    ${editMode ? `<div class="dash-edit-hint">
-      <span>拖动左侧 <b>≡</b> 重新排序（手机端用上下按钮）</span>
-      <span>点 <b>✎</b> 改标题，点 <b>×</b> 隐藏</span>
-    </div>` : ''}`;
-
-    /* 拖动绑定（仅编辑模式 + 桌面端） */
-    if (editMode && !U.isMobile()) {
-      U.draggableSortable(root.querySelector('.dash-grid'), '.dash-module', newOrder => {
-        saveLayout({ order: newOrder });
-      });
-    }
-
-    /* 事件绑定 */
+  /* 主页事件绑定（从 render 抽离为独立函数，行为不变） */
+  function bindDashboard(root, t) {
     U.rebind(root, 'dash', e => {
       const go = e.target.closest('[data-go]');
       if (go) { App.go(go.dataset.go); return; }
@@ -609,6 +527,92 @@ const Dashboard = (() => {
         }
       }
     });
+  }
+
+  function render() {
+    const root = U.$('#view');
+    if (!root || App.route !== 'dashboard') return;
+    const t = U.today(), pub = App.isPublic();
+    // 主页抽成口径：默认只统计「已上课」的实际抽成；开启开关后把待上课也计入
+    const inc = !!DB.data.settings.dashIncScheduled;
+    const todayLessons = DB.data.lessons.filter(l => l.date === t && l.status !== 'cancelled')
+      .sort((a, b) => U.safeT2m(a) - U.safeT2m(b));
+    const todosAll = Todo.ofDate(t);
+    const undone = todosAll.filter(x => x.status !== 'done').sort((a, b) => a.priority - b.priority);
+    // 遗留未完成：真正「过期」的任务——基准日早于今天，且今天不再发生（重复任务若今天仍要发生，
+    // 已计入今日 undone，不能再算遗留）。重复任务今天已勾掉（completedDates 含今天）也不算遗留。
+    const overdue = DB.data.todos.filter(x => {
+      if (x.status === 'done') return false;
+      if (x.date >= t) return false;                       // 今天或未来才发生，不是遗留
+      const r = U.recurRuleOf(x.repeat, x.date);
+      if (U.recurOccursOn(t, r)) return false;             // 今天仍要发生 → 归今日，不算遗留
+      if (Array.isArray(x.completedDates) && x.completedDates.includes(t)) return false;
+      return true;
+    });
+    const mFrom = U.monthFirst(t), mTo = U.monthLast(t);
+    const mStat = DB.statIn(mFrom, mTo, { includeScheduled: inc });
+    const mDone = DB.statIn(mFrom, mTo);
+    const prevM = U.addMonths(mFrom, -1);
+    const prevStat = DB.statIn(U.monthFirst(prevM), U.monthLast(prevM), { includeScheduled: inc });
+    const mom = prevStat.profit ? Math.round((mStat.profit - prevStat.profit) / prevStat.profit * 100) : null;
+    const week = U.weekDays(t);
+    const wStat = DB.statIn(week[0], week[6], { includeScheduled: inc });
+    const trials = DB.data.students.filter(s => s.status === 'trial');
+    const conflictDays = week.filter(d => {
+      const ls = DB.data.lessons.filter(l => l.date === d && l.status !== 'cancelled');
+      const lay = Schedule.layout(ls);
+      return Object.values(lay).some(v => v.conflict);
+    });
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const m = U.monthFirst(U.addMonths(mFrom, i - 5));
+      const s = DB.statIn(m, U.monthLast(m), { includeScheduled: inc });
+      return { label: +m.slice(5, 7) + '月', value: s.profit, hl: i === 5 };
+    });
+    const byGrade = Finance.group(DB.statIn(mFrom, mTo, { includeScheduled: inc }).lessons, 'grade');
+
+    const ctx = { t, pub, todayLessons, todosAll, undone, overdue, mStat, mDone, wStat, trials, conflictDays, months, byGrade, inc, prevStat, mom };
+    if (U.isMobile()) { root.innerHTML = renderMobile(ctx); bindMobile(root, ctx); return; }
+
+    const layout = getLayout();
+    const visible = layout.order.filter(k => !layout.hidden.includes(k));
+
+    /* 布局：full 独占整行，其余按 2 列网格自动排布（无空白列、无大段留白） */
+    let html = '';
+    visible.forEach(k => {
+      const mod = MODULES[k];
+      if (!mod) return;
+      html += wrapModule(k, mod.render(ctx), mod.layout === 'full');
+    });
+
+    root.innerHTML = `
+    <div class="dash-toolbar">
+      <span class="muted" style="font-size:12px">共 ${visible.length}/${layout.order.length} 个模块</span>
+      <button class="btn ${inc ? 'btn-primary' : 'btn-ghost'} btn-sm" data-act="toggleInc" title="主页抽成默认只统计已上课；开启后把待上课也计入抽成">
+        ${inc ? '抽成含未上课' : '抽成仅已上课'}</button>
+      <button class="btn btn-ghost btn-sm" data-act="backup" title="把当前全部数据导出成一个 JSON 文件存到本机，换设备/清缓存后可用它恢复">
+        <svg class="ico"><use href="#i-download"/></svg>备份数据</button>
+      <button class="btn ${editMode ? 'btn-primary' : 'btn-ghost'} btn-sm" data-act="toggleEdit" style="margin-left:auto">
+        <svg class="ico"><use href="#${editMode ? 'i-check' : 'i-gear'}"/></svg>
+        ${editMode ? '完成编辑' : '编辑模块'}
+      </button>
+    </div>
+    ${editMode ? renderHiddenPanel(layout.hidden) : ''}
+    <div class="dash-grid ${editMode ? 'edit-mode' : ''}">
+      ${html}
+    </div>
+    ${editMode ? `<div class="dash-edit-hint">
+      <span>拖动左侧 <b>≡</b> 重新排序（手机端用上下按钮）</span>
+      <span>点 <b>✎</b> 改标题，点 <b>×</b> 隐藏</span>
+    </div>` : ''}`;
+
+    /* 拖动绑定（仅编辑模式 + 桌面端） */
+    if (editMode && !U.isMobile()) {
+      U.draggableSortable(root.querySelector('.dash-grid'), '.dash-module', newOrder => {
+        saveLayout({ order: newOrder });
+      });
+    }
+
+    bindDashboard(root, t);
   }
 
   Views.dashboard = {

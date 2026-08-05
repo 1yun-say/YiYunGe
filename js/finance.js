@@ -558,6 +558,172 @@ const Finance = (() => {
       } catch (e) { console.warn('财务拖动排序初始化失败', e); }
     }
 
+    /* --- rebind 各分支抽成独立处理函数（行为不变，仅为可维护性拆分） --- */
+    function onEditHist() {
+      // 历史收入：按月总额（不再按学员拆分，已经不在你这上课的学员不用再管）
+      const data = DB.data;
+      let months = Object.keys(data.histIncome || {});
+      // 默认补齐「当前月之前的连续 3 个月」，方便首次填写；已存在的月份不重复加
+      for (let k = 1; k <= 3; k++) {
+        const d = U.addMonths(U.monthFirst(U.today()), -k);
+        const mk = `${d.slice(0, 4)}-${U.pad(+d.slice(5, 7))}`;
+        if (!months.includes(mk)) months.push(mk);
+      }
+      months.sort();
+      const vals = {};
+      months.forEach(m => { vals[m] = (data.histIncome[m] != null ? String(data.histIncome[m]) : ''); });
+      const monthLabel = mk => `${mk.slice(0, 4)}年${(+mk.slice(5, 7))}月`;
+      const drawRow = m => `<tr data-m="${m}">
+        <td data-label="月份" style="white-space:nowrap;font-weight:600">${monthLabel(m)}</td>
+        <td><input class="input" data-m="${m}" type="number" min="0" step="0.01" style="width:180px" placeholder="0" value="${vals[m] != null ? vals[m] : ''}"></td>
+        <td style="text-align:center"><button class="btn btn-icon btn-sm" data-delm="${m}" title="删除该月"><svg class="ico"><use href="#i-trash"/></svg></button></td>
+      </tr>`;
+      const tableHTML = () => `<div id="histGrid" style="overflow:auto;max-height:62vh">
+        <table class="tbl" style="min-width:max-content;font-size:13px">
+          <thead><tr><th>月份</th><th style="white-space:nowrap">每月抽成总额（元）</th><th style="width:64px">操作</th></tr></thead>
+          <tbody>${months.length ? months.map(drawRow).join('') : '<tr><td colspan="3" class="muted" style="text-align:center;padding:18px">还没有填写任何月份，点下方「+ 添加月份」开始</td></tr>'}</tbody>
+        </table></div>`;
+      const modal = U.modal({
+        title: '编辑历史收入（用本工作台之前，按月填写总额）',
+        wide: true,
+        okText: '保存',
+        body: `<p class="muted" style="font-size:12px;margin:0 0 12px">这里只填 <b>每个月的总抽成</b>，不用拆到每个学员——已经不在你这上课的学员不用再管。每个月单独一行，月度走势图会把它们各自画成一根柱子；填 0 或留空 = 该月无收入。需要更早的月份点「+ 添加月份」，不想要的月份点行尾 🗑 删除。</p>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+          <input type="month" class="input" id="histNewMonth" style="width:184px" value="${U.today().slice(0, 7)}">
+          <button class="btn btn-sm btn-primary" data-addm>+ 添加月份</button>
+        </div>
+        ${tableHTML()}`,
+        onOk: b2 => {
+          const collected = {};
+          b2.querySelectorAll('input[data-m]').forEach(inp => {
+            const m = inp.dataset.m, v = +inp.value || 0;
+            if (v) collected[m] = v;
+          });
+          data.histIncome = collected;
+          DB.save(); render();
+          U.toast('已保存历史收入', 'ok');
+        }
+      });
+      const grid = modal.body.querySelector('#histGrid');
+      if (grid) grid.addEventListener('click', e => {
+        const del = e.target.closest('[data-delm]');
+        if (del) {
+          const m = del.dataset.delm;
+          months = months.filter(x => x !== m);
+          delete vals[m];
+          grid.innerHTML = tableHTML();
+        }
+      });
+      const addBtn = modal.body.querySelector('[data-addm]');
+      if (addBtn) addBtn.onclick = () => {
+        const inp = modal.body.querySelector('#histNewMonth');
+        const m = inp ? inp.value : '';
+        if (!m || !/^\d{4}-\d{2}$/.test(m)) { U.toast('请先选择要添加的月份', 'warn'); return; }
+        if (months.includes(m)) { U.toast('该月份已经存在', 'warn'); return; }
+        months.push(m); months.sort(); vals[m] = '';
+        if (grid) grid.innerHTML = tableHTML();
+      };
+    }
+
+    function onAddCustom() {
+      const types = [['overview', '区间总览（抽成/流水/课酬/课时）'], ['teacher', '按老师课时排行'], ['grade', '按年级抽成'], ['student', '按学员抽成'], ['month', '按月抽成走势']];
+      U.modal({
+        title: '添加自定义统计块',
+        body: `<div class="form-row"><label>标题</label><input class="input" id="custTitle" placeholder="例如：暑期班抽成"></div>
+          <div class="form-row"><label>统计类型</label><select class="input" id="custType">${types.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}</select></div>
+          <p class="muted" style="font-size:12px">自定义块会出现在板块末尾，可随时改名、隐藏或删除。导出图片/CSV 时一并包含。</p>`,
+        okText: '添加',
+        onOk: () => {
+          const title = (U.$('#custTitle').value || '').trim() || '自定义统计块';
+          const type = U.$('#custType').value;
+          // 追加到原始配置数组，保留已有的 deleted 等标记，避免覆盖后「复活」已删除模块
+          const raw = (DB.data.settings.financeSections || []).slice();
+          raw.push({ key: 'custom_' + U.uid('c'), name: title, visible: true, custom: true, type });
+          DB.data.settings.financeSections = raw; DB.save(); render();
+          U.toast('已添加自定义模块', 'ok');
+        }
+      });
+      setTimeout(() => { const i = U.$('#custTitle'); if (i) { i.focus(); } }, 60);
+    }
+
+    function onRenameSec(b) {
+      const key = b.closest('.dash-module').dataset.sec;
+      const secs = getSections();
+      const sec = secs.find(s => s.key === key);
+      const oldName = sec.name;
+      const defName = DB.defaultFinanceSections().find(d => d.key === key);
+      const placeholder = defName ? defName.name : '';
+      U.modal({
+        title: '修改模块标题',
+        body: `<div class="form-row"><label>新标题</label><input class="input" id="secTitleInput" value="${U.esc(oldName)}" placeholder="${U.esc(placeholder)}">
+          <p class="muted" style="font-size:12px;margin-top:6px">留空 = 恢复默认标题</p></div>`,
+        okText: '保存',
+        onOk: () => {
+          const v = (U.$('#secTitleInput') || {}).value || '';
+          const def = defName ? defName.name : '';
+          sec.name = (!v.trim() || v.trim() === def) ? def : v.trim();
+          applySections(secs);
+          render();
+          U.toast('已更新', 'ok');
+        }
+      });
+      setTimeout(() => { const i = U.$('#secTitleInput'); if (i) { i.focus(); i.select(); } }, 60);
+    }
+
+    function onHideSec(b) {
+      const key = b.closest('.dash-module').dataset.sec;
+      const secs = getSections();
+      const sec = secs.find(s => s.key === key);
+      sec.visible = false;
+      applySections(secs);
+      render();
+      U.toast('已隐藏，可到上方「已隐藏的模块」恢复', 'ok');
+    }
+
+    function onDelSec(b) {
+      const key = b.closest('.dash-module').dataset.sec;
+      const isCustom = getSections().find(s => s.key === key && s.custom);
+      U.confirm(isCustom ? '删除这个自定义统计块？此操作不可恢复。' : '删除这个统计模块？删除后不再显示（点「恢复默认布局」可找回内置模块）。', () => {
+        const raw = (DB.data.settings.financeSections || []).slice();
+        const ex = raw.find(s => s.key === key);
+        if (ex) { ex.deleted = true; ex.visible = false; }
+        else raw.push({ key, deleted: true, visible: false });
+        DB.data.settings.financeSections = raw; DB.save(); render();
+        U.toast('已删除模块');
+      }, '删除');
+    }
+
+    function onShowSec(b) {
+      const key = b.closest('.dash-hidden-row').dataset.sec;
+      const secs = getSections();
+      const sec = secs.find(s => s.key === key);
+      sec.visible = true;
+      applySections(secs);
+      render();
+    }
+
+    function onMoveSec(b) {
+      const key = b.closest('.dash-module').dataset.sec;
+      const all = getSections();
+      const vis = all.filter(s => s.visible);
+      const idx = vis.findIndex(s => s.key === key);
+      const swap = b.dataset.act === 'moveUpSec' ? idx - 1 : idx + 1;
+      if (swap < 0 || swap >= vis.length) return;
+      [vis[idx], vis[swap]] = [vis[swap], vis[idx]];
+      const hidden = all.filter(s => !s.visible);
+      applySections([...vis, ...hidden]);
+      render();
+    }
+
+    function onResetLayout() {
+      U.confirm('恢复默认的模块布局（显示全部、恢复原名、重置顺序、移除自定义块）？', () => {
+        DB.data.settings.financeSections = DB.defaultFinanceSections();
+        DB.save();
+        render();
+        U.toast('已恢复默认布局');
+      }, '恢复');
+    }
+
     /* 事件绑定（务必最后执行，且上面的渲染细节即使抛错也不能让它失效） */
     U.rebind(root, 'fin', e => {
       const b = e.target.closest('[data-act]');
@@ -568,175 +734,15 @@ const Finance = (() => {
         case 'exportPdf': exportPDF(); break;
         case 'importCommission': if (window.CommissionImport) CommissionImport.pick(); break;
         case 'toggleEdit': editMode = !editMode; render(); break;
-
-        case 'editHist': {
-          // 历史收入：按月总额（不再按学员拆分，已经不在你这上课的学员不用再管）
-          const data = DB.data;
-          let months = Object.keys(data.histIncome || {});
-          // 默认补齐「当前月之前的连续 3 个月」，方便首次填写；已存在的月份不重复加
-          for (let k = 1; k <= 3; k++) {
-            const d = U.addMonths(U.monthFirst(U.today()), -k);
-            const mk = `${d.slice(0, 4)}-${U.pad(+d.slice(5, 7))}`;
-            if (!months.includes(mk)) months.push(mk);
-          }
-          months.sort();
-          const vals = {};
-          months.forEach(m => { vals[m] = (data.histIncome[m] != null ? String(data.histIncome[m]) : ''); });
-          const monthLabel = mk => `${mk.slice(0, 4)}年${(+mk.slice(5, 7))}月`;
-          const drawRow = m => `<tr data-m="${m}">
-            <td data-label="月份" style="white-space:nowrap;font-weight:600">${monthLabel(m)}</td>
-            <td><input class="input" data-m="${m}" type="number" min="0" step="0.01" style="width:180px" placeholder="0" value="${vals[m] != null ? vals[m] : ''}"></td>
-            <td style="text-align:center"><button class="btn btn-icon btn-sm" data-delm="${m}" title="删除该月"><svg class="ico"><use href="#i-trash"/></svg></button></td>
-          </tr>`;
-          const tableHTML = () => `<div id="histGrid" style="overflow:auto;max-height:62vh">
-            <table class="tbl" style="min-width:max-content;font-size:13px">
-              <thead><tr><th>月份</th><th style="white-space:nowrap">每月抽成总额（元）</th><th style="width:64px">操作</th></tr></thead>
-              <tbody>${months.length ? months.map(drawRow).join('') : '<tr><td colspan="3" class="muted" style="text-align:center;padding:18px">还没有填写任何月份，点下方「+ 添加月份」开始</td></tr>'}</tbody>
-            </table></div>`;
-          const ret = U.modal({
-            title: '编辑历史收入（用本工作台之前，按月填写总额）',
-            wide: true,
-            okText: '保存',
-            body: `<p class="muted" style="font-size:12px;margin:0 0 12px">这里只填 <b>每个月的总抽成</b>，不用拆到每个学员——已经不在你这上课的学员不用再管。每个月单独一行，月度走势图会把它们各自画成一根柱子；填 0 或留空 = 该月无收入。需要更早的月份点「+ 添加月份」，不想要的月份点行尾 🗑 删除。</p>
-            <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
-              <input type="month" class="input" id="histNewMonth" style="width:184px" value="${U.today().slice(0, 7)}">
-              <button class="btn btn-sm btn-primary" data-addm>+ 添加月份</button>
-            </div>
-            ${tableHTML()}`,
-            onOk: b2 => {
-              const collected = {};
-              b2.querySelectorAll('input[data-m]').forEach(inp => {
-                const m = inp.dataset.m, v = +inp.value || 0;
-                if (v) collected[m] = v;
-              });
-              data.histIncome = collected;
-              DB.save(); render();
-              U.toast('已保存历史收入', 'ok');
-            }
-          });
-          const grid = ret.body.querySelector('#histGrid');
-          if (grid) grid.addEventListener('click', e => {
-            const del = e.target.closest('[data-delm]');
-            if (del) {
-              const m = del.dataset.delm;
-              months = months.filter(x => x !== m);
-              delete vals[m];
-              grid.innerHTML = tableHTML();
-            }
-          });
-          const addBtn = ret.body.querySelector('[data-addm]');
-          if (addBtn) addBtn.onclick = () => {
-            const inp = ret.body.querySelector('#histNewMonth');
-            const m = inp ? inp.value : '';
-            if (!m || !/^\d{4}-\d{2}$/.test(m)) { U.toast('请先选择要添加的月份', 'warn'); return; }
-            if (months.includes(m)) { U.toast('该月份已经存在', 'warn'); return; }
-            months.push(m); months.sort(); vals[m] = '';
-            if (grid) grid.innerHTML = tableHTML();
-          };
-          break;
-        }
-
-        case 'addCustom': {
-          const types = [['overview', '区间总览（抽成/流水/课酬/课时）'], ['teacher', '按老师课时排行'], ['grade', '按年级抽成'], ['student', '按学员抽成'], ['month', '按月抽成走势']];
-          U.modal({
-            title: '添加自定义统计块',
-            body: `<div class="form-row"><label>标题</label><input class="input" id="custTitle" placeholder="例如：暑期班抽成"></div>
-              <div class="form-row"><label>统计类型</label><select class="input" id="custType">${types.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}</select></div>
-              <p class="muted" style="font-size:12px">自定义块会出现在板块末尾，可随时改名、隐藏或删除。导出图片/CSV 时一并包含。</p>`,
-            okText: '添加',
-            onOk: () => {
-              const title = (U.$('#custTitle').value || '').trim() || '自定义统计块';
-              const type = U.$('#custType').value;
-              // 追加到原始配置数组，保留已有的 deleted 等标记，避免覆盖后「复活」已删除模块
-              const raw = (DB.data.settings.financeSections || []).slice();
-              raw.push({ key: 'custom_' + U.uid('c'), name: title, visible: true, custom: true, type });
-              DB.data.settings.financeSections = raw; DB.save(); render();
-              U.toast('已添加自定义模块', 'ok');
-            }
-          });
-          setTimeout(() => { const i = U.$('#custTitle'); if (i) { i.focus(); } }, 60);
-          break;
-        }
-
-        case 'renameSec': {
-          const key = b.closest('.dash-module').dataset.sec;
-          const secs = getSections();
-          const sec = secs.find(s => s.key === key);
-          const oldName = sec.name;
-          const defName = DB.defaultFinanceSections().find(d => d.key === key);
-          const placeholder = defName ? defName.name : '';
-          U.modal({
-            title: '修改模块标题',
-            body: `<div class="form-row"><label>新标题</label><input class="input" id="secTitleInput" value="${U.esc(oldName)}" placeholder="${U.esc(placeholder)}">
-              <p class="muted" style="font-size:12px;margin-top:6px">留空 = 恢复默认标题</p></div>`,
-            okText: '保存',
-            onOk: () => {
-              const v = (U.$('#secTitleInput') || {}).value || '';
-              const def = defName ? defName.name : '';
-              sec.name = (!v.trim() || v.trim() === def) ? def : v.trim();
-              applySections(secs);
-              render();
-              U.toast('已更新', 'ok');
-            }
-          });
-          setTimeout(() => { const i = U.$('#secTitleInput'); if (i) { i.focus(); i.select(); } }, 60);
-          break;
-        }
-        case 'hideSec': {
-          const key = b.closest('.dash-module').dataset.sec;
-          const secs = getSections();
-          const sec = secs.find(s => s.key === key);
-          sec.visible = false;
-          applySections(secs);
-          render();
-          U.toast('已隐藏，可到上方「已隐藏的模块」恢复', 'ok');
-          break;
-        }
-        case 'delSec': {
-          const key = b.closest('.dash-module').dataset.sec;
-          const isCustom = getSections().find(s => s.key === key && s.custom);
-          U.confirm(isCustom ? '删除这个自定义统计块？此操作不可恢复。' : '删除这个统计模块？删除后不再显示（点「恢复默认布局」可找回内置模块）。', () => {
-            const raw = (DB.data.settings.financeSections || []).slice();
-            const ex = raw.find(s => s.key === key);
-            if (ex) { ex.deleted = true; ex.visible = false; }
-            else raw.push({ key, deleted: true, visible: false });
-            DB.data.settings.financeSections = raw; DB.save(); render();
-            U.toast('已删除模块');
-          }, '删除');
-          break;
-        }
-        case 'showSec': {
-          const key = b.closest('.dash-hidden-row').dataset.sec;
-          const secs = getSections();
-          const sec = secs.find(s => s.key === key);
-          sec.visible = true;
-          applySections(secs);
-          render();
-          break;
-        }
+        case 'editHist': onEditHist(); break;
+        case 'addCustom': onAddCustom(); break;
+        case 'renameSec': onRenameSec(b); break;
+        case 'hideSec': onHideSec(b); break;
+        case 'delSec': onDelSec(b); break;
+        case 'showSec': onShowSec(b); break;
         case 'moveUpSec':
-        case 'moveDownSec': {
-          const key = b.closest('.dash-module').dataset.sec;
-          const all = getSections();
-          const vis = all.filter(s => s.visible);
-          const idx = vis.findIndex(s => s.key === key);
-          const swap = b.dataset.act === 'moveUpSec' ? idx - 1 : idx + 1;
-          if (swap < 0 || swap >= vis.length) break;
-          [vis[idx], vis[swap]] = [vis[swap], vis[idx]];
-          const hidden = all.filter(s => !s.visible);
-          applySections([...vis, ...hidden]);
-          render();
-          break;
-        }
-        case 'resetLayout': {
-          U.confirm('恢复默认的模块布局（显示全部、恢复原名、重置顺序、移除自定义块）？', () => {
-            DB.data.settings.financeSections = DB.defaultFinanceSections();
-            DB.save();
-            render();
-            U.toast('已恢复默认布局');
-          }, '恢复');
-          break;
-        }
+        case 'moveDownSec': onMoveSec(b); break;
+        case 'resetLayout': onResetLayout(); break;
       }
     });
   }

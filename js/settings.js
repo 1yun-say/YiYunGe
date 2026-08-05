@@ -59,7 +59,7 @@ const Settings = (() => {
           <button class="btn btn-ghost" data-act="demo">载入演示数据</button>
           <button class="btn btn-danger" data-act="clear">清空全部数据</button>
         </div>
-        <div class="edit-time ${lastBk && Date.now() - d.settings.lastBackupAt > 7 * 86400000 ? 'warn' : ''}" style="margin-top:10px">
+        <div class="edit-time ${lastBk && Date.now() - d.settings.lastBackupAt > 7 * U.MS_PER_DAY ? 'warn' : ''}" style="margin-top:10px">
           <svg class="ico"><use href="#i-check"/></svg>
           ${lastBk ? `上次导出备份：${lastBk}` : '还没有导出过备份，建议现在导出一份存到手机或网盘'}</div>
         ${preImp ? `<div class="edit-time hide-on-mobile" style="margin-top:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">

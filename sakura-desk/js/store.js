@@ -2,68 +2,17 @@
 const DB = (() => {
   const KEY = 'sakura-desk-v1';
 
-  /* ---------- 学员编码解析（可自定义模板） ---------- */
-  // 默认模板：[日期]-[年级学科]-[家长]-[抽成]/[课时费]|[课时长]
-  // 例：240815-高二数学-李妈妈-50/300|90
-  // 用户可在「数据管理」里修改模板，用 [字段] 占位，自定义分隔符与顺序。
-  const DEFAULT_CODE_TEMPLATE = '[日期]-[年级学科]-[家长]-[抽成]/[课时费]|[课时长]';
+  /* ---------- 学员编码 ----------
+   * 早期版本曾支持「档案编码格式自定义 + 粘贴式一键拆解录入」（parseCode / buildCode 等），
+   * 该能力已移除；现学员编码仅由 studentCode() 依据档案结构化字段自动生成，不再支持粘贴拆解。
+   */
   const GRADES = ['高三', '高二', '高一', '初三', '初二', '初一',
     '六年级', '五年级', '四年级', '三年级', '二年级', '一年级',
     '小六', '小五', '小四', '小三', '小二', '小一',
     '大学', '高中', '初中', '小学', '幼小衔接', '成人'];
   const SUBJECTS = Object.keys(U.SUBJECT_COLORS);
 
-  // 占位符别名 → 内部字段
-  const FIELD_MAP = {
-    signdate: 'signDate', '签约日期': 'signDate', '日期': 'signDate', 'date': 'signDate', '日期编码': 'signDate',
-    '年级学科': 'gradeSubject', '年级': 'gradeSubject', '学科': 'gradeSubject', 'gs': 'gradeSubject', 'grade': 'gradeSubject',
-    '家长': 'parentName', '家长称呼': 'parentName', '家长名': 'parentName', '家长姓名': 'parentName', 'parent': 'parentName',
-    '抽成': 'commission', '提成': 'commission', 'commission': 'commission', 'cut': 'commission',
-    '课时费': 'tuition', '学费': 'tuition', '课酬': 'tuition', 'fee': 'tuition', 'tuition': 'tuition',
-    '课时长': 'duration', '时长': 'duration', '分钟': 'duration', 'duration': 'duration', 'dur': 'duration'
-  };
-  function resolveField(s) { return FIELD_MAP[(s || '').trim().toLowerCase()] || null; }
-
-  // 把模板拆成 tokens：{t:'lit', v} 或 {t:'ph', f}
-  function tokenizeCode(tpl) {
-    const tokens = [];
-    const re = /\[([^\]]+)\]/g;
-    let last = 0, m;
-    while ((m = re.exec(tpl)) !== null) {
-      if (m.index > last) tokens.push({ t: 'lit', v: tpl.slice(last, m.index) });
-      const f = resolveField(m[1]);
-      if (f) tokens.push({ t: 'ph', f });
-      else tokens.push({ t: 'lit', v: tpl.slice(m.index, m.index + m[0].length) }); // 不识别→当字面量
-      last = m.index + m[0].length;
-    }
-    if (last < tpl.length) tokens.push({ t: 'lit', v: tpl.slice(last) });
-    if (!tokens.length) tokens.push({ t: 'lit', v: tpl });
-    return tokens;
-  }
-
   function numOr0(v) { const n = parseFloat(String(v == null ? '' : v).replace(/[^\d.]/g, '')); return isFinite(n) ? n : 0; }
-  function fieldValue(f, s) {
-    switch (f) {
-      case 'signDate': return (s.signDate || '').replace(/-/g, '').slice(2); // YYMMDD
-      case 'gradeSubject': return (s.grade || '') + (s.subject || '');
-      case 'parentName': return s.parentName || '';
-      case 'commission': return s.commission || 0;
-      case 'tuition': return s.tuition || 0;
-      case 'duration': return s.duration || 0;
-      default: return '';
-    }
-  }
-
-  // 返回当前生效的编码模板（兼容旧数据未定义的情况）
-  function getCodeTemplate() {
-    const t = (data.settings && data.settings.codeTemplate) || DEFAULT_CODE_TEMPLATE;
-    return t && String(t).trim() ? t : DEFAULT_CODE_TEMPLATE;
-  }
-  function presentFields(tpl) {
-    const set = new Set();
-    tokenizeCode(tpl).forEach(t => { if (t.t === 'ph') set.add(t.f); });
-    return set;
-  }
 
   function normDate(raw) {
     const s = String(raw).replace(/[^\d]/g, '');
@@ -142,71 +91,6 @@ const DB = (() => {
   function normSubject(s) {
     const hit = SUBJECTS.find(x => s.includes(x));
     return hit || s;
-  }
-
-  function parseCode(raw) {
-    const out = { ok: false, errors: [], signDate: '', grade: '', subject: '', parentName: '', commission: 0, tuition: 0, duration: 0 };
-    const tpl = getCodeTemplate();
-    const tokens = tokenizeCode(tpl);
-    const present = presentFields(tpl);
-    const str = String(raw || '').trim().replace(/[－—–]/g, '-').replace(/[／]/g, '/').replace(/[｜]/g, '|');
-    if (!str) { out.errors.push('请输入档案编码'); return out; }
-
-    // 按字面量分隔符顺序定位，提取各占位符之间的文本（比正则更稳健，支持任意分隔符/顺序）
-    let cursor = 0;
-    const fields = {};
-    for (let i = 0; i < tokens.length; i++) {
-      const tk = tokens[i];
-      if (tk.t === 'lit') {
-        const idx = str.indexOf(tk.v, cursor);
-        if (idx < 0) { out.errors.push('未找到分隔符「' + tk.v + '」'); cursor = str.length; break; }
-        cursor = idx + tk.v.length;
-      } else {
-        let end = str.length;
-        for (let j = i + 1; j < tokens.length; j++) {
-          if (tokens[j].t === 'lit') {
-            const idx = str.indexOf(tokens[j].v, cursor);
-            end = (idx < 0) ? str.length : idx;
-            break;
-          }
-        }
-        fields[tk.f] = str.slice(cursor, end).trim();
-        cursor = end;
-      }
-    }
-
-    if (present.has('signDate')) {
-      const d = fields.signDate ? normDate(fields.signDate) : '';
-      if (!d) out.errors.push('日期需为 YYMMDD 或 YYYYMMDD，例：240815');
-      out.signDate = d || '';
-    }
-    if (present.has('gradeSubject') && fields.gradeSubject) Object.assign(out, splitGradeSubject(fields.gradeSubject));
-    if (present.has('parentName')) {
-      out.parentName = (fields.parentName || '').trim();
-      if (!out.parentName) out.errors.push('缺少家长称呼');
-    }
-    if (present.has('commission')) {
-      out.commission = numOr0(fields.commission);
-      if (!out.commission) out.errors.push('缺少抽成金额');
-    }
-    if (present.has('tuition')) {
-      out.tuition = numOr0(fields.tuition);
-      if (!out.tuition) out.errors.push('缺少课时费');
-    }
-    if (present.has('duration')) out.duration = numOr0(fields.duration);
-    if (out.commission > out.tuition) out.errors.push('抽成金额大于课时费，请检查');
-    if (out.duration && (out.duration <= 0 || out.duration > 480)) out.errors.push('课时长（分钟）不合理');
-    out.ok = out.errors.length === 0;
-    return out;
-  }
-
-  function buildCode(s) {
-    const tpl = getCodeTemplate();
-    let res = '';
-    tokenizeCode(tpl).forEach(tk => {
-      res += (tk.t === 'lit') ? tk.v : fieldValue(tk.f, s);
-    });
-    return res;
   }
 
   /* ---------- 默认数据 ---------- */
@@ -332,7 +216,7 @@ const DB = (() => {
   function blank() {
     return {
       version: 1,
-      settings: { route: 'dashboard', ownerName: '我', night: false, financeSections: defaultFinanceSections(), dashboardLayout: defaultDashboardLayout(), customSub: {}, codeTemplate: '[日期]-[年级学科]-[家长]-[抽成]/[课时费]|[课时长]', brandLogo: '' },
+      settings: { route: 'dashboard', ownerName: '我', night: false, financeSections: defaultFinanceSections(), dashboardLayout: defaultDashboardLayout(), customSub: {}, brandLogo: '' },
       teachers: [], students: [], lessons: [], todos: [], events: [],
       histIncome: {},                // 历史收入：按月总额 { 'YYYY-MM': 金额 }
       templates: defaultTemplates(), phrases: defaultPhrases(),
@@ -341,8 +225,7 @@ const DB = (() => {
   }
 
   /* ---------- 读写 ---------- */
-  // 先初始化为 blank()，避免首次载入演示数据（demoData→parseCode→getCodeTemplate）时
-  // 访问尚未赋值的 data 触发 TDZ 报错。
+  // 先初始化为 blank()，避免首次访问尚未赋值的 data 触发 TDZ 报错（演示数据在 load() 成功后按需填充）。
   let data = blank();
   data = load();
 
@@ -721,8 +604,7 @@ const DB = (() => {
     get data() { return data; },
     save, reset, exportJSON, importJSON, parseBackup, preImportInfo, restorePreImport, buildSnapshot,
     touch, setRemoteHandler,
-    parseCode, buildCode, GRADES, SUBJECTS, normDate, defaultFinanceSections,
-    getCodeTemplate, tokenizeCode, presentFields, resolveField, DEFAULT_CODE_TEMPLATE,
+    GRADES, SUBJECTS, normDate, defaultFinanceSections,
     student, teacher, teacherName, studentLabel, lessonsIn, statIn, lessonBreakdown, defaultTemplates, defaultPhrases,
     DASH_MODULES, studentSubjects, primarySubject, studentCode, normDateFlexible, lessonSub, migrateSubjects,
     resolveTeacher, rememberGradesSubjects,

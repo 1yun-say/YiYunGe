@@ -261,61 +261,70 @@ const Students = (() => {
       <div class="divider"></div>
       <div class="field"><label>备注 <span class="hint">家长性格、特殊要求、孩子情况</span></label>
         <textarea class="input" id="f_note" placeholder="例：妈妈很关注细节，每节课后一定要文字反馈；孩子函数薄弱。">${U.esc(init.note || '')}</textarea></div>`,
-      onOk: b => {
-        const dateStr = U.$('#f_date', b).value.trim();
-        const signDate = DB.normDateFlexible(dateStr);
-        if (!signDate) { U.toast('签约日期无法识别，请按 260820 或 2026.8.20 格式', 'warn'); return false; }
-        const parentName = U.$('#f_sname', b).value.trim();
-        if (!parentName) { U.toast('请填写学生姓名', 'warn'); return false; }
-        const rows = Array.from(U.$('#subjWrap', b).querySelectorAll('.subj-row'));
-        const subjects = [];
-        for (const r of rows) {
-          const grade = (r.querySelector('.sg') || {}).value || '';
-          const subject = (r.querySelector('.sj') || {}).value || '';
-          const tuition = +((r.querySelector('.fee') || {}).value || 0);
-          const commission = +((r.querySelector('.com') || {}).value || 0);
-          const duration = +((r.querySelector('.dur') || {}).value || 0);
-          if (!grade && !subject && !tuition && !commission && !duration) continue; // 跳过空行
-          if (!grade || !subject) { U.toast('学科行需填写年级与学科', 'warn'); return false; }
-          if (commission > tuition) { U.toast(`${grade}${subject}：抽成不能大于课时费`, 'warn'); return false; }
-          DB.rememberGradesSubjects(grade, subject);
-          subjects.push({ id: r.dataset.sid || U.uid('sbj'), grade, subject, tuition, commission, duration: duration || 60, fixed: ((DB.student(s ? s.id : '') || {}).subjects || []).find(x => x.id === r.dataset.sid)?.fixed || [] });
-        }
-        if (!subjects.length) { U.toast('请至少填写一个学科', 'warn'); return false; }
-        // 自定义字段：收集非空的 label+value
-        const customRows = Array.from(U.$('#customWrap', b).querySelectorAll('.cust-row'));
-        const customF = customRows.map(r => ({
-          id: r.dataset.cid || U.uid('cf'),
-          label: (r.querySelector('.cl') || {}).value.trim(),
-          value: (r.querySelector('.cv') || {}).value.trim()
-        })).filter(c => c.label || c.value);
-        const teacherId = DB.resolveTeacher(U.$('#f_tname', b).value);
-        const o = {
-          signDate, parentName, studentName: '',
-          teacherId, status: U.$('#f_st', b).value, freq: U.$('#f_freq', b).value || '',
-          trialDate: U.$('#f_trial', b).value, note: U.$('#f_note', b).value.trim(),
-          custom: customF,
-          grade: subjects[0].grade, subject: subjects[0].subject,
-          tuition: subjects[0].tuition, commission: subjects[0].commission, duration: subjects[0].duration,
-          subjects
-        };
-        o.code = DB.studentCode(Object.assign({ signDate, parentName }, { subjects }));
-        if (isNew) {
-          const dup = DB.data.students.find(x => (x.parentName || '').trim().toLowerCase() === parentName.toLowerCase());
-          if (dup && !window.confirm(`已存在同名学员「${dup.parentName}」，确定要再新建一个吗？\n若其实是同一人，建议直接编辑原档案即可。`)) {
-            return false;
-          }
-          DB.data.students.push(Object.assign({ id: U.uid('stu'), createdAt: Date.now() }, o));
-        }
-        else Object.assign(s, o);
-        DB.save(); DB.touch('student');
-        if (typeof Todo !== 'undefined' && Todo.checkAuto) { try { Todo.checkAuto(); } catch (_) {} }
-        if (typeof App !== 'undefined' && App.refreshBadge) { try { App.refreshBadge(); } catch (_) {} }
-        render();
-        U.toast(isNew ? '档案已创建' : '已保存');
-      }
+      onOk: b => { const r = gatherStudent(b, isNew, s); return r.ok; }
     });
 
+    wireStudentModal(m, subs, custom, cg, teachers, isNew, s);
+  }
+
+  /* 收集并校验学员表单 → 返回 {ok:true,o} 或 {ok:false}（已 toast 原因） */
+  function gatherStudent(b, isNew, s) {
+    const dateStr = U.$('#f_date', b).value.trim();
+    const signDate = DB.normDateFlexible(dateStr);
+    if (!signDate) { U.toast('签约日期无法识别，请按 260820 或 2026.8.20 格式', 'warn'); return { ok: false }; }
+    const parentName = U.$('#f_sname', b).value.trim();
+    if (!parentName) { U.toast('请填写学生姓名', 'warn'); return { ok: false }; }
+    const rows = Array.from(U.$('#subjWrap', b).querySelectorAll('.subj-row'));
+    const subjects = [];
+    for (const r of rows) {
+      const grade = (r.querySelector('.sg') || {}).value || '';
+      const subject = (r.querySelector('.sj') || {}).value || '';
+      const tuition = +((r.querySelector('.fee') || {}).value || 0);
+      const commission = +((r.querySelector('.com') || {}).value || 0);
+      const duration = +((r.querySelector('.dur') || {}).value || 0);
+      if (!grade && !subject && !tuition && !commission && !duration) continue; // 跳过空行
+      if (!grade || !subject) { U.toast('学科行需填写年级与学科', 'warn'); return { ok: false }; }
+      if (commission > tuition) { U.toast(`${grade}${subject}：抽成不能大于课时费`, 'warn'); return { ok: false }; }
+      DB.rememberGradesSubjects(grade, subject);
+      subjects.push({ id: r.dataset.sid || U.uid('sbj'), grade, subject, tuition, commission, duration: duration || 60, fixed: ((DB.student(s ? s.id : '') || {}).subjects || []).find(x => x.id === r.dataset.sid)?.fixed || [] });
+    }
+    if (!subjects.length) { U.toast('请至少填写一个学科', 'warn'); return { ok: false }; }
+    // 自定义字段：收集非空的 label+value
+    const customRows = Array.from(U.$('#customWrap', b).querySelectorAll('.cust-row'));
+    const customF = customRows.map(r => ({
+      id: r.dataset.cid || U.uid('cf'),
+      label: (r.querySelector('.cl') || {}).value.trim(),
+      value: (r.querySelector('.cv') || {}).value.trim()
+    })).filter(c => c.label || c.value);
+    const teacherId = DB.resolveTeacher(U.$('#f_tname', b).value);
+    const o = {
+      signDate, parentName, studentName: '',
+      teacherId, status: U.$('#f_st', b).value, freq: U.$('#f_freq', b).value || '',
+      trialDate: U.$('#f_trial', b).value, note: U.$('#f_note', b).value.trim(),
+      custom: customF,
+      grade: subjects[0].grade, subject: subjects[0].subject,
+      tuition: subjects[0].tuition, commission: subjects[0].commission, duration: subjects[0].duration,
+      subjects
+    };
+    o.code = DB.studentCode(Object.assign({ signDate, parentName }, { subjects }));
+    if (isNew) {
+      const dup = DB.data.students.find(x => (x.parentName || '').trim().toLowerCase() === parentName.toLowerCase());
+      if (dup && !window.confirm(`已存在同名学员「${dup.parentName}」，确定要再新建一个吗？\n若其实是同一人，建议直接编辑原档案即可。`)) {
+        return { ok: false };
+      }
+      DB.data.students.push(Object.assign({ id: U.uid('stu'), createdAt: Date.now() }, o));
+    }
+    else Object.assign(s, o);
+    DB.save(); DB.touch('student');
+    if (typeof Todo !== 'undefined' && Todo.checkAuto) { try { Todo.checkAuto(); } catch (_) {} }
+    if (typeof App !== 'undefined' && App.refreshBadge) { try { App.refreshBadge(); } catch (_) {} }
+    render();
+    U.toast(isNew ? '档案已创建' : '已保存');
+    return { ok: true };
+  }
+
+  /* 模态打开后：绑定学科/自定义字段动态增删、日期实时规整提示 */
+  function wireStudentModal(m, subs, custom, cg, teachers, isNew, s) {
     const wrap = U.$('#subjWrap', m.body);
     wrap.innerHTML = subs.map(subjRowHTML).join('');
     const refreshAddBtn = () => {
@@ -361,28 +370,6 @@ const Students = (() => {
     dateIn.oninput = upd; upd();
     const stSel = U.$('#f_st', m.body), trialWrap = U.$('#trialWrap', m.body);
     stSel.onchange = () => trialWrap.style.display = stSel.value === 'trial' ? 'flex' : 'none';
-  }
-
-  function previewHTML(p) {
-    const cell = (k, v, bad) => `<div class="parse-cell ${bad ? 'bad' : ''}"><span class="pk">${k}</span><span class="pv">${U.esc(v || '—')}</span></div>`;
-    return `<div class="parse-box">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px">
-        <b style="font-size:12.5px">解析预览</b>
-        <span class="tag ${p.ok ? 'leaf' : 'alert'}">${p.ok ? '格式正确' : '待完善'}</span>
-      </div>
-      <div class="parse-row">
-        ${cell('签约日期', p.signDate, !p.signDate)}
-        ${cell('年级', p.grade, !p.grade)}
-        ${cell('学科', p.subject, !p.subject)}
-        ${cell('学员名', p.parentName, !p.parentName)}
-        ${cell('我的抽成', p.commission ? U.money(p.commission) : '', !p.commission)}
-        ${cell('课时费', p.tuition ? U.money(p.tuition) : '', !p.tuition)}
-        ${cell('课时长', p.duration ? p.duration + ' 分钟' : '', !p.duration)}
-        ${cell('老师课酬', p.tuition ? U.money(p.tuition - p.commission) : '')}
-        ${cell('抽成比例', p.tuition ? Math.round(p.commission / p.tuition * 100) + '%' : '')}
-      </div>
-      ${p.errors.length ? `<div style="margin-top:9px;font-size:11.5px;color:#cf5252">${p.errors.map(U.esc).join('<br>')}</div>` : ''}
-    </div>`;
   }
 
   /* ---------- 档案详情 ---------- */
@@ -586,5 +573,5 @@ const Students = (() => {
     render() { render(); }
   };
 
-  return { render, edit, STATUS, statOf, previewHTML };
+  return { render, edit, STATUS, statOf };
 })();

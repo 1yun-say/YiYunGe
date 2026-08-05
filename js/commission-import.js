@@ -21,7 +21,7 @@
             if (!res.records.length) { U.toast('没有解析到任何抽成记录，请检查表格格式', 'err'); return; }
             C.preview(res);
           } catch (err) {
-            console.error(err);
+            console.error('[commission-import] 解析 Excel 失败：', err);
             U.toast('解析失败：' + (err && err.message ? err.message : err), 'err');
           }
         };
@@ -47,7 +47,7 @@
       const num = Number(rawStr);
       if (isFinite(num) && /^\d{4,6}(\.\d+)?$/.test(rawStr) && num > 20000 && num < 80000) {
         const adj = num > 60 ? num - 1 : num;                 // 修正 Excel 1900 伪闰年（序列号>60 减 1 天）
-        const d = new Date((adj - 25569) * 86400 * 1000);     // Excel 序列号 → JS 时间戳（UTC）
+        const d = new Date((adj - U.EXCEL_EPOCH) * U.MS_PER_DAY);     // Excel 序列号 → JS 时间戳（UTC）
         if (!isNaN(d.getTime())) {
           const y = d.getUTCFullYear(), M = d.getUTCMonth() + 1, D = d.getUTCDate();
           if (M >= 1 && M <= 12 && D >= 1 && D <= 31) return `${y}-${String(M).padStart(2, '0')}-${String(D).padStart(2, '0')}`;

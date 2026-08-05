@@ -2,6 +2,10 @@
 const U = (() => {
   const pad = n => String(n).padStart(2, '0');
 
+  // 常量（避免散落魔法数字，便于统一维护）
+  const MS_PER_DAY = 86400000;   // 一天的毫秒数
+  const EXCEL_EPOCH = 25569;     // Excel 日期序列号的 Unix 纪元偏移（1900 伪闰年，序号>60 需减 1 天）
+
   /* --- 日期 --- */
   const today = () => fmt(new Date());
   const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -24,7 +28,7 @@ const U = (() => {
   const wdName = s => WD[dow(s)];
   const cnDate = s => { const d = parse(s); return `${d.getMonth() + 1}月${d.getDate()}日`; };
   const between = (s, a, b) => s >= a && s <= b;
-  const daysDiff = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
+  const daysDiff = (a, b) => Math.round((parse(b) - parse(a)) / MS_PER_DAY);
 
   /* --- 时间(分钟) --- */
   const t2m = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
@@ -84,7 +88,7 @@ const U = (() => {
     const p2 = n => String(n).padStart(2, '0');
     const hm = `${p2(d.getHours())}:${p2(d.getMinutes())}`;
     if (sameDay) return `今天 ${hm}`;
-    const y = new Date(now - 86400000);
+    const y = new Date(now - MS_PER_DAY);
     if (d.toDateString() === y.toDateString()) return `昨天 ${hm}`;
     return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${hm}`;
   };
@@ -511,6 +515,7 @@ function editableSub(node, viewKey, fallback) {
     toast, modal, confirm, copy, pie, bars, columns, subColor, SUBJECT_COLORS, WEEK_MUTED, WD, rebind, unbindNode, pct, fmtTime, isMobile,
     editableSub, draggableSortable,
     monthDay, recurRuleOf, recurOccurrencesBetween, recurOccursOn, recurDescribe,
-    buildRepeatControl, wireRepeatControl, readRepeatControl
+    buildRepeatControl, wireRepeatControl, readRepeatControl,
+    MS_PER_DAY, EXCEL_EPOCH
   };
 })();
