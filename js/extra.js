@@ -368,6 +368,8 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.2.4`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>优化：可视化课表月视图「非本月」配色对齐独立日历页</b>：上版（v2.2.3）把课表非本月改成了中性灰 #f4f3f5，本次按你的要求改为与日历非本月一致——底色 #faf6f7、日期数字 var(--ink-3)，两处页面观感统一；今天仍为粉色高亮，非本月与今天的区分保持不变（夜览模式也同步参照日历，非本月用 var(--card)、数字 var(--ink-3)）。`] },
     { ver: `v2.2.3`, date: `2026-08-05`, held: false, divider: false,
       items: [`<b>回退 + 修复：上版本（v2.2.2）误把样式改到了独立的「日历」页</b>，本次纠正：① 独立日历页「非本月」颜色已恢复到 v2.2.1 原样（#faf6f7 浅底）；② 真正要改的是<b>可视化课表月视图</b>——它的非本月格子 <code>.mg-cell.out</code> 原本是粉色 <code>var(--pink-50)</code> 加半透明，和今天的粉色 <code>.mg-cell.today</code> 太接近。现把课表非本月改为中性浅灰 #f4f3f5、日期数字调淡，今天的粉色高亮得以突出；夜览模式同步加了中性暗灰弱化。日历页与课表页现已各归各位。`] },
     { ver: `v2.2.2`, date: `2026-08-05`, held: false, divider: false,
