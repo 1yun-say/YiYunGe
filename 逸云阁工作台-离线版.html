@@ -253,6 +253,13 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .tpl-chip{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--line);border-radius:var(--r-s);background:#fff;transition:.18s}
 .tpl-chip:hover{border-color:var(--pink-300)}
 .tpl-chip .pdot{width:9px;height:9px;border-radius:50%;flex:none}
+.tpl-chip.sel{cursor:pointer;border-style:dashed}
+.tpl-chip.sel:active{transform:scale(.99)}
+.tpl-check{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--line-2);flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;line-height:1;color:#fff;transition:.15s;background:transparent}
+.tpl-check.on{background:var(--pink-500);border-color:var(--pink-500)}
+.tpl-batch-bar{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line-2)}
+.tpl-sel-count{font-size:12px;color:var(--ink-3);flex:1}
+.btn-icon.on{background:var(--pink-200);border-color:var(--pink-400)}
 .t-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:2px}
 .t-card{border:1px solid var(--line-2);border-radius:10px;padding:9px 10px;background:var(--bg-card);display:flex;flex-direction:column;gap:4px;min-width:0}
 .t-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
@@ -1233,7 +1240,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-05T10:14:43.371Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-05T10:32:05.640Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -3049,6 +3056,8 @@ const Todo = (() => {
   const cycle = s => STATUS[s]?.next || 'done';
   let curDate = U.today();
   let filter = -1;
+  let tplSelMode = false;          // 每日模板库「批量删除」选择模式
+  const tplSel = new Set();        // 已选中的模板 id 集合
 
   /* --- 数据迁移：旧版 done 布尔值 → 三态 status --- */
   function migrate() {
@@ -3134,29 +3143,58 @@ const Todo = (() => {
               <b style="margin-left:4px;color:inherit;opacity:.6">${undone.filter(t => t.priority === p.v).length}</b></div>`).join('')}
           </div>`;
   }
+  /* 每日模板库：单条模板 chip（支持批量删除选择模式） */
+  function tplChipHTML(tpl, selMode, selected) {
+    const color = pInfo(tpl.priority).color;
+    if (selMode) {
+      return `<div class="tpl-chip sel" data-tpl="${tpl.id}" data-act="tplToggle" role="button" tabindex="0">
+        <span class="tpl-check ${selected ? 'on' : ''}">${selected ? '✓' : ''}</span>
+        <span class="pdot" style="background:${color}"></span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(tpl.title)}</div>
+          ${tpl.tag ? `<span class="tag gray" style="margin-top:3px">${U.esc(tpl.tag)}</span>` : ''}
+        </div>
+      </div>`;
+    }
+    return `<div class="tpl-chip" data-tpl="${tpl.id}">
+      <span class="pdot" style="background:${color}"></span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(tpl.title)}</div>
+        ${tpl.tag ? `<span class="tag gray" style="margin-top:3px">${U.esc(tpl.tag)}</span>` : ''}
+      </div>
+      <button class="btn btn-icon" data-act="useTpl" title="导入这条"><svg class="ico"><use href="#i-plus"/></svg></button>
+      <button class="btn btn-icon" data-act="editTpl" title="编辑"><svg class="ico"><use href="#i-edit"/></svg></button>
+      <button class="btn btn-icon" data-act="delTpl" title="删除"><svg class="ico"><use href="#i-trash"/></svg></button>
+    </div>`;
+  }
+
+  /* 每日模板库：批量删除操作条 */
+  function tplBatchBarHTML() {
+    const total = DB.data.templates.length;
+    const n = tplSel.size;
+    return `<div class="tpl-batch-bar">
+      <button class="btn btn-sm btn-ghost" data-act="tplSelAll">${n === total && total ? '取消全选' : '全选'}</button>
+      <span class="tpl-sel-count">已选 ${n} 项</span>
+      <button class="btn btn-sm btn-danger" data-act="tplDelSel" ${n ? '' : 'disabled'}>删除选中</button>
+      <button class="btn btn-sm btn-ghost" data-act="tplSelCancel">退出</button>
+    </div>`;
+  }
+
   function buildRightColHTML(isM) {
     if (isM) return '';
     return `<div style="display:flex;flex-direction:column;gap:16px">
         <div class="card">
           <div class="card-h"><h3>每日模板库</h3>
+            <button class="btn btn-icon ${tplSelMode ? 'on' : ''}" data-act="tplBatch" title="${tplSelMode ? '退出批量删除' : '批量删除'}"><svg class="ico"><use href="#i-check"/></svg></button>
             <button class="btn btn-icon" data-act="addTpl" title="新增模板"><svg class="ico"><use href="#i-plus"/></svg></button>
           </div>
           <button class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:11px" data-act="importAll">
             一键导入全部到${curDate === U.today() ? '今天' : U.cnDate(curDate)}
           </button>
           <div style="display:flex;flex-direction:column;gap:7px">
-            ${DB.data.templates.length ? DB.data.templates.map(tpl => `
-              <div class="tpl-chip" data-tpl="${tpl.id}">
-                <span class="pdot" style="background:${pInfo(tpl.priority).color}"></span>
-                <div style="flex:1;min-width:0">
-                  <div style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(tpl.title)}</div>
-                  ${tpl.tag ? `<span class="tag gray" style="margin-top:3px">${U.esc(tpl.tag)}</span>` : ''}
-                </div>
-                <button class="btn btn-icon" data-act="useTpl" title="导入这条"><svg class="ico"><use href="#i-plus"/></svg></button>
-                <button class="btn btn-icon" data-act="editTpl" title="编辑"><svg class="ico"><use href="#i-edit"/></svg></button>
-                <button class="btn btn-icon" data-act="delTpl" title="删除"><svg class="ico"><use href="#i-trash"/></svg></button>
-              </div>`).join('') : `<p class="muted" style="font-size:12px">还没有模板，点右上角 + 添加</p>`}
+            ${DB.data.templates.length ? DB.data.templates.map(tpl => tplChipHTML(tpl, tplSelMode, tplSel.has(tpl.id))).join('') : `<p class="muted" style="font-size:12px">还没有模板，点右上角 + 添加</p>`}
           </div>
+          ${tplSelMode ? tplBatchBarHTML() : ''}
         </div>
 
         <div class="card">
@@ -3172,23 +3210,15 @@ const Todo = (() => {
   }
   function buildMobileTplHTML(isM) {
     if (!isM) return '';
-    return `<div class="card">
+    return `      <div class="card">
         <div class="card-h"><h3>每日模板库</h3>
+          <button class="btn btn-icon ${tplSelMode ? 'on' : ''}" data-act="tplBatch" title="${tplSelMode ? '退出批量删除' : '批量删除'}"><svg class="ico"><use href="#i-check"/></svg></button>
           <button class="btn btn-icon" data-act="addTpl" title="新增模板"><svg class="ico"><use href="#i-plus"/></svg></button>
         </div>
         <div style="display:flex;flex-direction:column;gap:7px">
-          ${DB.data.templates.length ? DB.data.templates.map(tpl => `
-            <div class="tpl-chip" data-tpl="${tpl.id}">
-              <span class="pdot" style="background:${pInfo(tpl.priority).color}"></span>
-              <div style="flex:1;min-width:0">
-                <div style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(tpl.title)}</div>
-                ${tpl.tag ? `<span class="tag gray" style="margin-top:3px">${U.esc(tpl.tag)}</span>` : ''}
-              </div>
-              <button class="btn btn-icon" data-act="useTpl" title="导入这条"><svg class="ico"><use href="#i-plus"/></svg></button>
-              <button class="btn btn-icon" data-act="editTpl" title="编辑"><svg class="ico"><use href="#i-edit"/></svg></button>
-              <button class="btn btn-icon" data-act="delTpl" title="删除"><svg class="ico"><use href="#i-trash"/></svg></button>
-            </div>`).join('') : `<p class="muted" style="font-size:12px">还没有模板，点右上角 + 添加</p>`}
+          ${DB.data.templates.length ? DB.data.templates.map(tpl => tplChipHTML(tpl, tplSelMode, tplSel.has(tpl.id))).join('') : `<p class="muted" style="font-size:12px">还没有模板，点右上角 + 添加</p>`}
         </div>
+        ${tplSelMode ? tplBatchBarHTML() : ''}
         <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:11px" data-act="importAll">一键导入全部到今天</button>
       </div>`;
   }
@@ -3372,6 +3402,31 @@ const Todo = (() => {
           }, '删除');
           break;
         case 'addTpl': editTpl(null); break;
+        /* ---- 每日模板库：批量删除 ---- */
+        case 'tplBatch': tplSelMode = !tplSelMode; if (!tplSelMode) tplSel.clear(); render(); break;
+        case 'tplToggle': {
+          const id = btn.closest('[data-tpl]').dataset.tpl;
+          if (tplSel.has(id)) tplSel.delete(id); else tplSel.add(id);
+          render(); break;
+        }
+        case 'tplSelAll': {
+          if (tplSel.size === DB.data.templates.length) tplSel.clear();
+          else DB.data.templates.forEach(t => tplSel.add(t.id));
+          render(); break;
+        }
+        case 'tplSelCancel': tplSelMode = false; tplSel.clear(); render(); break;
+        case 'tplDelSel': {
+          const ids = [...tplSel];
+          if (!ids.length) break;
+          U.confirm(`确定删除选中的 ${ids.length} 个模板？删除会跨端同步到其他设备`, () => {
+            ids.forEach(id => DB.removeRecord('templates', id));
+            DB.save();
+            tplSel.clear(); tplSelMode = false;
+            render();
+            U.toast(`已删除 ${ids.length} 个模板`, 'ok');
+          }, '删除');
+          break;
+        }
       }
     });
 
@@ -8113,6 +8168,8 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.2.0`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>每日模板库新增「批量删除」</b>：模板多了想一次清掉几条？点模板库标题右侧的 <b>✓ 批量删除</b> 进入选择模式，逐条点选（或点「全选」），再点「删除选中」即可一次删多条；删除一样走墓碑（tombstone）机制，<b>删除会跨端同步</b>——A 端批量删的模板，B/C 端下次同步后也消失，其余模板保留。误删可在同步前退出选择模式取消，或在同步前重新录入覆盖。桌面端（提醒事项页右侧）与手机端（提醒事项页底部卡片）均已支持。`] },
     { ver: `v2.1.1`, date: `2026-08-05`, held: false, divider: false,
       items: [`<b>修复「清空全部数据 + 上传后，一点连接数据又全回来」的致命 bug（v2.1.0 删除同步的漏网之鱼）</b>：v2.1.0 给单条删除加了墓碑（tombstone）跨端同步，但「设置 → 清空全部数据」用的是 <code>DB.reset(false)</code> 硬重置——它把数组和墓碑映射<code>deleted</code>一起清空、没给任何记录打墓碑。于是你三端清空、点「立即上传」时，<code>push</code> 内部按「本机 ∪ 云端」合并，把云端里那份满数据又补回上传了，云端根本没被清空；再点「连接」（pull）就把满数据拉回来——数据「复活」。`,
         `<b>修复方式</b>：新增 <code>DB.wipeSynced()</code> 替代清空的硬重置——清空学员/老师/课节/提醒/日程前，<b>先为每条被清记录打墓碑</b>，再清空数组并保留 <code>deleted</code> 映射，最后 <code>save()</code>。这样「立即上传」时合并会按墓碑把云端对应记录也过滤掉，云端被真正清空；其他端下次同步（上传或下载）后同样变空。<b>模板与话术仍保留工厂初始版本</b>（与清空承诺一致，不在此清除、不打墓碑）。`,

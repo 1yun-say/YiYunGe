@@ -245,6 +245,13 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .tpl-chip{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--line);border-radius:var(--r-s);background:#fff;transition:.18s}
 .tpl-chip:hover{border-color:var(--pink-300)}
 .tpl-chip .pdot{width:9px;height:9px;border-radius:50%;flex:none}
+.tpl-chip.sel{cursor:pointer;border-style:dashed}
+.tpl-chip.sel:active{transform:scale(.99)}
+.tpl-check{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--line-2);flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;line-height:1;color:#fff;transition:.15s;background:transparent}
+.tpl-check.on{background:var(--pink-500);border-color:var(--pink-500)}
+.tpl-batch-bar{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line-2)}
+.tpl-sel-count{font-size:12px;color:var(--ink-3);flex:1}
+.btn-icon.on{background:var(--pink-200);border-color:var(--pink-400)}
 .t-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:2px}
 .t-card{border:1px solid var(--line-2);border-radius:10px;padding:9px 10px;background:var(--bg-card);display:flex;flex-direction:column;gap:4px;min-width:0}
 .t-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
