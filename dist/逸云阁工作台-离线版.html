@@ -353,8 +353,9 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-m);overflow:hidden}
 .mg-head{background:var(--pink-75);padding:8px;text-align:center;font-size:12px;color:var(--ink-2)}
 .mg-cell{background:#fff;min-height:104px;padding:6px;position:relative}
-.mg-cell.out{background:var(--pink-50);opacity:.6}
+.mg-cell.out{background:#f4f3f5;color:var(--ink-3)}
 .mg-cell.today{background:var(--pink-100)}
+.mg-cell.out .mg-date{color:var(--ink-3)}
 .mg-date{font-size:12px;color:var(--ink-2);font-weight:600;margin-bottom:4px}
 .mg-item{font-size:10.5px;padding:2px 5px;border-radius:5px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;border-left:3px solid}
 .mg-item.imported{font-style:italic;color:#666}
@@ -620,11 +621,11 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .cal-month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .cal-month-cell{background:#fff;border:1px solid var(--line);border-radius:10px;padding:5px 5px 4px;min-height:84px;display:flex;flex-direction:column;gap:3px;cursor:pointer;position:relative;transition:.15s}
 .cal-month-cell:hover{border-color:var(--pink-300)}
-.cal-month-cell.out{background:#f4f3f5;color:var(--ink-3)}
+.cal-month-cell.out{background:#faf6f7;color:var(--ink-3)}
 .cal-month-cell.today{background:linear-gradient(135deg,#fff,#fff1f6);border:2px solid var(--pink-400);box-shadow:0 3px 12px rgba(249,112,157,.20);padding:6px 6px 5px}
 .cal-month-cell.sel{background:linear-gradient(135deg,#ffe1eb,#ffd0e0);border-color:var(--pink-400)}
 .cal-month-dn{font-size:13.5px;font-weight:700;color:var(--ink-1)}
-.cal-month-cell.out .cal-month-dn{color:#b8aab5}
+.cal-month-cell.out .cal-month-dn{color:var(--ink-3)}
 .cal-month-cell.today .cal-month-dn{color:var(--pink-600);font-size:15px}
 .cal-month-events{flex:1;display:flex;flex-direction:column;gap:2px;overflow:hidden}
 .cal-month-ev{display:flex;align-items:center;gap:4px;font-size:10.5px;background:var(--pink-50);border-radius:4px;padding:1px 5px;min-width:0;cursor:pointer;height:18px}
@@ -1171,9 +1172,9 @@ body.night .dash-stat,
 body.night .dash-actions button:hover,
 body.night .dash-hidden-row,
 body.night .lock-card{ background:var(--card); }
-/* 非本月格子（日夜间均要弱于本月/今天） */
-body.night .cal-month-cell.out{background:#1c161b;color:var(--ink-3)}
-body.night .cal-month-cell.out .cal-month-dn{color:#7a6671}
+/* 非本月格子：日历沿用 v2.2.1 浅底；课表改为中性灰（日夜间均弱于本月/今天） */
+body.night .mg-cell.out{background:#1c161b;color:var(--ink-3)}
+body.night .mg-cell.out .mg-date{color:#7a6671}
 /* 选中的小标签/分页：用浅粉底+深字，保证对比 */
 body.night .tab.active,
 body.night .cal-tab.on{ background:var(--pink-300); color:#2a1622; }
@@ -1243,7 +1244,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-05T11:34:59.762Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-05T11:45:54.651Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -8217,8 +8218,10 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.2.3`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>回退 + 修复：上版本（v2.2.2）误把样式改到了独立的「日历」页</b>，本次纠正：① 独立日历页「非本月」颜色已恢复到 v2.2.1 原样（#faf6f7 浅底）；② 真正要改的是<b>可视化课表月视图</b>——它的非本月格子 <code>.mg-cell.out</code> 原本是粉色 <code>var(--pink-50)</code> 加半透明，和今天的粉色 <code>.mg-cell.today</code> 太接近。现把课表非本月改为中性浅灰 #f4f3f5、日期数字调淡，今天的粉色高亮得以突出；夜览模式同步加了中性暗灰弱化。日历页与课表页现已各归各位。`] },
     { ver: `v2.2.2`, date: `2026-08-05`, held: false, divider: false,
-      items: [`<b>修复：日历月视图「非本月」与「今天」颜色太像、层次不清</b>：非本月日期原底色是偏粉 #faf6f7，和今天的粉色高亮 #fff1f6 太接近，导致上月/下月格子抢戏、today 不突出。现把非本月底色改为中性浅灰 #f4f3f5，日期数字用更淡的 #b8aab5，让它自然退为背景；夜览模式也补了对应的暗色弱化（#1c161b / #7a6671），避免夜间反而和本月同色。`] },
+      items: [`<b>（已回退）本版本本意修复「可视化课表月视图非本月与今天颜色太像」，但误将改动写到了独立「日历」页的全局样式，导致日历页被误改。该改动已在 v2.2.3 回退，正确修复也已在 v2.2.3 落到可视化课表。</b>`] },
     { ver: `v2.2.1`, date: `2026-08-05`, held: false, divider: false,
       items: [`<b>修复：财务「历史收入」改了又回来（同步回潮，最关键的 bug）</b>：历史收入是按月总额 <code>histIncome</code>，旧合并对同月取 <code>Math.max</code>——你把某月改小后上传，云端旧的大值会在下次合并时把它覆盖回去，于是「一转头又回来了」。现改为<b>按月 LWW（最后写入时间胜出）</b>：新增 <code>histIncomeMt</code>（按月写入时间戳）与 <code>histIncomeDel</code>（按月删除墓碑），合并时同月取时间戳较新的一方、删掉的月份用墓碑真正移除，<b>不再比大小</b>。老数据升级后第一轮同步本机当前值被视为权威（给已填月份打「足够新」时间戳）。<code>wipeSynced()</code> 清空时也一并清理这三项。`,
         `<b>修复：可视化课表周视图 8:00 时间轴显示不全</b>：时间槽的 <code>top:-7px</code> 负偏移被周视图滚动容器顶部裁切，现改为 flex 垂直居中、移除负偏移，8:00 完整显示。`,
