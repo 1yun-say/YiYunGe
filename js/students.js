@@ -27,9 +27,12 @@ const Students = (() => {
 
   function ensureOrder() {
     const sts = DB.data.students;
-    if (sts.length && sts.every(s => typeof s.order === 'number')) return;
-    const sorted = sts.slice().sort((a, b) => freqRank(b.freq) - freqRank(a.freq) || (b.signDate || '').localeCompare(a.signDate || ''));
-    sorted.forEach((s, i) => { s.order = i; });
+    if (!sts.length) return;
+    // 关键修复：只有「全部已有 order」才跳过；否则只给缺 order 的追加到末尾，
+    // 绝不再主动全量重排（否则会把用户手动拖好的顺序冲掉）。
+    if (sts.every(s => typeof s.order === 'number')) return;
+    let maxOrder = sts.reduce((m, x) => Math.max(m, typeof x.order === 'number' ? x.order : -1), -1);
+    sts.forEach(s => { if (typeof s.order !== 'number') s.order = ++maxOrder; });
     DB.save();
   }
   function reorder(s, dir) {
@@ -38,12 +41,15 @@ const Students = (() => {
     const j = idx + dir;
     if (j < 0 || j >= sts.length) return;
     [sts[idx], sts[j]] = [sts[j], sts[idx]];
+    const now = Date.now();
     sts.forEach((x, i) => { x.order = i; });
+    sts[idx]._mt = now; sts[j]._mt = now;   // 交换的两位顺序变了 → 打时间戳，跨端同步按新者胜
     DB.save(); DB.touch('student'); render();
   }
   function sortByFreq() {
     const sts = DB.data.students.slice().sort((a, b) => freqRank(b.freq) - freqRank(a.freq) || (b.signDate || '').localeCompare(a.signDate || ''));
-    sts.forEach((x, i) => { x.order = i; });
+    const now = Date.now();
+    sts.forEach((x, i) => { x.order = i; x._mt = now; });   // 主动重排：全部打时间戳
     DB.save(); DB.touch('student'); render();
     U.toast('已按上课频率重排', 'ok');
   }
@@ -138,9 +144,12 @@ const Students = (() => {
       <div class="stu-body">
         ${subs.map(sb => `<div class="kv"><span class="k">${U.esc(sb.grade)}${U.esc(sb.subject)}</span>
           <b class="money">${U.money(sb.tuition)} / ${sb.duration}分</b>
-          <span class="tag secret" style="background:var(--pink-100);color:var(--pink-600)">抽${U.money(sb.commission)}</span></div>`).join('')}
-        <div class="kv"><span class="k">授课老师</span><b>${U.esc(DB.teacherName(s.teacherId))}</b></div>
-        <div class="kv"><span class="k">上课频率</span><b>${U.esc(freqName(s.freq))}</b></div>
+          <span class="tag secret" style="background:var(--pink-100);color:var(--pink-600)">抽${U.money(sb.commission)}</span>
+          ${sb.teacherId ? `<span class="tag sky">${U.esc(DB.teacherName(sb.teacherId))}</span>` : ''}
+          ${sb.freq ? `<span class="tag gray">${U.esc(freqName(sb.freq))}</span>` : ''}</div>`).join('')}
+        ${subs.length > 1 ? `<div class="kv muted" style="font-size:11px"><span class="k">多学科</span><b>每科老师/频率见上方各科目行</b></div>` : ''}
+        ${(!subs.some(sb => sb.teacherId) && s.teacherId) ? `<div class="kv"><span class="k">授课老师</span><b>${U.esc(DB.teacherName(s.teacherId))}</b></div>` : ''}
+        ${(!subs.some(sb => sb.freq) && s.freq) ? `<div class="kv"><span class="k">上课频率</span><b>${U.esc(freqName(s.freq))}</b></div>` : ''}
         <div class="kv"><span class="k">签约 / 已上</span><b>${U.esc(s.signDate || '-')} · ${stat.done}节</b></div>
         ${s.status === 'trial' && s.trialDate ? `<div class="kv"><span class="k">试课日期</span><b class="tag gold">${U.cnDate(s.trialDate)}（次日回访）</b></div>` : ''}
         <div class="kv secret"><span class="k">累计抽成</span><b class="money in">${U.money(stat.profit)}</b></div>
@@ -179,7 +188,7 @@ const Students = (() => {
       case 'edit': edit(s); break;
       case 'book': Schedule.bookFor(s.id, () => render()); break;
       case 'detail': detail(s); break;
-      case 'toActive': s.status = 'active'; DB.save(); DB.touch('student'); render(); U.toast(`${s.parentName} 已转为正式学员`); break;
+      case 'toActive': s.status = 'active'; s._mt = Date.now(); DB.save(); DB.touch('student'); render(); U.toast(`${s.parentName} 已转为正式学员`); break;
       case 'moveUp': reorder(s, -1); break;
       case 'moveDown': reorder(s, +1); break;
       case 'sortFreq': sortByFreq(); break;
@@ -200,12 +209,17 @@ const Students = (() => {
   /* ---------- 新建 / 编辑 ---------- */
   function subjRowHTML(sb) {
     // 年级 / 学科：下拉建议 + 允许手填自定义（datalist 由弹窗内 <datalist> 提供）
+    // 每科可独立选老师与上课频率（支持一个学员多学科、每科老师/频率不同）
+    const teachers = DB.data.teachers;
+    const sbt = sb.teacherId || '';
     return `<div class="subj-row" data-sid="${sb.id}">
       <input class="input sg" list="dl-grades" placeholder="年级（可自填）" value="${U.esc(sb.grade || '')}">
       <input class="input sj" list="dl-subjects" placeholder="学科（可自填）" value="${U.esc(sb.subject || '')}">
       <input class="input fee" type="number" min="0" placeholder="课时费" value="${sb.tuition || ''}">
       <input class="input com" type="number" min="0" placeholder="抽成" value="${sb.commission || ''}">
       <input class="input dur" type="number" min="15" step="15" placeholder="时长分" value="${sb.duration || ''}">
+      <select class="input stj">${teachers.map(t => `<option value="${t.id}" ${t.id === sbt ? 'selected' : ''}>${U.esc(t.name)}</option>`).join('')}${sbt ? '' : '<option value="" selected>老师（可空）</option>'}</select>
+      <select class="input sfq">${FREQ.map(f => `<option value="${f.v}" ${f.v === (sb.freq || '') ? 'selected' : ''}>${f.name}</option>`).join('')}</select>
       <button class="btn btn-icon delSubj" title="删除该学科"><svg class="ico"><use href="#i-trash"/></svg></button>
     </div>`;
   }
@@ -285,11 +299,13 @@ const Students = (() => {
       const tuition = +((r.querySelector('.fee') || {}).value || 0);
       const commission = +((r.querySelector('.com') || {}).value || 0);
       const duration = +((r.querySelector('.dur') || {}).value || 0);
+      const subTeacherId = (r.querySelector('.stj') || {}).value || '';
+      const subFreq = (r.querySelector('.sfq') || {}).value || '';
       if (!grade && !subject && !tuition && !commission && !duration) continue; // 跳过空行
       if (!grade || !subject) { U.toast('学科行需填写年级与学科', 'warn'); return { ok: false }; }
       if (commission > tuition) { U.toast(`${grade}${subject}：抽成不能大于课时费`, 'warn'); return { ok: false }; }
       DB.rememberGradesSubjects(grade, subject);
-      subjects.push({ id: r.dataset.sid || U.uid('sbj'), grade, subject, tuition, commission, duration: duration || 60, fixed: ((DB.student(s ? s.id : '') || {}).subjects || []).find(x => x.id === r.dataset.sid)?.fixed || [] });
+      subjects.push({ id: r.dataset.sid || U.uid('sbj'), grade, subject, tuition, commission, duration: duration || 60, teacherId: subTeacherId, freq: subFreq, fixed: ((DB.student(s ? s.id : '') || {}).subjects || []).find(x => x.id === r.dataset.sid)?.fixed || [] });
     }
     if (!subjects.length) { U.toast('请至少填写一个学科', 'warn'); return { ok: false }; }
     // 自定义字段：收集非空的 label+value
@@ -315,9 +331,10 @@ const Students = (() => {
       if (dup && !window.confirm(`已存在同名学员「${dup.parentName}」，确定要再新建一个吗？\n若其实是同一人，建议直接编辑原档案即可。`)) {
         return { ok: false };
       }
-      DB.data.students.push(Object.assign({ id: U.uid('stu'), createdAt: Date.now() }, o));
+      const maxOrder = DB.data.students.reduce((m, x) => Math.max(m, x.order || 0), -1);
+      DB.data.students.push(Object.assign({ id: U.uid('stu'), createdAt: Date.now(), order: maxOrder + 1, _mt: Date.now() }, o));
     }
-    else Object.assign(s, o);
+    else { Object.assign(s, o); s._mt = Date.now(); }
     DB.save(); DB.touch('student');
     if (typeof Todo !== 'undefined' && Todo.checkAuto) { try { Todo.checkAuto(); } catch (_) {} }
     if (typeof App !== 'undefined' && App.refreshBadge) { try { App.refreshBadge(); } catch (_) {} }
@@ -421,12 +438,13 @@ const Students = (() => {
     const grade = r.grade || '未分级', subject = r.subject || '其它';
     // 仅提供「抽成」而无「课时费」时，课时费留空(0)，不把抽成误填为课时费（否则 takeHome=0 且统计失真）。
     const hasTuition = (r.tuition !== undefined && r.tuition !== null && r.tuition !== '');
-    const sub = { id: U.uid('sbj'), grade, subject, tuition: hasTuition ? r.tuition : 0, commission: r.commission || 0, duration: r.duration || 60, fixed: [] };
+    const sub = { id: U.uid('sbj'), grade, subject, tuition: hasTuition ? r.tuition : 0, commission: r.commission || 0, duration: r.duration || 60, teacherId: '', freq: '', fixed: [] };
+    const maxOrder = DB.data.students.reduce((m, x) => Math.max(m, x.order || 0), -1);
     const st = {
       id: U.uid('stu'), code: '', signDate: r.date, parentName: r.name, studentName: '',
-      teacherId: '', status: 'active', note: '', trialDate: '', createdAt: Date.now(),
+      teacherId: '', status: 'active', note: '', trialDate: '', createdAt: Date.now(), _mt: Date.now(),
       grade: sub.grade, subject: sub.subject, tuition: sub.tuition, commission: sub.commission, duration: sub.duration,
-      subjects: [sub], freq: '', custom: [], order: DB.data.students.length
+      subjects: [sub], freq: '', custom: [], order: maxOrder + 1
     };
     st.code = DB.studentCode(st);
     DB.data.students.push(st);
