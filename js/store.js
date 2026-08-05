@@ -520,6 +520,31 @@ const DB = (() => {
     save();
   }
 
+  // 跨端清空：清空用户数据集合，但为每条被清记录打墓碑，使删除能随「立即上传」传播到云端 / 其他端。
+  // 模板与话术保留工厂初始版本（与 reset(false) 一致），不清除、不打墓碑（各端一致，无需墓碑）。
+  // 关键：必须打墓碑，而不能直接 data=blank()——
+  // 否则 push 时 mergeDocs 按「本机 ∪ 云端」会把云端满数据补回来，
+  // 造成「清空 + 上传」后一点连接数据又全回来（v2.1.1 修复此 bug）。
+  function wipeSynced() {
+    const wipeCols = ['students', 'teachers', 'lessons', 'todos', 'events'];
+    const t = Date.now();
+    if (!data.deleted) data.deleted = blankDeleted();
+    for (const col of wipeCols) {
+      if (!Array.isArray(data[col])) data[col] = [];
+      if (!data.deleted[col]) data.deleted[col] = {};
+      for (const it of data[col]) {
+        if (it && it.id != null) {
+          const k = String(it.id);
+          data.deleted[col][k] = Math.max(data.deleted[col][k] || 0, t);
+        }
+      }
+      data[col] = [];                 // 清空数组，但墓碑已登记，删除会随上传传播
+    }
+    data.histIncome = {};             // 聚合统计一并清空（非按记录、无墓碑；三端都清空则合并后自然为空）
+    data.meta = { lastLessonEdit: null, lastStudentEdit: null };
+    save();
+  }
+
   /* ---------- 备份：导出 / 预览 / 导入 / 撤销导入 ---------- */
   const PRE_IMPORT_KEY = KEY + '__preimport';   // 导入前的自动快照（用于一键撤销）
 
@@ -657,7 +682,7 @@ const DB = (() => {
     set data(v) { data = v; },
     save, reset, exportJSON, importJSON, parseBackup, preImportInfo, restorePreImport, buildSnapshot,
     touch, setRemoteHandler,
-    markDeleted, isDeleted, unmarkDeleted, removeRecord, blankDeleted,
+    markDeleted, isDeleted, unmarkDeleted, removeRecord, blankDeleted, wipeSynced,
     GRADES, SUBJECTS, normDate, defaultFinanceSections,
     student, teacher, teacherName, studentLabel, lessonsIn, statIn, lessonBreakdown, defaultTemplates, defaultPhrases,
     DASH_MODULES, studentSubjects, primarySubject, studentCode, normDateFlexible, lessonSub, migrateSubjects,

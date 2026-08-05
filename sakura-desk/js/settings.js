@@ -226,7 +226,7 @@ const Settings = (() => {
           break;
         case 'clear':
           U.confirm('清空后无法恢复（模板与话术会保留初始版本），建议先导出备份。确定清空？', () => {
-            DB.reset(false); App.boot(); U.toast('已清空');
+            DB.wipeSynced(); App.boot(); U.toast('已清空（已标记跨端删除，点「立即上传」后各端同步清空）');
           }, '确认清空');
           break;
         case 'connect':
