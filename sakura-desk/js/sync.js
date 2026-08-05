@@ -131,6 +131,66 @@ window.Sync = (() => {
     } catch (_) { return null; }
   }
 
+  /* ---------- 云端拉取（统一封装：返回是否存在内容 + 解密结果） ---------- */
+  async function fetchCloud() {
+    const s = cfg();
+    try {
+      const res = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
+      if (res.status === 404) return { status: 404, content: null, remote: null, present: false };
+      if (!res.ok) return { status: res.status, content: null, remote: null, present: false };
+      const j = await res.json();
+      const content = j.files && j.files[FNAME] && j.files[FNAME].content;
+      if (!content) return { status: 200, content: null, remote: null, present: false };
+      const remote = await readRemote(content, s.token);
+      return { status: 200, content, remote, present: true };
+    } catch (e) { return { status: 0, content: null, remote: null, present: false, err: e }; }
+  }
+
+  /* ---------- 无损合并：按 id 取并集，绝不整体覆盖 ----------
+     这是「多端同步不会再丢失数据」的根本保障。
+     - 各数据集合（学员/老师/课节/提醒/日程/模板/话术）按记录 id 合并：
+       两端都有的 id 取「修改时间(_mt)较新者」；都没有 _mt 则按方向（拉取取远端、上传取本机）；
+       任一侧独有的 id 都保留 → 一端新增、另一端绝不会被覆盖丢失。
+     - histIncome / meta 按月/字段取较大值。
+     - settings 整段保留本机（含 token/gistId 等连接信息），绝不从云端覆盖，避免一端连接被另一端清空。
+     - __savedAt 取两端较大值，保证时间戳单调、基线对得上。
+  */
+  const SYNC_ARRAYS = ['students', 'teachers', 'lessons', 'todos', 'events', 'templates', 'phrases'];
+  function mergeDocs(local, remote, direction) {
+    const merged = Object.assign({}, local);           // 浅拷贝：保留本机 settings 等所有字段
+    const r = remote || {};
+    for (const key of SYNC_ARRAYS) {
+      const la = Array.isArray(local[key]) ? local[key] : [];
+      const ra = Array.isArray(r[key]) ? r[key] : [];
+      const out = [];
+      for (const it of ra) { if (it && it.id != null) out.push(it); }   // 先放远端
+      for (const it of la) {
+        if (!it || it.id == null) { out.push(it); continue; }
+        const k = String(it.id);
+        const idx = out.findIndex(x => String(x.id) === k);
+        if (idx < 0) out.push(it);                      // 本机独有 → 保留
+        else {                                          // 冲突：按 _mt 或方向择优
+          const a = it, b = out[idx];
+          const ma = a._mt || 0, mb = b._mt || 0;
+          out[idx] = (ma && mb) ? (ma >= mb ? a : b) : (direction === 'pull' ? b : a);
+        }
+      }
+      merged[key] = out;
+    }
+    const li = (local && local.histIncome && typeof local.histIncome === 'object') ? local.histIncome : {};
+    const ri = (r && r.histIncome && typeof r.histIncome === 'object') ? r.histIncome : {};
+    const hi = Object.assign({}, li);
+    for (const m in ri) hi[m] = Math.max(hi[m] || 0, ri[m] || 0);
+    merged.histIncome = hi;
+    const lm = (local && local.meta && typeof local.meta === 'object') ? local.meta : {};
+    const rm = (r && r.meta && typeof r.meta === 'object') ? r.meta : {};
+    const mt = Object.assign({}, lm);
+    for (const k in rm) mt[k] = Math.max(mt[k] || 0, rm[k] || 0);
+    merged.meta = mt;
+    merged.__savedAt = Math.max((local && local.__savedAt) || 0, (r && r.__savedAt) || 0);
+    return merged;
+  }
+
   let timer = null, busy = false;
 
   function schedulePush() {
@@ -247,27 +307,15 @@ window.Sync = (() => {
     busy = true;
     try {
       await ensureGist();
-      // 冲突检测：拉取远端，比较 base
-      try {
-        const cur = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
-        if (cur.ok) {
-          const cj = await cur.json();
-          const rc = cj.files && cj.files[FNAME] && cj.files[FNAME].content;
-          const remote = await readRemote(rc, s.token);
-          const remoteBase = remote && (remote.__savedAt || 0);
-          // 仅当「本机确有未上传改动」且「远端时间戳与我的基线不一致」才算冲突。
-          // 否则若本机无改动(localDirty=false)而被旧的 baseSavedAt 错位误判为冲突，会自动上传被卡死；
-          // 加上 localDirty 前提后，无改动的设备永远不会被冲突拦截，自动同步得以持续。
-          const localDirty = (DB.data.__savedAt || 0) > (s.baseSavedAt || 0);
-          if (remote && !force && s.baseSavedAt && localDirty && remoteBase !== s.baseSavedAt) {
-            status('云端已有其他设备更新，请先「下载同步」避免覆盖', 'warn');
-            throw new Error('conflict');
-          }
-        }
-      } catch (e) { if (e.message === 'conflict') throw e; /* 网络抖动则忽略，继续推送 */ }
-
+      const fc = await fetchCloud();
+      // 网络异常 / 云端读不到：放弃本次上传，绝不拿本机旧数据去覆盖云端真实数据
+      if (!fc.present && fc.status !== 404) throw new Error('cloud-unreachable');
+      // 云端已有内容但本机解不开 → 密钥不匹配，绝不覆盖（否则会清空对方数据）
+      if (fc.present && !fc.remote) { status('密钥不匹配，无法上传（会清空对方数据）', 'warn'); throw new Error('key-mismatch'); }
+      // 合并本机与云端（取并集），即便本地「更旧」也绝不会丢失云端新增的记录
+      const merged = mergeDocs(DB.data, fc.remote, 'push');
       status('正在加密上传…');
-      const body = await sealWithKey(DB.data, await activeKey());
+      const body = await sealWithKey(merged, await activeKey());
       const res = await fetch(apiBase() + '/' + s.gistId, {
         method: 'PATCH',
         headers: authHeaders(),
@@ -279,24 +327,19 @@ window.Sync = (() => {
           s.gistId = null; DB.save({ preserveSavedAt: true, silent: true });
           await ensureGist();
           const res2 = await fetch(apiBase() + '/' + s.gistId, {
-            method: 'PATCH',
-            headers: authHeaders(),
+            method: 'PATCH', headers: authHeaders(),
             body: JSON.stringify(withBody({ files: { [FNAME]: { content: body } } }))
           });
-          if (res2.ok) { /* 重试成功，继续下面的收尾 */ }
-          else { const t = await res2.text().catch(() => ''); throw new Error('上传失败(' + res2.status + ')：' + t.slice(0, 120)); }
-        } else {
-          const t = await res.text().catch(() => '');
-          throw new Error('上传失败(' + res.status + ')：' + t.slice(0, 120));
-        }
+          if (!res2.ok) { const t = await res2.text().catch(() => ''); throw new Error('上传失败(' + res2.status + ')：' + t.slice(0, 120)); }
+        } else { const t = await res.text().catch(() => ''); throw new Error('上传失败(' + res.status + ')：' + t.slice(0, 120)); }
       }
-      s.baseSavedAt = DB.data.__savedAt || Date.now();
+      s.baseSavedAt = merged.__savedAt;
       s.lastSync = Date.now();
-      // 保存同步配置但不要刷新 __savedAt，否则刚上传的时间戳立即变新，
-      // 远端还是旧时间戳，下一周期又被误判冲突。
+      // 落盘合并结果（保留 __savedAt，静默不触发上传），使本机与云端完全一致
+      DB.data = merged;
       DB.save({ preserveSavedAt: true, silent: true });
       status('已加密上传 · ' + U.fmtTime(s.lastSync));
-      if (s.auto !== false) startAutoPull();   // 之前若因冲突暂停，上传成功后恢复自动同步
+      if (s.auto !== false) startAutoPull();
     } finally { busy = false; }
   }
 
@@ -307,33 +350,20 @@ window.Sync = (() => {
     busy = true;
     try {
       if (!quiet) status('正在下载…');
-      const res = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
-      if (!res.ok) {
-        const t = await res.text().catch(() => '');
-        throw new Error('下载失败(' + res.status + ')：' + t.slice(0, 120));
-      }
-      const j = await res.json();
-      const content = j.files && j.files[FNAME] && j.files[FNAME].content;
-      if (!content) throw new Error('云端暂无数据');
-      // 复用 readRemote：能解密则返回数据；token 不匹配/数据损坏（envelope 解不开）或格式错误均返回 null，绝不把加密信封当真实数据导入覆盖本地
-      const data = await readRemote(content, s.token);
-      if (!data) throw new Error('解密失败：若更换过 Token，请用原 Token 下载，或本地重新连接');
-      const remoteBase = data.__savedAt || 0;
-      // 关键修复：用「保留远端时间戳 + 静默(不触发自动上传)」一次性导入。
-      // 之前先无参 importJSON(刷新 __savedAt 并触发自动上传)，再二次导入，最后又用普通 save 把 __savedAt 抹成当前时间，
-      // 导致 baseSavedAt 与 __savedAt 永远对不上 → 每次被误判冲突、自动同步被 stopAutoPull 关掉、小字消不掉。
-      DB.importJSON(JSON.stringify(data), { preserveSavedAt: true, silent: true });
-
-      // importJSON 会替换整个 DB.data，同步配置对象也变了，需要重新取并更新 baseSavedAt
-      const s2 = cfg();
-      s2.baseSavedAt = remoteBase;
-      s2.lastSync = Date.now();
-      // 务必 preserveSavedAt：保证 __savedAt === baseSavedAt === remoteBase，闭环不再误判冲突
+      const fc = await fetchCloud();
+      if (!fc.present) throw new Error('云端暂无数据');
+      if (!fc.remote) throw new Error('解密失败：密钥不匹配，请用原 Token / 同步密钥，或本地重新连接');
+      // 合并云端与本机（取并集），本机独有记录不会被云端覆盖丢失
+      const merged = mergeDocs(DB.data, fc.remote, 'pull');
+      DB.data = merged;
       DB.save({ preserveSavedAt: true, silent: true });
-
+      const s2 = cfg();
+      s2.baseSavedAt = fc.remote.__savedAt || 0;
+      s2.lastSync = Date.now();
+      DB.save({ preserveSavedAt: true, silent: true });
       if (App && App.boot) App.boot();
       status((quiet ? '已自动同步' : '已下载同步') + ' · ' + U.fmtTime(s2.lastSync));
-      if (s2.auto !== false) startAutoPull();      // 之前若因冲突暂停，手动下载后恢复自动同步
+      if (s2.auto !== false) startAutoPull();
     } finally { busy = false; }
   }
   function pull() { return doPull(false); }
@@ -369,28 +399,23 @@ window.Sync = (() => {
     const ae = (typeof document !== 'undefined') && document.activeElement;
     if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
     try {
-      const res = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
-      if (!res.ok) { if (res.status === 404) stopAutoPull(); return; }
-      const j = await res.json();
-      const rc = j.files && j.files[FNAME] && j.files[FNAME].content;
-      if (!rc) return;
-      const remote = await readRemote(rc, s.token);
-      const remoteBase = remote && (remote.__savedAt || 0);
-      if (!remoteBase) return;
-      if (remoteBase === s.baseSavedAt) return;     // 没有新版本，直接跳过，不打扰
-      // 有更新：本机若有尚未上传的改动，先上传；若撞车则提示手动处理，本轮不覆盖
+      const fc = await fetchCloud();
+      if (!fc.present) return;                       // 云端空，跳过
+      if (!fc.remote) {                              // 有内容但解不开 → 密钥不匹配，停止自动同步并提示
+        stopAutoPull();
+        status('同步密钥不匹配，已暂停自动同步（请检查两端同步密钥 / Token 是否一致）', 'warn');
+        return;
+      }
+      const remoteBase = fc.remote.__savedAt || 0;
+      if (remoteBase === s.baseSavedAt) return;      // 无新版本，跳过，不打扰
+      // 本机若有未上传改动：先合并上传（上传内部也会先合并云端，绝不丢数据）；
+      // 上传失败（如密钥不匹配）也降级为仅拉取合并，保证本机拿到云端数据且不丢本机数据。
       const localDirty = (DB.data.__savedAt || 0) > (s.baseSavedAt || 0);
       if (localDirty) {
-        try { await push(); return; }               // 上传成功会同步 baseSavedAt
-        catch (e) {
-          if (e.message === 'conflict') {
-            stopAutoPull();   // 停止自动拉取，避免每 20s 重复弹同一警告刷屏
-            status('云端和本机都有改动，已暂停自动同步，请手动「下载同步」处理', 'warn');
-          }
-          return;
-        }
+        try { await push(); return; }
+        catch (e) { if (e.message === 'key-mismatch') { stopAutoPull(); return; } /* 其它失败则继续拉取 */ }
       }
-      await doPull(true);                           // 本机干净 → 静默拉取
+      await doPull(true);                            // 合并拉取，绝不丢本机数据
     } catch (e) { /* 网络抖动忽略，下个周期再试 */ }
   }
 
@@ -404,5 +429,6 @@ window.Sync = (() => {
 
   return { cfg, schedulePush, push, pull, ensureGist, status, refreshStatus,
            startAutoPull, stopAutoPull, fingerprint, readRemote, activeSecret,
-           _crypto: { seal, open, sealWithKey, openWithKey, secureCtx } };
+           _crypto: { seal, open, sealWithKey, openWithKey, secureCtx },
+           _merge: mergeDocs, _fetchCloud: fetchCloud, _autoActive: () => !!pullTimer };
 })();

@@ -26,7 +26,7 @@ const App = (() => {
   function go(r) {
     if (!Views[r]) r = 'dashboard';
     route = r;
-    DB.data.settings.route = r; DB.save();
+    DB.data.settings.route = r; DB.save({ silent: true });   // 仅记录路由，不触发云同步上传（否则每次切页都被误标「有改动」而覆盖云端）
     U.$$('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.route === r));
     U.$$('.bn-item').forEach(n => n.classList.toggle('active', n.dataset.route === r));
     U.$('#pageTitle').textContent = Views[r].title;

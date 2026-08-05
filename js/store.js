@@ -606,6 +606,8 @@ const DB = (() => {
 
   return {
     get data() { return data; },
+    // 允许外部整体替换数据（云同步合并后回写）；与 importJSON 内部 data= 行为一致
+    set data(v) { data = v; },
     save, reset, exportJSON, importJSON, parseBackup, preImportInfo, restorePreImport, buildSnapshot,
     touch, setRemoteHandler,
     GRADES, SUBJECTS, normDate, defaultFinanceSections,
