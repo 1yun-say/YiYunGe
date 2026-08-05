@@ -1233,7 +1233,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-05T05:49:31.910Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-05T06:29:55.040Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -2553,14 +2553,23 @@ window.Sync = (() => {
     for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
     return arr.buffer;
   }
-  async function deriveKey(token) {
+  async function deriveKey(secret) {
     const c = getCrypto();
     const enc = new TextEncoder();
-    const hash = await c.subtle.digest('SHA-256', enc.encode(token));
+    const hash = await c.subtle.digest('SHA-256', enc.encode(secret || ''));
     return c.subtle.importKey('raw', hash, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
   }
-  async function seal(obj, token) {
-    const key = await deriveKey(token);
+  // 当前用于加密的「密钥源」：优先用独立的「同步密钥(pass)」，留空则回退到 Token。
+  // 这样多端只需填同一个「同步密钥」即可互相解密，不必强求各端 Token 完全一致——
+  // 此前密钥=Token，若两端 Token 不同，便永远解不开对方数据，表现为「下载失败 / 自动同步始终不通 / 小字消不掉」。
+  function activeSecret() {
+    const s = cfg();
+    const p = (s.pass || '').trim();
+    return p ? p : ((s.token || '').trim());
+  }
+  async function activeKey() { return deriveKey(activeSecret()); }
+  async function seal(obj, secret) {
+    const key = await deriveKey(secret);
     return sealWithKey(obj, key);
   }
   async function sealWithKey(obj, key) {
@@ -2569,8 +2578,8 @@ window.Sync = (() => {
     const ct = await c.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(obj)));
     return JSON.stringify({ v: 1, alg: 'AES-GCM', iv: b64u(iv.buffer), ct: b64u(ct) });
   }
-  async function open(sealed, token) {
-    const key = await deriveKey(token);
+  async function open(sealed, secret) {
+    const key = await deriveKey(secret);
     return openWithKey(sealed, key);
   }
   async function openWithKey(sealed, key) {
@@ -2581,18 +2590,25 @@ window.Sync = (() => {
     const pt = await c.subtle.decrypt({ name: 'AES-GCM', iv }, key, unb64u(env.ct));
     return JSON.parse(new TextDecoder().decode(pt));
   }
-  // 读远端内容：优先解密；失败则当作旧版明文兼容
+  // 读远端内容：优先用「同步密钥」解密，再回退到 Token；都解不开则当作旧版明文兼容。
+  // 多候选解密让「两端 Token 不同、但同步密钥相同」也能互相解密，彻底消除“下载失败 / 小字消不掉”。
   async function readRemote(rc, token) {
     if (!rc) return null;
-    try { return await open(rc, token); }
-    catch (e) {
-      try {
-        const parsed = JSON.parse(rc);
-        // 解析结果是加密信封（而非旧版明文数据）→ 说明 token 不匹配或数据损坏，绝不当明文返回，否则下游会误判 / 误覆盖本地真实数据
-        if (parsed && parsed.alg === 'AES-GCM' && parsed.ct && parsed.iv) return null;
-        return parsed;
-      } catch (_) { return null; }
+    const s = cfg();
+    const secrets = [];
+    const p = (s.pass || '').trim();
+    if (p) secrets.push(p);
+    const t = (token || '').trim();
+    if (t) secrets.push(t);
+    for (const secret of secrets) {
+      try { return await open(rc, secret); } catch (e) { /* 试下一个候选密钥 */ }
     }
+    // 以上密钥都解不开：当作旧版明文兼容（仅当确为非加密明文才返回，加密信封返回 null 避免误覆盖本地真实数据）
+    try {
+      const parsed = JSON.parse(rc);
+      if (parsed && parsed.alg === 'AES-GCM' && parsed.ct && parsed.iv) return null;
+      return parsed;
+    } catch (_) { return null; }
   }
 
   let timer = null, busy = false;
@@ -2639,14 +2655,14 @@ window.Sync = (() => {
 
     // 0) 容错：把粘贴的链接 / 多余空格规整成纯 ID（仅当确实能提取时才改写）
     const norm = normalizeGistId(s.gistId);
-    if (norm && norm !== s.gistId) { s.gistId = norm; DB.save({ preserveSavedAt: true }); }
+    if (norm && norm !== s.gistId) { s.gistId = norm; DB.save({ preserveSavedAt: true, silent: true }); }
 
     // 1) 格式校验：手动填的 ID 必须符合服务商格式，否则视为「留空」，自动新建。
     // 这是为了防止用户填自定义名（如 20260802）导致各端各自新建、无法同步同一份数据。
     // 关键修复：此前 GitHub 误用 20 位固定长度正则，会把正确的 32 位 ID 判为「格式非法」而清空新建。
     if (s.gistId && !idRe.test(s.gistId)) {
       s.gistId = '';
-      DB.save({ preserveSavedAt: true });
+      DB.save({ preserveSavedAt: true, silent: true });
     }
 
     // 2) 用户填了真实有效的 ID：尝试连接并验证，失败时报错，但绝不擅自丢弃该 ID。
@@ -2656,9 +2672,19 @@ window.Sync = (() => {
       try {
         const chk = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
         if (chk.ok) {
-          s.baseSavedAt = DB.data.__savedAt || Date.now();
-          // preserveSavedAt：仅登记 baseSavedAt，不刷新 __savedAt，否则会被冲突检测误判为「本机有改动」
-          DB.save({ preserveSavedAt: true });
+          // 关键修复：连接已存在空间时——
+          // ① 基线必须取「远端真实时间戳」，而非本机 __savedAt，否则会和云端对不上、误判冲突；
+          // ② 本次保存必须 silent（禁止触发 schedulePush），否则会把本机旧数据自动上传、把共享空间覆盖掉，
+          //    导致另一端永远拉不到正确数据、自动同步看似失效。连接后的真正同步由「立即拉取 + 自动拉取」完成。
+          let remoteBase = DB.data.__savedAt || Date.now();
+          try {
+            const cj = await chk.json();
+            const rc = cj.files && cj.files[FNAME] && cj.files[FNAME].content;
+            const remote = rc ? await readRemote(rc, s.token) : null;
+            if (remote && remote.__savedAt) remoteBase = remote.__savedAt;
+          } catch (e) { /* 解密失败则用本机时间戳兜底 */ }
+          s.baseSavedAt = remoteBase;
+          DB.save({ preserveSavedAt: true, silent: true });
           status('已连接到现有空间');
           return s.gistId;
         }
@@ -2676,7 +2702,7 @@ window.Sync = (() => {
     // 3) 留空或格式无效：新建空间
     if (!secureCtx()) throw new Error('insecure');
     status('正在创建加密同步空间…');
-    const body = await seal(DB.data, s.token);
+    const body = await sealWithKey(DB.data, await activeKey());
     const res = await fetch(apiBase(), {
       method: 'POST',
       headers: authHeaders(),
@@ -2689,7 +2715,7 @@ window.Sync = (() => {
     const j = await res.json();
     s.gistId = j.id;
     s.baseSavedAt = DB.data.__savedAt || Date.now();
-    DB.save({ preserveSavedAt: true });
+    DB.save({ preserveSavedAt: true, silent: true });
     status('加密同步空间已创建');
     return j.id;
   }
@@ -2721,7 +2747,7 @@ window.Sync = (() => {
       } catch (e) { if (e.message === 'conflict') throw e; /* 网络抖动则忽略，继续推送 */ }
 
       status('正在加密上传…');
-      const body = await seal(DB.data, s.token);
+      const body = await sealWithKey(DB.data, await activeKey());
       const res = await fetch(apiBase() + '/' + s.gistId, {
         method: 'PATCH',
         headers: authHeaders(),
@@ -2730,7 +2756,7 @@ window.Sync = (() => {
       if (!res.ok) {
         // 空间失效（404）时自动重建并重试一次，避免卡死在陈旧 ID
         if (res.status === 404) {
-          s.gistId = null; DB.save();
+          s.gistId = null; DB.save({ preserveSavedAt: true, silent: true });
           await ensureGist();
           const res2 = await fetch(apiBase() + '/' + s.gistId, {
             method: 'PATCH',
@@ -2857,7 +2883,7 @@ window.Sync = (() => {
   }
 
   return { cfg, schedulePush, push, pull, ensureGist, status, refreshStatus,
-           startAutoPull, stopAutoPull, fingerprint, readRemote,
+           startAutoPull, stopAutoPull, fingerprint, readRemote, activeSecret,
            _crypto: { seal, open, sealWithKey, openWithKey, secureCtx } };
 })();
 
@@ -7243,7 +7269,7 @@ const Settings = (() => {
         <div class="card-h"><h3>云同步（免费 · 三端统一）</h3><span class="sub sync-status" id="syncStatus">未连接</span></div>
         <p class="muted" style="font-size:12.5px;margin-bottom:12px">
           把数据存到一份加密的私密空间，手机 / 平板 / 电脑三端自动同步、统一数据。
-          <b>隐私保护：上传前数据会先在本机用 AES 加密（密钥由你的 Token 生成），明文绝不出本机；即便空间链接泄露，他人也只看到乱码。</b>
+          <b>隐私保护：上传前数据会先在本机用 AES 加密（密钥默认由你的 Token 生成，也可在下方单独设置「同步密钥」）。多端同步只需各端填<b>同一个同步密钥</b>即可互相解密。</b>
           Token 仅保存在本机浏览器。<b style="color:#b5587a">国内访问 GitHub 经常连不上，建议选「码云 Gitee（国内更稳）」。</b></p>
         <div class="field" style="max-width:440px">
           <label>同步服务商</label>
@@ -7255,6 +7281,10 @@ const Settings = (() => {
         <div class="field" style="max-width:440px">
           <label id="syncTokenLabel">访问令牌 Token</label>
           <input class="input" id="syncToken" type="password" placeholder="ghp_xxx（GitHub）或 gitee_xxx（Gitee）" value="${(sc.token || '').replace(/"/g, '&quot;')}">
+        </div>
+        <div class="field" style="max-width:440px">
+          <label>同步密钥（口令）<span class="hint">加密密钥由它决定，<b>所有设备填同一个密钥</b>即可互相解密同步（推荐）。留空则回退用上方 Token 作密钥——此时必须保证各端 Token 也一致。建议三端统一填一个相同的密钥，这样即使各端 Token 不同也能正常同步。</span></label>
+          <input class="input" id="syncPass" type="password" placeholder="多端共用请填相同的密钥（留空则用 Token 作密钥）" value="${(sc.pass || '').replace(/"/g, '&quot;')}">
         </div>
         <div class="field" style="max-width:440px">
           <label>同步空间 ID<span class="hint">留空则自动创建新空间。<b>多端共用同一份数据：</b>请在电脑端连接后，复制下方自动生成的<b>真实空间 ID（一长串字符）</b>填到这里。⚠️ 不要自己起名（如 20260802）——GitHub 不认自定义名，各端会各自新建、无法同步。</span></label>
@@ -7303,6 +7333,7 @@ const Settings = (() => {
       // 先同步云同步两个输入框到配置（多设备共用需填同一 Token + 同一空间 ID）
       Sync.cfg().token = U.$('#syncToken', root).value.trim();
       Sync.cfg().gistId = U.$('#syncGistId', root).value.trim();
+      Sync.cfg().pass = U.$('#syncPass', root).value.trim();
       const provSel = U.$('#syncProvider', root);
       if (provSel) Sync.cfg().provider = provSel.value;
         switch (b.dataset.act) {
@@ -7355,7 +7386,7 @@ const Settings = (() => {
           break;
         case 'connect':
           if (!Sync.cfg().token) { U.toast('请先填写 Token', 'warn'); break; }
-          DB.save();
+          DB.save({ silent: true });
           const hadGistId = !!(Sync.cfg().gistId || '').trim();
           Sync.ensureGist().then(() => {
             const _id = Sync.cfg().gistId || '';
@@ -7366,13 +7397,16 @@ const Settings = (() => {
               const _fp = U.$('#syncFpShown', root); if (_fp) _fp.textContent = Sync.fingerprint(_id) || '（无法识别）';
               _tip.style.display = 'block';
             }
-            if (hadGistId) {
-              U.toast('已连接到现有空间！请确认下方「空间指纹」与另一端的指纹一致，即说明两端连到同一份数据', 'ok', 6000);
-            } else {
-              U.toast('已连接！已生成真实空间 ID，请复制它到其他设备共用（不要自己起名）', 'ok', 6000);
-            }
-            Sync.refreshStatus();
-            Sync.startAutoPull();
+            // 关键修复：连接后立刻「拉取一次」云端数据（以云端为基准），避免本机旧数据占位、且不等 20s 自动轮询
+            Sync.pull().catch(() => {}).finally(() => {
+              if (hadGistId) {
+                U.toast('已连接到现有空间并同步云端数据！请确认下方「空间指纹」与另一端一致', 'ok', 6000);
+              } else {
+                U.toast('已连接！已生成真实空间 ID，请复制它到其他设备共用（不要自己起名）', 'ok', 6000);
+              }
+              Sync.refreshStatus();
+              Sync.startAutoPull();
+            });
           }).catch(err => U.toast('连接失败：' + syncErrHint(err), 'warn'));
           break;
         case 'push':
@@ -7934,6 +7968,10 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.0.4`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>真·修复：云同步「连接即覆盖 / 自动同步失效」根因（你三端同 Token 同 ID 却不同步的真正元凶）</b>：此前在「设置 → 连接 / 初始化」时，<code>ensureGist</code> 内部多次 <code>DB.save()</code> 未加 <code>silent</code>，会触发 <code>schedulePush</code>——于是连接后约 1.5s，本机旧数据被自动上传、<b>把共享空间整个覆盖掉</b>，而真正的下载要等 3s 以后才发生；结果：另一端永远拉不到正确数据、自动同步看似失效、冲突提示反复出现。本版：① 连接全流程保存一律 <code>silent</code>，<b>连接绝不再上传本机数据</b>；② 连接后<b>立即拉取一次云端</b>（以云端为基准），并让基线取「远端真实时间戳」；③ 新建空间 / 404 重建时的保存也改 <code>silent</code>。现三端连接同一 ID 后：本机旧数据不会覆盖共享空间，连接即同步云端数据，之后改完自动上传、他端约 3s 自动拉取。新增 <code>sync-3device-test.js</code>（11/0，含「连接不覆盖共享空间」防回归断言）锁定该行为。`] },
+    { ver: `v2.0.3`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>热修复：云同步「跨设备解不开对方数据 / 下载失败」根因——密钥不再绑死 Token</b>：此前加密密钥 = SHA-256(Token)，两端 Token 不同时，任一方都解不开另一方上传的密文，表现为「平板/电脑点下载也没反应、自动同步始终不通、冲突提示小字消不掉」。本版引入独立的<b>同步密钥（口令）</b>作为加密密钥的唯一来源（留空则回退 Token，向后兼容）；多端只要填<u>同一个同步密钥</u>即可互相解密，Token 是否一致不再影响同步。读取端按「同步密钥 → Token」顺序尝试解密，旧 Token 加密的数据仍能读。设置页新增「同步密钥」输入框与说明。新增 <code>sync-key-test.js</code>（6/0）锁定该行为。`] },
     { ver: `v2.0.2`, date: `2026-08-05`, held: false, divider: false,
       items: [`<b>热修复：云同步自动实时同步彻底修复（小字反复出现 / 必须手动点下载的根因）</b>：v2.0.1 的修复仍残留一处时间戳污染——<code>doPull</code> 收尾的 <code>DB.save({silent:true})</code> 未传 <code>preserveSavedAt</code>，把刚保留的远端时间戳抹成当前时间，导致 <code>__savedAt</code> 与 <code>baseSavedAt</code> 永久错位；<code>ensureGist</code> 每次 <code>DB.save()</code> 也无参、刷新 <code>__savedAt</code>，使自动上传被「本机有改动」误判为冲突而拒绝。本版：① <code>doPull</code> 一次性 <code>importJSON(preserveSavedAt+silent)</code> 后，收尾保存也 <code>preserveSavedAt</code>，保证 <code>__savedAt === baseSavedAt === 远端</code> 闭环；② <code>ensureGist</code> 全部 <code>DB.save</code> 改 <code>preserveSavedAt</code>，消除误判冲突；③ <code>push</code> 冲突检测加「本机确有未上传改动(localDirty)」前提，无改动设备永不被冲突拦截。现电脑端改完自动上传、平板端 20 秒内自动拉取，且「请手动下载同步」提示在真正下载后消失、不再反复出现。新增 <code>sync-fix-test.js</code>（11 断言全绿）回归锁死该闭环。`] },
     { ver: `v2.0.1`, date: `2026-08-05`, held: false, divider: false,

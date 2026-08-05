@@ -368,6 +368,10 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.0.4`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>真·修复：云同步「连接即覆盖 / 自动同步失效」根因（你三端同 Token 同 ID 却不同步的真正元凶）</b>：此前在「设置 → 连接 / 初始化」时，<code>ensureGist</code> 内部多次 <code>DB.save()</code> 未加 <code>silent</code>，会触发 <code>schedulePush</code>——于是连接后约 1.5s，本机旧数据被自动上传、<b>把共享空间整个覆盖掉</b>，而真正的下载要等 3s 以后才发生；结果：另一端永远拉不到正确数据、自动同步看似失效、冲突提示反复出现。本版：① 连接全流程保存一律 <code>silent</code>，<b>连接绝不再上传本机数据</b>；② 连接后<b>立即拉取一次云端</b>（以云端为基准），并让基线取「远端真实时间戳」；③ 新建空间 / 404 重建时的保存也改 <code>silent</code>。现三端连接同一 ID 后：本机旧数据不会覆盖共享空间，连接即同步云端数据，之后改完自动上传、他端约 3s 自动拉取。新增 <code>sync-3device-test.js</code>（11/0，含「连接不覆盖共享空间」防回归断言）锁定该行为。`] },
+    { ver: `v2.0.3`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>热修复：云同步「跨设备解不开对方数据 / 下载失败」根因——密钥不再绑死 Token</b>：此前加密密钥 = SHA-256(Token)，两端 Token 不同时，任一方都解不开另一方上传的密文，表现为「平板/电脑点下载也没反应、自动同步始终不通、冲突提示小字消不掉」。本版引入独立的<b>同步密钥（口令）</b>作为加密密钥的唯一来源（留空则回退 Token，向后兼容）；多端只要填<u>同一个同步密钥</u>即可互相解密，Token 是否一致不再影响同步。读取端按「同步密钥 → Token」顺序尝试解密，旧 Token 加密的数据仍能读。设置页新增「同步密钥」输入框与说明。新增 <code>sync-key-test.js</code>（6/0）锁定该行为。`] },
     { ver: `v2.0.2`, date: `2026-08-05`, held: false, divider: false,
       items: [`<b>热修复：云同步自动实时同步彻底修复（小字反复出现 / 必须手动点下载的根因）</b>：v2.0.1 的修复仍残留一处时间戳污染——<code>doPull</code> 收尾的 <code>DB.save({silent:true})</code> 未传 <code>preserveSavedAt</code>，把刚保留的远端时间戳抹成当前时间，导致 <code>__savedAt</code> 与 <code>baseSavedAt</code> 永久错位；<code>ensureGist</code> 每次 <code>DB.save()</code> 也无参、刷新 <code>__savedAt</code>，使自动上传被「本机有改动」误判为冲突而拒绝。本版：① <code>doPull</code> 一次性 <code>importJSON(preserveSavedAt+silent)</code> 后，收尾保存也 <code>preserveSavedAt</code>，保证 <code>__savedAt === baseSavedAt === 远端</code> 闭环；② <code>ensureGist</code> 全部 <code>DB.save</code> 改 <code>preserveSavedAt</code>，消除误判冲突；③ <code>push</code> 冲突检测加「本机确有未上传改动(localDirty)」前提，无改动设备永不被冲突拦截。现电脑端改完自动上传、平板端 20 秒内自动拉取，且「请手动下载同步」提示在真正下载后消失、不再反复出现。新增 <code>sync-fix-test.js</code>（11 断言全绿）回归锁死该闭环。`] },
     { ver: `v2.0.1`, date: `2026-08-05`, held: false, divider: false,

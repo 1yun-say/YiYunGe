@@ -73,14 +73,23 @@ window.Sync = (() => {
     for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
     return arr.buffer;
   }
-  async function deriveKey(token) {
+  async function deriveKey(secret) {
     const c = getCrypto();
     const enc = new TextEncoder();
-    const hash = await c.subtle.digest('SHA-256', enc.encode(token));
+    const hash = await c.subtle.digest('SHA-256', enc.encode(secret || ''));
     return c.subtle.importKey('raw', hash, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
   }
-  async function seal(obj, token) {
-    const key = await deriveKey(token);
+  // 当前用于加密的「密钥源」：优先用独立的「同步密钥(pass)」，留空则回退到 Token。
+  // 这样多端只需填同一个「同步密钥」即可互相解密，不必强求各端 Token 完全一致——
+  // 此前密钥=Token，若两端 Token 不同，便永远解不开对方数据，表现为「下载失败 / 自动同步始终不通 / 小字消不掉」。
+  function activeSecret() {
+    const s = cfg();
+    const p = (s.pass || '').trim();
+    return p ? p : ((s.token || '').trim());
+  }
+  async function activeKey() { return deriveKey(activeSecret()); }
+  async function seal(obj, secret) {
+    const key = await deriveKey(secret);
     return sealWithKey(obj, key);
   }
   async function sealWithKey(obj, key) {
@@ -89,8 +98,8 @@ window.Sync = (() => {
     const ct = await c.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(obj)));
     return JSON.stringify({ v: 1, alg: 'AES-GCM', iv: b64u(iv.buffer), ct: b64u(ct) });
   }
-  async function open(sealed, token) {
-    const key = await deriveKey(token);
+  async function open(sealed, secret) {
+    const key = await deriveKey(secret);
     return openWithKey(sealed, key);
   }
   async function openWithKey(sealed, key) {
@@ -101,18 +110,25 @@ window.Sync = (() => {
     const pt = await c.subtle.decrypt({ name: 'AES-GCM', iv }, key, unb64u(env.ct));
     return JSON.parse(new TextDecoder().decode(pt));
   }
-  // 读远端内容：优先解密；失败则当作旧版明文兼容
+  // 读远端内容：优先用「同步密钥」解密，再回退到 Token；都解不开则当作旧版明文兼容。
+  // 多候选解密让「两端 Token 不同、但同步密钥相同」也能互相解密，彻底消除“下载失败 / 小字消不掉”。
   async function readRemote(rc, token) {
     if (!rc) return null;
-    try { return await open(rc, token); }
-    catch (e) {
-      try {
-        const parsed = JSON.parse(rc);
-        // 解析结果是加密信封（而非旧版明文数据）→ 说明 token 不匹配或数据损坏，绝不当明文返回，否则下游会误判 / 误覆盖本地真实数据
-        if (parsed && parsed.alg === 'AES-GCM' && parsed.ct && parsed.iv) return null;
-        return parsed;
-      } catch (_) { return null; }
+    const s = cfg();
+    const secrets = [];
+    const p = (s.pass || '').trim();
+    if (p) secrets.push(p);
+    const t = (token || '').trim();
+    if (t) secrets.push(t);
+    for (const secret of secrets) {
+      try { return await open(rc, secret); } catch (e) { /* 试下一个候选密钥 */ }
     }
+    // 以上密钥都解不开：当作旧版明文兼容（仅当确为非加密明文才返回，加密信封返回 null 避免误覆盖本地真实数据）
+    try {
+      const parsed = JSON.parse(rc);
+      if (parsed && parsed.alg === 'AES-GCM' && parsed.ct && parsed.iv) return null;
+      return parsed;
+    } catch (_) { return null; }
   }
 
   let timer = null, busy = false;
@@ -159,14 +175,14 @@ window.Sync = (() => {
 
     // 0) 容错：把粘贴的链接 / 多余空格规整成纯 ID（仅当确实能提取时才改写）
     const norm = normalizeGistId(s.gistId);
-    if (norm && norm !== s.gistId) { s.gistId = norm; DB.save({ preserveSavedAt: true }); }
+    if (norm && norm !== s.gistId) { s.gistId = norm; DB.save({ preserveSavedAt: true, silent: true }); }
 
     // 1) 格式校验：手动填的 ID 必须符合服务商格式，否则视为「留空」，自动新建。
     // 这是为了防止用户填自定义名（如 20260802）导致各端各自新建、无法同步同一份数据。
     // 关键修复：此前 GitHub 误用 20 位固定长度正则，会把正确的 32 位 ID 判为「格式非法」而清空新建。
     if (s.gistId && !idRe.test(s.gistId)) {
       s.gistId = '';
-      DB.save({ preserveSavedAt: true });
+      DB.save({ preserveSavedAt: true, silent: true });
     }
 
     // 2) 用户填了真实有效的 ID：尝试连接并验证，失败时报错，但绝不擅自丢弃该 ID。
@@ -176,9 +192,19 @@ window.Sync = (() => {
       try {
         const chk = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
         if (chk.ok) {
-          s.baseSavedAt = DB.data.__savedAt || Date.now();
-          // preserveSavedAt：仅登记 baseSavedAt，不刷新 __savedAt，否则会被冲突检测误判为「本机有改动」
-          DB.save({ preserveSavedAt: true });
+          // 关键修复：连接已存在空间时——
+          // ① 基线必须取「远端真实时间戳」，而非本机 __savedAt，否则会和云端对不上、误判冲突；
+          // ② 本次保存必须 silent（禁止触发 schedulePush），否则会把本机旧数据自动上传、把共享空间覆盖掉，
+          //    导致另一端永远拉不到正确数据、自动同步看似失效。连接后的真正同步由「立即拉取 + 自动拉取」完成。
+          let remoteBase = DB.data.__savedAt || Date.now();
+          try {
+            const cj = await chk.json();
+            const rc = cj.files && cj.files[FNAME] && cj.files[FNAME].content;
+            const remote = rc ? await readRemote(rc, s.token) : null;
+            if (remote && remote.__savedAt) remoteBase = remote.__savedAt;
+          } catch (e) { /* 解密失败则用本机时间戳兜底 */ }
+          s.baseSavedAt = remoteBase;
+          DB.save({ preserveSavedAt: true, silent: true });
           status('已连接到现有空间');
           return s.gistId;
         }
@@ -196,7 +222,7 @@ window.Sync = (() => {
     // 3) 留空或格式无效：新建空间
     if (!secureCtx()) throw new Error('insecure');
     status('正在创建加密同步空间…');
-    const body = await seal(DB.data, s.token);
+    const body = await sealWithKey(DB.data, await activeKey());
     const res = await fetch(apiBase(), {
       method: 'POST',
       headers: authHeaders(),
@@ -209,7 +235,7 @@ window.Sync = (() => {
     const j = await res.json();
     s.gistId = j.id;
     s.baseSavedAt = DB.data.__savedAt || Date.now();
-    DB.save({ preserveSavedAt: true });
+    DB.save({ preserveSavedAt: true, silent: true });
     status('加密同步空间已创建');
     return j.id;
   }
@@ -241,7 +267,7 @@ window.Sync = (() => {
       } catch (e) { if (e.message === 'conflict') throw e; /* 网络抖动则忽略，继续推送 */ }
 
       status('正在加密上传…');
-      const body = await seal(DB.data, s.token);
+      const body = await sealWithKey(DB.data, await activeKey());
       const res = await fetch(apiBase() + '/' + s.gistId, {
         method: 'PATCH',
         headers: authHeaders(),
@@ -250,7 +276,7 @@ window.Sync = (() => {
       if (!res.ok) {
         // 空间失效（404）时自动重建并重试一次，避免卡死在陈旧 ID
         if (res.status === 404) {
-          s.gistId = null; DB.save();
+          s.gistId = null; DB.save({ preserveSavedAt: true, silent: true });
           await ensureGist();
           const res2 = await fetch(apiBase() + '/' + s.gistId, {
             method: 'PATCH',
@@ -377,6 +403,6 @@ window.Sync = (() => {
   }
 
   return { cfg, schedulePush, push, pull, ensureGist, status, refreshStatus,
-           startAutoPull, stopAutoPull, fingerprint, readRemote,
+           startAutoPull, stopAutoPull, fingerprint, readRemote, activeSecret,
            _crypto: { seal, open, sealWithKey, openWithKey, secureCtx } };
 })();

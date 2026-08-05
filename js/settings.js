@@ -114,7 +114,7 @@ const Settings = (() => {
         <div class="card-h"><h3>云同步（免费 · 三端统一）</h3><span class="sub sync-status" id="syncStatus">未连接</span></div>
         <p class="muted" style="font-size:12.5px;margin-bottom:12px">
           把数据存到一份加密的私密空间，手机 / 平板 / 电脑三端自动同步、统一数据。
-          <b>隐私保护：上传前数据会先在本机用 AES 加密（密钥由你的 Token 生成），明文绝不出本机；即便空间链接泄露，他人也只看到乱码。</b>
+          <b>隐私保护：上传前数据会先在本机用 AES 加密（密钥默认由你的 Token 生成，也可在下方单独设置「同步密钥」）。多端同步只需各端填<b>同一个同步密钥</b>即可互相解密。</b>
           Token 仅保存在本机浏览器。<b style="color:#b5587a">国内访问 GitHub 经常连不上，建议选「码云 Gitee（国内更稳）」。</b></p>
         <div class="field" style="max-width:440px">
           <label>同步服务商</label>
@@ -126,6 +126,10 @@ const Settings = (() => {
         <div class="field" style="max-width:440px">
           <label id="syncTokenLabel">访问令牌 Token</label>
           <input class="input" id="syncToken" type="password" placeholder="ghp_xxx（GitHub）或 gitee_xxx（Gitee）" value="${(sc.token || '').replace(/"/g, '&quot;')}">
+        </div>
+        <div class="field" style="max-width:440px">
+          <label>同步密钥（口令）<span class="hint">加密密钥由它决定，<b>所有设备填同一个密钥</b>即可互相解密同步（推荐）。留空则回退用上方 Token 作密钥——此时必须保证各端 Token 也一致。建议三端统一填一个相同的密钥，这样即使各端 Token 不同也能正常同步。</span></label>
+          <input class="input" id="syncPass" type="password" placeholder="多端共用请填相同的密钥（留空则用 Token 作密钥）" value="${(sc.pass || '').replace(/"/g, '&quot;')}">
         </div>
         <div class="field" style="max-width:440px">
           <label>同步空间 ID<span class="hint">留空则自动创建新空间。<b>多端共用同一份数据：</b>请在电脑端连接后，复制下方自动生成的<b>真实空间 ID（一长串字符）</b>填到这里。⚠️ 不要自己起名（如 20260802）——GitHub 不认自定义名，各端会各自新建、无法同步。</span></label>
@@ -174,6 +178,7 @@ const Settings = (() => {
       // 先同步云同步两个输入框到配置（多设备共用需填同一 Token + 同一空间 ID）
       Sync.cfg().token = U.$('#syncToken', root).value.trim();
       Sync.cfg().gistId = U.$('#syncGistId', root).value.trim();
+      Sync.cfg().pass = U.$('#syncPass', root).value.trim();
       const provSel = U.$('#syncProvider', root);
       if (provSel) Sync.cfg().provider = provSel.value;
         switch (b.dataset.act) {
@@ -226,7 +231,7 @@ const Settings = (() => {
           break;
         case 'connect':
           if (!Sync.cfg().token) { U.toast('请先填写 Token', 'warn'); break; }
-          DB.save();
+          DB.save({ silent: true });
           const hadGistId = !!(Sync.cfg().gistId || '').trim();
           Sync.ensureGist().then(() => {
             const _id = Sync.cfg().gistId || '';
@@ -237,13 +242,16 @@ const Settings = (() => {
               const _fp = U.$('#syncFpShown', root); if (_fp) _fp.textContent = Sync.fingerprint(_id) || '（无法识别）';
               _tip.style.display = 'block';
             }
-            if (hadGistId) {
-              U.toast('已连接到现有空间！请确认下方「空间指纹」与另一端的指纹一致，即说明两端连到同一份数据', 'ok', 6000);
-            } else {
-              U.toast('已连接！已生成真实空间 ID，请复制它到其他设备共用（不要自己起名）', 'ok', 6000);
-            }
-            Sync.refreshStatus();
-            Sync.startAutoPull();
+            // 关键修复：连接后立刻「拉取一次」云端数据（以云端为基准），避免本机旧数据占位、且不等 20s 自动轮询
+            Sync.pull().catch(() => {}).finally(() => {
+              if (hadGistId) {
+                U.toast('已连接到现有空间并同步云端数据！请确认下方「空间指纹」与另一端一致', 'ok', 6000);
+              } else {
+                U.toast('已连接！已生成真实空间 ID，请复制它到其他设备共用（不要自己起名）', 'ok', 6000);
+              }
+              Sync.refreshStatus();
+              Sync.startAutoPull();
+            });
           }).catch(err => U.toast('连接失败：' + syncErrHint(err), 'warn'));
           break;
         case 'push':
