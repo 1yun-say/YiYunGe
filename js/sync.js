@@ -261,8 +261,11 @@ window.Sync = (() => {
       }
       s.baseSavedAt = DB.data.__savedAt || Date.now();
       s.lastSync = Date.now();
-      DB.save();
+      // 保存同步配置但不要刷新 __savedAt，否则刚上传的时间戳立即变新，
+      // 远端还是旧时间戳，下一周期又被误判冲突。
+      DB.save({ preserveSavedAt: true, silent: true });
       status('已加密上传 · ' + U.fmtTime(s.lastSync));
+      if (s.auto !== false) startAutoPull();   // 之前若因冲突暂停，上传成功后恢复自动同步
     } finally { busy = false; }
   }
 
@@ -285,11 +288,20 @@ window.Sync = (() => {
       const data = await readRemote(content, s.token);
       if (!data) throw new Error('解密失败：若更换过 Token，请用原 Token 下载，或本地重新连接');
       DB.importJSON(JSON.stringify(data));                 // 内部会 save()
-      s.baseSavedAt = DB.data.__savedAt || Date.now();
-      s.lastSync = Date.now();
-      DB.save();
+      // 关键修复：下载后必须保留远端时间戳，否则 importJSON 会刷新 __savedAt 为当前时间，
+      // 导致 baseSavedAt 与远端不一致，下一次同步又被误判为冲突，「请手动下载同步」提示永不消失。
+      const remoteBase = data.__savedAt || 0;
+      DB.importJSON(JSON.stringify(data), { preserveSavedAt: true, silent: true });
+
+      // importJSON 会替换整个 DB.data，同步配置对象也变了，需要重新取并更新 baseSavedAt
+      const s2 = cfg();
+      s2.baseSavedAt = remoteBase;
+      s2.lastSync = Date.now();
+      DB.save({ silent: true });
+
       if (App && App.boot) App.boot();
-      status((quiet ? '已自动同步' : '已下载同步') + ' · ' + U.fmtTime(s.lastSync));
+      status((quiet ? '已自动同步' : '已下载同步') + ' · ' + U.fmtTime(s2.lastSync));
+      if (s2.auto !== false) startAutoPull();      // 之前若因冲突暂停，手动下载后恢复自动同步
     } finally { busy = false; }
   }
   function pull() { return doPull(false); }

@@ -536,15 +536,38 @@ const Students = (() => {
     return { created, added };
   }
 
+  /* 把用户选择的 Excel / CSV / TXT 转成 parseSheet 能处理的文本。
+   * - Excel：用 XLSX 库转制表符分隔文本（避免单元格内逗号干扰）。
+   * - CSV / TXT：优先按 UTF-8 解码；Excel 在中文 Windows 上默认存的是 GBK/GB18030，
+   *   解码失败或乱码时自动 fallback 到 GB18030 / GBK。 */
+  async function fileToSheetText(f) {
+    const name = (f.name || '').toLowerCase();
+    const isExcel = name.endsWith('.xlsx') || name.endsWith('.xls');
+    if (isExcel) {
+      if (typeof XLSX === 'undefined') throw new Error('Excel 解析库未加载，请刷新页面');
+      const buf = await f.arrayBuffer();
+      const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+      if (!wb.SheetNames.length) throw new Error('Excel 文件为空');
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      return XLSX.utils.sheet_to_csv(ws, { FS: '\t', RS: '\n' });
+    }
+    const buf = await f.arrayBuffer();
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+    catch (e) {
+      try { return new TextDecoder('gb18030').decode(buf); }
+      catch (e2) { return new TextDecoder('gbk').decode(buf); }
+    }
+  }
+
   function importExcelFlow() {
     U.modal({
       title: '从 Excel / CSV 导入课时',
       wide: true,
       okText: '确认导入',
       body: `
-      <p class="muted" style="font-size:12px;margin:0 0 8px">把 Excel 另存为 <b>CSV（逗号分隔）</b> 后选择文件，或直接把表格内容粘贴到下方。需要包含列：<b>上课时间</b>、<b>孩子姓名</b>、<b>每次抽成</b>（课时费 / 年级 / 学科 / 时长 可选）。系统按姓名归入已有学员，没有的自动新建，并跳过完全重复的课程。</p>
-      <input type="file" id="excelFile" accept=".csv,text/csv" style="margin:8px 0 4px;display:block">
-      <textarea class="input" id="excelText" rows="6" placeholder="在此粘贴 CSV 内容（第一行写表头，例如：上课时间,孩子姓名,每次抽成）"></textarea>
+      <p class="muted" style="font-size:12px;margin:0 0 8px">选择 <b>Excel (.xlsx / .xls)</b> 或 <b>CSV / TXT</b> 文件，也可直接把表格内容粘贴到下方。需要包含列：<b>上课时间</b>、<b>孩子姓名</b>、<b>每次抽成</b>（课时费 / 年级 / 学科 / 时长 可选）。系统按姓名归入已有学员，没有的自动新建，并跳过完全重复的课程。</p>
+      <input type="file" id="excelFile" accept=".xlsx,.xls,.csv,.txt" style="margin:8px 0 4px;display:block">
+      <textarea class="input" id="excelText" rows="6" placeholder="在此粘贴表格内容（第一行写表头，例如：上课时间,孩子姓名,每次抽成）"></textarea>
       <div id="excelPreview" style="margin-top:10px"></div>`,
       onOk: b => {
         const txt = (U.$('#excelText', b).value || '').trim();
@@ -558,11 +581,15 @@ const Students = (() => {
       }
     });
     const fi = U.$('#excelFile'), ta = U.$('#excelText');
-    if (fi) fi.onchange = e => {
+    if (fi) fi.onchange = async e => {
       const f = e.target.files && e.target.files[0]; if (!f) return;
-      const r = new FileReader();
-      r.onload = () => { if (ta) { ta.value = r.result; renderImportPreview(ta.value); } };
-      r.readAsText(f, 'UTF-8');
+      try {
+        const text = await fileToSheetText(f);
+        if (ta) { ta.value = text; renderImportPreview(text); }
+      } catch (err) {
+        console.error('[students] 读取导入文件失败', err);
+        U.toast('读取文件失败：' + (err && err.message ? err.message : err), 'warn');
+      }
     };
     if (ta) ta.oninput = () => renderImportPreview(ta.value);
   }

@@ -1233,7 +1233,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-05T03:25:08.038Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-05T05:24:48.750Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -2152,14 +2152,17 @@ const DB = (() => {
     return d;
   }
 
-  function save() {
+  // opts.silent: true 时不触发云同步排队上传（用于同步模块内部拉取后落盘，避免循环上传）
+  // opts.preserveSavedAt: true 时不刷新 __savedAt（用于云端下载后保留远端时间戳，避免 baseSavedAt 对不上）
+  function save(opts) {
+    opts = opts || {};
     try {
-      data.__savedAt = Date.now();
+      if (!opts.preserveSavedAt) data.__savedAt = Date.now();
       localStorage.setItem(KEY, JSON.stringify(data));
     }
     catch (e) { U.toast('保存失败：本地存储空间不足', 'warn'); }
     // 已连接云同步且开启自动同步时，改动后自动排队上传（去抖在 Sync 内处理）
-    if (window.Sync) window.Sync.schedulePush();
+    if (!opts.silent && window.Sync) window.Sync.schedulePush();
   }
 
   /* 记录各模块最近一次编辑时间（用于课表/财务页展示） */
@@ -2408,12 +2411,13 @@ const DB = (() => {
 
   // 导入备份。解析失败会在写入前抛错（原数据分毫不动）；
   // 写入前自动把当前数据存一份快照，可用 restorePreImport() 一键撤销。
-  function importJSON(text) {
+  // opts 透传给 save()：preserveSavedAt 用于云端下载后保留远端时间戳；silent 用于抑制自动上传。
+  function importJSON(text, opts) {
     const info = parseBackup(text);          // 失败即抛错，此时尚未触碰现有数据
     try { localStorage.setItem(PRE_IMPORT_KEY, JSON.stringify({ at: Date.now(), counts: backupCounts(data), raw: JSON.stringify(data) })); }
     catch (e) { /* 空间不足则跳过快照，不阻断导入 */ }
     data = adoptData(info.data);
-    save();
+    save(opts);
     return info;
   }
 
@@ -2737,8 +2741,11 @@ window.Sync = (() => {
       }
       s.baseSavedAt = DB.data.__savedAt || Date.now();
       s.lastSync = Date.now();
-      DB.save();
+      // 保存同步配置但不要刷新 __savedAt，否则刚上传的时间戳立即变新，
+      // 远端还是旧时间戳，下一周期又被误判冲突。
+      DB.save({ preserveSavedAt: true, silent: true });
       status('已加密上传 · ' + U.fmtTime(s.lastSync));
+      if (s.auto !== false) startAutoPull();   // 之前若因冲突暂停，上传成功后恢复自动同步
     } finally { busy = false; }
   }
 
@@ -2761,11 +2768,20 @@ window.Sync = (() => {
       const data = await readRemote(content, s.token);
       if (!data) throw new Error('解密失败：若更换过 Token，请用原 Token 下载，或本地重新连接');
       DB.importJSON(JSON.stringify(data));                 // 内部会 save()
-      s.baseSavedAt = DB.data.__savedAt || Date.now();
-      s.lastSync = Date.now();
-      DB.save();
+      // 关键修复：下载后必须保留远端时间戳，否则 importJSON 会刷新 __savedAt 为当前时间，
+      // 导致 baseSavedAt 与远端不一致，下一次同步又被误判为冲突，「请手动下载同步」提示永不消失。
+      const remoteBase = data.__savedAt || 0;
+      DB.importJSON(JSON.stringify(data), { preserveSavedAt: true, silent: true });
+
+      // importJSON 会替换整个 DB.data，同步配置对象也变了，需要重新取并更新 baseSavedAt
+      const s2 = cfg();
+      s2.baseSavedAt = remoteBase;
+      s2.lastSync = Date.now();
+      DB.save({ silent: true });
+
       if (App && App.boot) App.boot();
-      status((quiet ? '已自动同步' : '已下载同步') + ' · ' + U.fmtTime(s.lastSync));
+      status((quiet ? '已自动同步' : '已下载同步') + ' · ' + U.fmtTime(s2.lastSync));
+      if (s2.auto !== false) startAutoPull();      // 之前若因冲突暂停，手动下载后恢复自动同步
     } finally { busy = false; }
   }
   function pull() { return doPull(false); }
@@ -3870,15 +3886,38 @@ const Students = (() => {
     return { created, added };
   }
 
+  /* 把用户选择的 Excel / CSV / TXT 转成 parseSheet 能处理的文本。
+   * - Excel：用 XLSX 库转制表符分隔文本（避免单元格内逗号干扰）。
+   * - CSV / TXT：优先按 UTF-8 解码；Excel 在中文 Windows 上默认存的是 GBK/GB18030，
+   *   解码失败或乱码时自动 fallback 到 GB18030 / GBK。 */
+  async function fileToSheetText(f) {
+    const name = (f.name || '').toLowerCase();
+    const isExcel = name.endsWith('.xlsx') || name.endsWith('.xls');
+    if (isExcel) {
+      if (typeof XLSX === 'undefined') throw new Error('Excel 解析库未加载，请刷新页面');
+      const buf = await f.arrayBuffer();
+      const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+      if (!wb.SheetNames.length) throw new Error('Excel 文件为空');
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      return XLSX.utils.sheet_to_csv(ws, { FS: '\t', RS: '\n' });
+    }
+    const buf = await f.arrayBuffer();
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+    catch (e) {
+      try { return new TextDecoder('gb18030').decode(buf); }
+      catch (e2) { return new TextDecoder('gbk').decode(buf); }
+    }
+  }
+
   function importExcelFlow() {
     U.modal({
       title: '从 Excel / CSV 导入课时',
       wide: true,
       okText: '确认导入',
       body: `
-      <p class="muted" style="font-size:12px;margin:0 0 8px">把 Excel 另存为 <b>CSV（逗号分隔）</b> 后选择文件，或直接把表格内容粘贴到下方。需要包含列：<b>上课时间</b>、<b>孩子姓名</b>、<b>每次抽成</b>（课时费 / 年级 / 学科 / 时长 可选）。系统按姓名归入已有学员，没有的自动新建，并跳过完全重复的课程。</p>
-      <input type="file" id="excelFile" accept=".csv,text/csv" style="margin:8px 0 4px;display:block">
-      <textarea class="input" id="excelText" rows="6" placeholder="在此粘贴 CSV 内容（第一行写表头，例如：上课时间,孩子姓名,每次抽成）"></textarea>
+      <p class="muted" style="font-size:12px;margin:0 0 8px">选择 <b>Excel (.xlsx / .xls)</b> 或 <b>CSV / TXT</b> 文件，也可直接把表格内容粘贴到下方。需要包含列：<b>上课时间</b>、<b>孩子姓名</b>、<b>每次抽成</b>（课时费 / 年级 / 学科 / 时长 可选）。系统按姓名归入已有学员，没有的自动新建，并跳过完全重复的课程。</p>
+      <input type="file" id="excelFile" accept=".xlsx,.xls,.csv,.txt" style="margin:8px 0 4px;display:block">
+      <textarea class="input" id="excelText" rows="6" placeholder="在此粘贴表格内容（第一行写表头，例如：上课时间,孩子姓名,每次抽成）"></textarea>
       <div id="excelPreview" style="margin-top:10px"></div>`,
       onOk: b => {
         const txt = (U.$('#excelText', b).value || '').trim();
@@ -3892,11 +3931,15 @@ const Students = (() => {
       }
     });
     const fi = U.$('#excelFile'), ta = U.$('#excelText');
-    if (fi) fi.onchange = e => {
+    if (fi) fi.onchange = async e => {
       const f = e.target.files && e.target.files[0]; if (!f) return;
-      const r = new FileReader();
-      r.onload = () => { if (ta) { ta.value = r.result; renderImportPreview(ta.value); } };
-      r.readAsText(f, 'UTF-8');
+      try {
+        const text = await fileToSheetText(f);
+        if (ta) { ta.value = text; renderImportPreview(text); }
+      } catch (err) {
+        console.error('[students] 读取导入文件失败', err);
+        U.toast('读取文件失败：' + (err && err.message ? err.message : err), 'warn');
+      }
     };
     if (ta) ta.oninput = () => renderImportPreview(ta.value);
   }
@@ -7885,6 +7928,10 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.0.1`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>热修复：课时导入恢复 Excel 直传 + 云同步真正自动实时同步</b>：针对上线后你反馈的两个阻塞性问题紧急修复。`,
+        `<b>修复：课时导入被改成 CSV 后乱码 / 识别差</b>——原先「从 Excel / CSV 导入课时」只接受 <code>.csv</code> 且用 UTF-8 读取，Excel 默认另存的 CSV 在中文 Windows 上是 GBK/GB18030，导致中文乱码；同时不支持直接传 <code>.xlsx</code>。现改为：① 文件选择同时支持 <b>.xlsx / .xls / .csv / .txt</b>；② Excel 用 XLSX 库解析并转成制表符分隔文本；③ CSV/TXT 做 UTF-8 → GB18030 → GBK 自动编码探测；④ 保留粘贴框。`,
+        `<b>修复：云同步不会自动实时同步，且「请手动下载同步」提示点了下载还在</b>——根因是 <code>doPull</code> 下载后调用 <code>DB.importJSON</code> 会刷新 <code>__savedAt</code> 为当前时间，导致本地 <code>baseSavedAt</code> 与云端时间戳不一致，下一次同步又被误判为冲突；冲突后 <code>stopAutoPull</code> 也永久停掉自动轮询。现：① <code>DB.save</code> 新增 <code>preserveSavedAt</code> / <code>silent</code> 选项；② 下载后保留远端时间戳、保存同步配置时不触发上传；③ 手动上传 / 下载成功后自动恢复 <code>startAutoPull</code>，实现「电脑端改完自动上传、平板端自动拉取」。`] },
     { ver: `v2.0.0`, date: `2026-08-05`, held: false, divider: false,
       items: [`<b>「最彻底 · 最深度」第五轮：P2/P3 清理 + 两项定向深挖（随 v2.0.0 发布）</b>：按你的要求对上一轮结构检查遗留的 P2/P3 项逐条修复（均行为不变、harness 回归全绿），并针对此前<b>未涉及</b>的维度新开两项定向深挖。`,
         `<b>代码质量（P2/P3 清理）</b>：① 移除已下线的「档案编码格式可自定义」整套死代码（parseCode/buildCode/tokenizeCode 等）并修正 4 处仍在宣传该功能的文案；② 修复电脑端周视图晚课（22:30+90min）溢出时间轴、压住图例的布局问题（clamp 块高 + 跨夜标记，数据不变）；③ 拆分财务页 15-case 事件总控 god-handler 为按功能子函数；④ 将 329 行硬编码更新日志改为本「数据数组 + 通用渲染器」（即此改法）；⑤ 抽取魔法数字为命名常量（每日毫秒 / Excel 纪元 / 默认透明度 / 默认课时长等）并统一三处 VERSION 注释；⑥ 重命名 schedule/finance 模糊的 modal 句柄 mm/ret → modal，并为裸 console.error 补全上下文。`,

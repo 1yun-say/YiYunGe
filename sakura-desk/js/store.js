@@ -292,14 +292,17 @@ const DB = (() => {
     return d;
   }
 
-  function save() {
+  // opts.silent: true 时不触发云同步排队上传（用于同步模块内部拉取后落盘，避免循环上传）
+  // opts.preserveSavedAt: true 时不刷新 __savedAt（用于云端下载后保留远端时间戳，避免 baseSavedAt 对不上）
+  function save(opts) {
+    opts = opts || {};
     try {
-      data.__savedAt = Date.now();
+      if (!opts.preserveSavedAt) data.__savedAt = Date.now();
       localStorage.setItem(KEY, JSON.stringify(data));
     }
     catch (e) { U.toast('保存失败：本地存储空间不足', 'warn'); }
     // 已连接云同步且开启自动同步时，改动后自动排队上传（去抖在 Sync 内处理）
-    if (window.Sync) window.Sync.schedulePush();
+    if (!opts.silent && window.Sync) window.Sync.schedulePush();
   }
 
   /* 记录各模块最近一次编辑时间（用于课表/财务页展示） */
@@ -548,12 +551,13 @@ const DB = (() => {
 
   // 导入备份。解析失败会在写入前抛错（原数据分毫不动）；
   // 写入前自动把当前数据存一份快照，可用 restorePreImport() 一键撤销。
-  function importJSON(text) {
+  // opts 透传给 save()：preserveSavedAt 用于云端下载后保留远端时间戳；silent 用于抑制自动上传。
+  function importJSON(text, opts) {
     const info = parseBackup(text);          // 失败即抛错，此时尚未触碰现有数据
     try { localStorage.setItem(PRE_IMPORT_KEY, JSON.stringify({ at: Date.now(), counts: backupCounts(data), raw: JSON.stringify(data) })); }
     catch (e) { /* 空间不足则跳过快照，不阻断导入 */ }
     data = adoptData(info.data);
-    save();
+    save(opts);
     return info;
   }
 

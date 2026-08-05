@@ -368,6 +368,10 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.0.1`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>热修复：课时导入恢复 Excel 直传 + 云同步真正自动实时同步</b>：针对上线后你反馈的两个阻塞性问题紧急修复。`,
+        `<b>修复：课时导入被改成 CSV 后乱码 / 识别差</b>——原先「从 Excel / CSV 导入课时」只接受 <code>.csv</code> 且用 UTF-8 读取，Excel 默认另存的 CSV 在中文 Windows 上是 GBK/GB18030，导致中文乱码；同时不支持直接传 <code>.xlsx</code>。现改为：① 文件选择同时支持 <b>.xlsx / .xls / .csv / .txt</b>；② Excel 用 XLSX 库解析并转成制表符分隔文本；③ CSV/TXT 做 UTF-8 → GB18030 → GBK 自动编码探测；④ 保留粘贴框。`,
+        `<b>修复：云同步不会自动实时同步，且「请手动下载同步」提示点了下载还在</b>——根因是 <code>doPull</code> 下载后调用 <code>DB.importJSON</code> 会刷新 <code>__savedAt</code> 为当前时间，导致本地 <code>baseSavedAt</code> 与云端时间戳不一致，下一次同步又被误判为冲突；冲突后 <code>stopAutoPull</code> 也永久停掉自动轮询。现：① <code>DB.save</code> 新增 <code>preserveSavedAt</code> / <code>silent</code> 选项；② 下载后保留远端时间戳、保存同步配置时不触发上传；③ 手动上传 / 下载成功后自动恢复 <code>startAutoPull</code>，实现「电脑端改完自动上传、平板端自动拉取」。`] },
     { ver: `v2.0.0`, date: `2026-08-05`, held: false, divider: false,
       items: [`<b>「最彻底 · 最深度」第五轮：P2/P3 清理 + 两项定向深挖（随 v2.0.0 发布）</b>：按你的要求对上一轮结构检查遗留的 P2/P3 项逐条修复（均行为不变、harness 回归全绿），并针对此前<b>未涉及</b>的维度新开两项定向深挖。`,
         `<b>代码质量（P2/P3 清理）</b>：① 移除已下线的「档案编码格式可自定义」整套死代码（parseCode/buildCode/tokenizeCode 等）并修正 4 处仍在宣传该功能的文案；② 修复电脑端周视图晚课（22:30+90min）溢出时间轴、压住图例的布局问题（clamp 块高 + 跨夜标记，数据不变）；③ 拆分财务页 15-case 事件总控 god-handler 为按功能子函数；④ 将 329 行硬编码更新日志改为本「数据数组 + 通用渲染器」（即此改法）；⑤ 抽取魔法数字为命名常量（每日毫秒 / Excel 纪元 / 默认透明度 / 默认课时长等）并统一三处 VERSION 注释；⑥ 重命名 schedule/finance 模糊的 modal 句柄 mm/ret → modal，并为裸 console.error 补全上下文。`,
