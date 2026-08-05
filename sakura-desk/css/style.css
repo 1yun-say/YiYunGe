@@ -612,11 +612,11 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .cal-month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .cal-month-cell{background:#fff;border:1px solid var(--line);border-radius:10px;padding:5px 5px 4px;min-height:84px;display:flex;flex-direction:column;gap:3px;cursor:pointer;position:relative;transition:.15s}
 .cal-month-cell:hover{border-color:var(--pink-300)}
-.cal-month-cell.out{background:#faf6f7;color:var(--ink-3)}
+.cal-month-cell.out{background:#f4f3f5;color:var(--ink-3)}
 .cal-month-cell.today{background:linear-gradient(135deg,#fff,#fff1f6);border:2px solid var(--pink-400);box-shadow:0 3px 12px rgba(249,112,157,.20);padding:6px 6px 5px}
 .cal-month-cell.sel{background:linear-gradient(135deg,#ffe1eb,#ffd0e0);border-color:var(--pink-400)}
 .cal-month-dn{font-size:13.5px;font-weight:700;color:var(--ink-1)}
-.cal-month-cell.out .cal-month-dn{color:var(--ink-3)}
+.cal-month-cell.out .cal-month-dn{color:#b8aab5}
 .cal-month-cell.today .cal-month-dn{color:var(--pink-600);font-size:15px}
 .cal-month-events{flex:1;display:flex;flex-direction:column;gap:2px;overflow:hidden}
 .cal-month-ev{display:flex;align-items:center;gap:4px;font-size:10.5px;background:var(--pink-50);border-radius:4px;padding:1px 5px;min-width:0;cursor:pointer;height:18px}
@@ -1163,6 +1163,9 @@ body.night .dash-stat,
 body.night .dash-actions button:hover,
 body.night .dash-hidden-row,
 body.night .lock-card{ background:var(--card); }
+/* 非本月格子（日夜间均要弱于本月/今天） */
+body.night .cal-month-cell.out{background:#1c161b;color:var(--ink-3)}
+body.night .cal-month-cell.out .cal-month-dn{color:#7a6671}
 /* 选中的小标签/分页：用浅粉底+深字，保证对比 */
 body.night .tab.active,
 body.night .cal-tab.on{ background:var(--pink-300); color:#2a1622; }

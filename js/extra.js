@@ -368,6 +368,8 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.2.2`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>修复：日历月视图「非本月」与「今天」颜色太像、层次不清</b>：非本月日期原底色是偏粉 #faf6f7，和今天的粉色高亮 #fff1f6 太接近，导致上月/下月格子抢戏、today 不突出。现把非本月底色改为中性浅灰 #f4f3f5，日期数字用更淡的 #b8aab5，让它自然退为背景；夜览模式也补了对应的暗色弱化（#1c161b / #7a6671），避免夜间反而和本月同色。`] },
     { ver: `v2.2.1`, date: `2026-08-05`, held: false, divider: false,
       items: [`<b>修复：财务「历史收入」改了又回来（同步回潮，最关键的 bug）</b>：历史收入是按月总额 <code>histIncome</code>，旧合并对同月取 <code>Math.max</code>——你把某月改小后上传，云端旧的大值会在下次合并时把它覆盖回去，于是「一转头又回来了」。现改为<b>按月 LWW（最后写入时间胜出）</b>：新增 <code>histIncomeMt</code>（按月写入时间戳）与 <code>histIncomeDel</code>（按月删除墓碑），合并时同月取时间戳较新的一方、删掉的月份用墓碑真正移除，<b>不再比大小</b>。老数据升级后第一轮同步本机当前值被视为权威（给已填月份打「足够新」时间戳）。<code>wipeSynced()</code> 清空时也一并清理这三项。`,
         `<b>修复：可视化课表周视图 8:00 时间轴显示不全</b>：时间槽的 <code>top:-7px</code> 负偏移被周视图滚动容器顶部裁切，现改为 flex 垂直居中、移除负偏移，8:00 完整显示。`,
