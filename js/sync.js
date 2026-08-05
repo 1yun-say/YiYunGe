@@ -151,7 +151,7 @@ window.Sync = (() => {
      - 各数据集合（学员/老师/课节/提醒/日程/模板/话术）按记录 id 合并：
        两端都有的 id 取「修改时间(_mt)较新者」；都没有 _mt 则按方向（拉取取远端、上传取本机）；
        任一侧独有的 id 都保留 → 一端新增、另一端绝不会被覆盖丢失。
-     - histIncome / meta 按月/字段取较大值。
+     - histIncome 按月「最后修改时间」胜出(LWW) + 按月删除墓碑（不再取较大值，避免改小的值被云端旧大值顶掉）；meta 按字段取较大值。
      - settings 整段保留本机（含 token/gistId 等连接信息），绝不从云端覆盖，避免一端连接被另一端清空。
      - __savedAt 取两端较大值，保证时间戳单调、基线对得上。
   */
@@ -216,11 +216,38 @@ window.Sync = (() => {
       merged[col] = out;
     }
     merged.deleted = mergedDeleted;
+    // ---- 历史收入：按月「最后修改时间胜出(LWW)」+ 按月删除墓碑 ----
+    // 旧实现按月份取 Math.max，导致「把某月收入改小」会被云端旧的大值覆盖（改了又回来）。
+    // 现改为：同一个月比较两端写入时间戳，较新者胜；删除标记若比两端值都新，则该月真正移除（跨端删除也生效）。
     const li = (local && local.histIncome && typeof local.histIncome === 'object') ? local.histIncome : {};
     const ri = (r && r.histIncome && typeof r.histIncome === 'object') ? r.histIncome : {};
-    const hi = Object.assign({}, li);
-    for (const m in ri) hi[m] = Math.max(hi[m] || 0, ri[m] || 0);
+    const lmt = (local && local.histIncomeMt && typeof local.histIncomeMt === 'object') ? local.histIncomeMt : {};
+    const rmt = (r && r.histIncomeMt && typeof r.histIncomeMt === 'object') ? r.histIncomeMt : {};
+    const ldel = (local && local.histIncomeDel && typeof local.histIncomeDel === 'object') ? local.histIncomeDel : {};
+    const rdel = (r && r.histIncomeDel && typeof r.histIncomeDel === 'object') ? r.histIncomeDel : {};
+    const hi = {}, himt = {}, hidel = {};
+    const months = new Set([...Object.keys(li), ...Object.keys(ri), ...Object.keys(ldel), ...Object.keys(rdel)]);
+    for (const m of months) {
+      const lv = (m in li) ? li[m] : null, rv = (m in ri) ? ri[m] : null;
+      const lt = lmt[m] || 0, rt = rmt[m] || 0;
+      const ldt = ldel[m] || 0, rdt = rdel[m] || 0;
+      // 删除墓碑：任一侧删除时间晚于两侧所有值写入时间 → 该月真正移除（跨端删除也生效）
+      const delAt = Math.max(ldt, rdt);
+      if (delAt > 0 && delAt > Math.max(lt, rt)) { hidel[m] = delAt; continue; }
+      // 值按最后修改时间(LWW)择优；时间相同则按方向（push 取本机、pull 取远端）
+      let val, ts;
+      if (lv != null && rv != null) {
+        if (lt > rt) { val = lv; ts = lt; }
+        else if (rt > lt) { val = rv; ts = rt; }
+        else { val = (direction === 'push') ? lv : rv; ts = lt; }
+      } else if (lv != null) { val = lv; ts = lt; }
+      else if (rv != null) { val = rv; ts = rt; }
+      else { continue; }   // 只有删除标记（已被上方 continue 处理），无值可留
+      if (val) { hi[m] = val; himt[m] = ts; }   // 0/空视为无收入，不入表（与填写端一致）
+    }
     merged.histIncome = hi;
+    merged.histIncomeMt = himt;
+    merged.histIncomeDel = hidel;
     const lm = (local && local.meta && typeof local.meta === 'object') ? local.meta : {};
     const rm = (r && r.meta && typeof r.meta === 'object') ? r.meta : {};
     const mt = Object.assign({}, lm);

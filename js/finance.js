@@ -599,6 +599,14 @@ const Finance = (() => {
             const m = inp.dataset.m, v = +inp.value || 0;
             if (v) collected[m] = v;
           });
+          // 写入时间戳：填了值的月份记「最后写入时间」，被删掉的月份记「删除墓碑」，
+          // 让同步按 LWW 合并——改小的值不会被云端旧大值顶掉，删除也能跨端生效。
+          const now = Date.now();
+          if (!data.histIncomeMt) data.histIncomeMt = {};
+          if (!data.histIncomeDel) data.histIncomeDel = {};
+          const before = Object.keys(data.histIncome || {});
+          before.forEach(m => { if (!(m in collected)) data.histIncomeDel[m] = now; });  // 删掉的月份
+          Object.keys(collected).forEach(m => { data.histIncomeMt[m] = now; });          // 填了值的月份
           data.histIncome = collected;
           DB.save(); render();
           U.toast('已保存历史收入', 'ok');

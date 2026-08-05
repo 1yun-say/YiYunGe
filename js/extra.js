@@ -368,6 +368,12 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.2.1`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>修复：财务「历史收入」改了又回来（同步回潮，最关键的 bug）</b>：历史收入是按月总额 <code>histIncome</code>，旧合并对同月取 <code>Math.max</code>——你把某月改小后上传，云端旧的大值会在下次合并时把它覆盖回去，于是「一转头又回来了」。现改为<b>按月 LWW（最后写入时间胜出）</b>：新增 <code>histIncomeMt</code>（按月写入时间戳）与 <code>histIncomeDel</code>（按月删除墓碑），合并时同月取时间戳较新的一方、删掉的月份用墓碑真正移除，<b>不再比大小</b>。老数据升级后第一轮同步本机当前值被视为权威（给已填月份打「足够新」时间戳）。<code>wipeSynced()</code> 清空时也一并清理这三项。`,
+        `<b>修复：可视化课表周视图 8:00 时间轴显示不全</b>：时间槽的 <code>top:-7px</code> 负偏移被周视图滚动容器顶部裁切，现改为 flex 垂直居中、移除负偏移，8:00 完整显示。`,
+        `<b>修复：日历「今天」方框太小、看着紧巴巴</b>：月视图 today 由细 <code>outline</code> 内收描边改为粉色填充 + 2px 实边 + 轻投影、内边距加大、日期字号调大；年视图 today 也加同款实边与投影，整体更大气。`,
+        `<b>修复：更新日志记录莫名换行、排版丑</b>：列表样式 <code>.log-list</code> 被一处「财务模块死样式」重复定义并污染了更新日志（它从未在 JS 中使用），现删除该冲突规则；版本号与日期合并成一行表头 <code>.log-head</code>，条目加 <code>word-break:break-word</code> 与舒适行距，长行不再乱折。`,
+        `<b>回归锁定</b>：<code>sync-delete-test.js</code> 扩到 47 条断言全绿，新增场景 11（改小的 3000 胜出旧云端 5000，不回潮）、场景 12（删除墓碑使该月真正移除）、场景 13（pull/push 均取较新一方）、场景 14（复刻现场：H1 改小 3000 上传后 H2 拉取得到 3000）；<code>sync-loss-test.js</code> 改为断言 LWW 并补「较小但较新胜出」锁定（26/0）。连同 3device/key/fix/timestamp 共 6 套 105 条断言 0 失败，三处版本常量同步 bump 至 v2.2.1。`] },
     { ver: `v2.2.0`, date: `2026-08-05`, held: false, divider: false,
       items: [`<b>每日模板库新增「批量删除」</b>：模板多了想一次清掉几条？点模板库标题右侧的 <b>✓ 批量删除</b> 进入选择模式，逐条点选（或点「全选」），再点「删除选中」即可一次删多条；删除一样走墓碑（tombstone）机制，<b>删除会跨端同步</b>——A 端批量删的模板，B/C 端下次同步后也消失，其余模板保留。误删可在同步前退出选择模式取消，或在同步前重新录入覆盖。桌面端（提醒事项页右侧）与手机端（提醒事项页底部卡片）均已支持。`] },
     { ver: `v2.1.1`, date: `2026-08-05`, held: false, divider: false,
@@ -593,7 +599,7 @@ const Changelog = (() => {
       const held = e.held
         ? '<div style="margin:2px 0 10px;font-size:12px;color:#b06;font-weight:600">⏳ 待发布 · 待你确认无误后上线</div>'
         : '';
-      return '<div class="log-ver">' + e.ver + '</div><div class="log-date">' + e.date + '</div>' + held +
+      return '<div class="log-head"><span class="log-ver">' + e.ver + '</span><span class="log-date">' + e.date + '</span></div>' + held +
         '<ul class="log-list">' + e.items.join('') + '</ul>';
     };
     const parts = [];

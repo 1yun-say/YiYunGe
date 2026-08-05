@@ -253,6 +253,13 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .tpl-chip{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--line);border-radius:var(--r-s);background:#fff;transition:.18s}
 .tpl-chip:hover{border-color:var(--pink-300)}
 .tpl-chip .pdot{width:9px;height:9px;border-radius:50%;flex:none}
+.tpl-chip.sel{cursor:pointer;border-style:dashed}
+.tpl-chip.sel:active{transform:scale(.99)}
+.tpl-check{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--line-2);flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;line-height:1;color:#fff;transition:.15s;background:transparent}
+.tpl-check.on{background:var(--pink-500);border-color:var(--pink-500)}
+.tpl-batch-bar{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line-2)}
+.tpl-sel-count{font-size:12px;color:var(--ink-3);flex:1}
+.btn-icon.on{background:var(--pink-200);border-color:var(--pink-400)}
 .t-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:2px}
 .t-card{border:1px solid var(--line-2);border-radius:10px;padding:9px 10px;background:var(--bg-card);display:flex;flex-direction:column;gap:4px;min-width:0}
 .t-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
@@ -309,7 +316,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .wh-cell.today b{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--pink-500);color:#fff;margin-top:2px}
 .week-body{display:grid;grid-template-columns:56px repeat(7,1fr);position:relative;max-height:calc(100vh - 300px);overflow:auto}
 .time-col{border-right:1px solid var(--line)}
-.time-slot{height:30px;font-size:10.5px;color:var(--ink-3);text-align:right;padding-right:6px;position:relative;top:-7px}
+.time-slot{height:30px;font-size:10.5px;color:var(--ink-3);text-align:right;padding-right:6px;display:flex;align-items:center;justify-content:flex-end;line-height:30px;box-sizing:border-box}
 .day-col{border-left:1px solid var(--line);position:relative}
 .day-col.today{background:rgba(255,232,241,.4)}
 .slot{height:30px;border-bottom:1px dashed var(--pink-75)}
@@ -493,10 +500,11 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .link-rel svg{width:12px;height:12px}
 
 /* 更新日志 */
-.log-ver{font-size:12px;color:var(--pink-600);font-weight:700;margin-bottom:3px}
-.log-date{font-size:11px;color:var(--ink-3);margin-bottom:8px}
+.log-head{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+.log-ver{font-size:13px;color:var(--pink-600);font-weight:700}
+.log-date{font-size:11px;color:var(--ink-3)}
 .log-list{margin:0;padding-left:18px}
-.log-list li{font-size:13px;margin-bottom:5px;line-height:1.6}
+.log-list li{font-size:13px;margin-bottom:9px;line-height:1.7;color:var(--ink-1);word-break:break-word;overflow-wrap:anywhere}
 
 /* 财务板块管理 */
 .fm-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-s);background:#fff;margin-bottom:8px}
@@ -613,11 +621,11 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .cal-month-cell{background:#fff;border:1px solid var(--line);border-radius:10px;padding:5px 5px 4px;min-height:84px;display:flex;flex-direction:column;gap:3px;cursor:pointer;position:relative;transition:.15s}
 .cal-month-cell:hover{border-color:var(--pink-300)}
 .cal-month-cell.out{background:#faf6f7;color:var(--ink-3)}
-.cal-month-cell.today{outline:2px solid var(--pink-500);outline-offset:-2px}
+.cal-month-cell.today{background:linear-gradient(135deg,#fff,#fff1f6);border:2px solid var(--pink-400);box-shadow:0 3px 12px rgba(249,112,157,.20);padding:6px 6px 5px}
 .cal-month-cell.sel{background:linear-gradient(135deg,#ffe1eb,#ffd0e0);border-color:var(--pink-400)}
 .cal-month-dn{font-size:13.5px;font-weight:700;color:var(--ink-1)}
 .cal-month-cell.out .cal-month-dn{color:var(--ink-3)}
-.cal-month-cell.today .cal-month-dn{color:var(--pink-600)}
+.cal-month-cell.today .cal-month-dn{color:var(--pink-600);font-size:15px}
 .cal-month-events{flex:1;display:flex;flex-direction:column;gap:2px;overflow:hidden}
 .cal-month-ev{display:flex;align-items:center;gap:4px;font-size:10.5px;background:var(--pink-50);border-radius:4px;padding:1px 5px;min-width:0;cursor:pointer;height:18px}
 .cal-month-ev i{width:6px;height:6px;border-radius:50%;flex:none}
@@ -633,7 +641,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .cal-year-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 .cal-year-cell{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 12px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:.15s}
 .cal-year-cell:hover{border-color:var(--pink-400)}
-.cal-year-cell.today{background:linear-gradient(135deg,#fff,#fff4f8);border-color:var(--pink-400)}
+.cal-year-cell.today{background:linear-gradient(135deg,#fff,#fff1f6);border:2px solid var(--pink-400);box-shadow:0 3px 12px rgba(249,112,157,.18)}
 .cal-year-h{font-size:15px;font-weight:700}
 .cal-year-bar{width:32px;background:linear-gradient(180deg,var(--pink-300),var(--pink-500));border-radius:6px}
 .cal-year-meta{font-size:11px;color:var(--ink-3)}
@@ -1042,8 +1050,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   .switch-row input{width:22px;height:22px}
 }
 
-/* ===== 财务模块修改日志 ===== */
-.log-list{max-height:52vh;overflow:auto;display:flex;flex-direction:column;gap:2px}
+/* ===== 财务模块修改日志（独立 .log-row 体系，注意不要与更新日志 .log-list 冲突） ===== */
 .log-row{
   display:grid;grid-template-columns:auto auto 1fr;gap:10px;align-items:baseline;
   padding:9px 10px;border-radius:8px;background:var(--pink-50);font-size:13px;line-height:1.5
@@ -1233,7 +1240,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T22:20:21.591Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-05T10:56:05.583Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -1338,6 +1345,10 @@ window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-04T22:20:21.591Z","note":"本文�
 const U = (() => {
   const pad = n => String(n).padStart(2, '0');
 
+  // 常量（避免散落魔法数字，便于统一维护）
+  const MS_PER_DAY = 86400000;   // 一天的毫秒数
+  const EXCEL_EPOCH = 25569;     // Excel 日期序列号的 Unix 纪元偏移（1900 伪闰年，序号>60 需减 1 天）
+
   /* --- 日期 --- */
   const today = () => fmt(new Date());
   const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -1360,7 +1371,7 @@ const U = (() => {
   const wdName = s => WD[dow(s)];
   const cnDate = s => { const d = parse(s); return `${d.getMonth() + 1}月${d.getDate()}日`; };
   const between = (s, a, b) => s >= a && s <= b;
-  const daysDiff = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
+  const daysDiff = (a, b) => Math.round((parse(b) - parse(a)) / MS_PER_DAY);
 
   /* --- 时间(分钟) --- */
   const t2m = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
@@ -1420,7 +1431,7 @@ const U = (() => {
     const p2 = n => String(n).padStart(2, '0');
     const hm = `${p2(d.getHours())}:${p2(d.getMinutes())}`;
     if (sameDay) return `今天 ${hm}`;
-    const y = new Date(now - 86400000);
+    const y = new Date(now - MS_PER_DAY);
     if (d.toDateString() === y.toDateString()) return `昨天 ${hm}`;
     return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${hm}`;
   };
@@ -1847,7 +1858,8 @@ function editableSub(node, viewKey, fallback) {
     toast, modal, confirm, copy, pie, bars, columns, subColor, SUBJECT_COLORS, WEEK_MUTED, WD, rebind, unbindNode, pct, fmtTime, isMobile,
     editableSub, draggableSortable,
     monthDay, recurRuleOf, recurOccurrencesBetween, recurOccursOn, recurDescribe,
-    buildRepeatControl, wireRepeatControl, readRepeatControl
+    buildRepeatControl, wireRepeatControl, readRepeatControl,
+    MS_PER_DAY, EXCEL_EPOCH
   };
 })();
 
@@ -1857,68 +1869,17 @@ function editableSub(node, viewKey, fallback) {
 const DB = (() => {
   const KEY = 'sakura-desk-v1';
 
-  /* ---------- 学员编码解析（可自定义模板） ---------- */
-  // 默认模板：[日期]-[年级学科]-[家长]-[抽成]/[课时费]|[课时长]
-  // 例：240815-高二数学-李妈妈-50/300|90
-  // 用户可在「数据管理」里修改模板，用 [字段] 占位，自定义分隔符与顺序。
-  const DEFAULT_CODE_TEMPLATE = '[日期]-[年级学科]-[家长]-[抽成]/[课时费]|[课时长]';
+  /* ---------- 学员编码 ----------
+   * 早期版本曾支持「档案编码格式自定义 + 粘贴式一键拆解录入」（parseCode / buildCode 等），
+   * 该能力已移除；现学员编码仅由 studentCode() 依据档案结构化字段自动生成，不再支持粘贴拆解。
+   */
   const GRADES = ['高三', '高二', '高一', '初三', '初二', '初一',
     '六年级', '五年级', '四年级', '三年级', '二年级', '一年级',
     '小六', '小五', '小四', '小三', '小二', '小一',
     '大学', '高中', '初中', '小学', '幼小衔接', '成人'];
   const SUBJECTS = Object.keys(U.SUBJECT_COLORS);
 
-  // 占位符别名 → 内部字段
-  const FIELD_MAP = {
-    signdate: 'signDate', '签约日期': 'signDate', '日期': 'signDate', 'date': 'signDate', '日期编码': 'signDate',
-    '年级学科': 'gradeSubject', '年级': 'gradeSubject', '学科': 'gradeSubject', 'gs': 'gradeSubject', 'grade': 'gradeSubject',
-    '家长': 'parentName', '家长称呼': 'parentName', '家长名': 'parentName', '家长姓名': 'parentName', 'parent': 'parentName',
-    '抽成': 'commission', '提成': 'commission', 'commission': 'commission', 'cut': 'commission',
-    '课时费': 'tuition', '学费': 'tuition', '课酬': 'tuition', 'fee': 'tuition', 'tuition': 'tuition',
-    '课时长': 'duration', '时长': 'duration', '分钟': 'duration', 'duration': 'duration', 'dur': 'duration'
-  };
-  function resolveField(s) { return FIELD_MAP[(s || '').trim().toLowerCase()] || null; }
-
-  // 把模板拆成 tokens：{t:'lit', v} 或 {t:'ph', f}
-  function tokenizeCode(tpl) {
-    const tokens = [];
-    const re = /\[([^\]]+)\]/g;
-    let last = 0, m;
-    while ((m = re.exec(tpl)) !== null) {
-      if (m.index > last) tokens.push({ t: 'lit', v: tpl.slice(last, m.index) });
-      const f = resolveField(m[1]);
-      if (f) tokens.push({ t: 'ph', f });
-      else tokens.push({ t: 'lit', v: tpl.slice(m.index, m.index + m[0].length) }); // 不识别→当字面量
-      last = m.index + m[0].length;
-    }
-    if (last < tpl.length) tokens.push({ t: 'lit', v: tpl.slice(last) });
-    if (!tokens.length) tokens.push({ t: 'lit', v: tpl });
-    return tokens;
-  }
-
   function numOr0(v) { const n = parseFloat(String(v == null ? '' : v).replace(/[^\d.]/g, '')); return isFinite(n) ? n : 0; }
-  function fieldValue(f, s) {
-    switch (f) {
-      case 'signDate': return (s.signDate || '').replace(/-/g, '').slice(2); // YYMMDD
-      case 'gradeSubject': return (s.grade || '') + (s.subject || '');
-      case 'parentName': return s.parentName || '';
-      case 'commission': return s.commission || 0;
-      case 'tuition': return s.tuition || 0;
-      case 'duration': return s.duration || 0;
-      default: return '';
-    }
-  }
-
-  // 返回当前生效的编码模板（兼容旧数据未定义的情况）
-  function getCodeTemplate() {
-    const t = (data.settings && data.settings.codeTemplate) || DEFAULT_CODE_TEMPLATE;
-    return t && String(t).trim() ? t : DEFAULT_CODE_TEMPLATE;
-  }
-  function presentFields(tpl) {
-    const set = new Set();
-    tokenizeCode(tpl).forEach(t => { if (t.t === 'ph') set.add(t.f); });
-    return set;
-  }
 
   function normDate(raw) {
     const s = String(raw).replace(/[^\d]/g, '');
@@ -1997,71 +1958,6 @@ const DB = (() => {
   function normSubject(s) {
     const hit = SUBJECTS.find(x => s.includes(x));
     return hit || s;
-  }
-
-  function parseCode(raw) {
-    const out = { ok: false, errors: [], signDate: '', grade: '', subject: '', parentName: '', commission: 0, tuition: 0, duration: 0 };
-    const tpl = getCodeTemplate();
-    const tokens = tokenizeCode(tpl);
-    const present = presentFields(tpl);
-    const str = String(raw || '').trim().replace(/[－—–]/g, '-').replace(/[／]/g, '/').replace(/[｜]/g, '|');
-    if (!str) { out.errors.push('请输入档案编码'); return out; }
-
-    // 按字面量分隔符顺序定位，提取各占位符之间的文本（比正则更稳健，支持任意分隔符/顺序）
-    let cursor = 0;
-    const fields = {};
-    for (let i = 0; i < tokens.length; i++) {
-      const tk = tokens[i];
-      if (tk.t === 'lit') {
-        const idx = str.indexOf(tk.v, cursor);
-        if (idx < 0) { out.errors.push('未找到分隔符「' + tk.v + '」'); cursor = str.length; break; }
-        cursor = idx + tk.v.length;
-      } else {
-        let end = str.length;
-        for (let j = i + 1; j < tokens.length; j++) {
-          if (tokens[j].t === 'lit') {
-            const idx = str.indexOf(tokens[j].v, cursor);
-            end = (idx < 0) ? str.length : idx;
-            break;
-          }
-        }
-        fields[tk.f] = str.slice(cursor, end).trim();
-        cursor = end;
-      }
-    }
-
-    if (present.has('signDate')) {
-      const d = fields.signDate ? normDate(fields.signDate) : '';
-      if (!d) out.errors.push('日期需为 YYMMDD 或 YYYYMMDD，例：240815');
-      out.signDate = d || '';
-    }
-    if (present.has('gradeSubject') && fields.gradeSubject) Object.assign(out, splitGradeSubject(fields.gradeSubject));
-    if (present.has('parentName')) {
-      out.parentName = (fields.parentName || '').trim();
-      if (!out.parentName) out.errors.push('缺少家长称呼');
-    }
-    if (present.has('commission')) {
-      out.commission = numOr0(fields.commission);
-      if (!out.commission) out.errors.push('缺少抽成金额');
-    }
-    if (present.has('tuition')) {
-      out.tuition = numOr0(fields.tuition);
-      if (!out.tuition) out.errors.push('缺少课时费');
-    }
-    if (present.has('duration')) out.duration = numOr0(fields.duration);
-    if (out.commission > out.tuition) out.errors.push('抽成金额大于课时费，请检查');
-    if (out.duration && (out.duration <= 0 || out.duration > 480)) out.errors.push('课时长（分钟）不合理');
-    out.ok = out.errors.length === 0;
-    return out;
-  }
-
-  function buildCode(s) {
-    const tpl = getCodeTemplate();
-    let res = '';
-    tokenizeCode(tpl).forEach(tk => {
-      res += (tk.t === 'lit') ? tk.v : fieldValue(tk.f, s);
-    });
-    return res;
   }
 
   /* ---------- 默认数据 ---------- */
@@ -2184,20 +2080,30 @@ const DB = (() => {
     };
   }
 
+  // 墓碑（tombstone）覆盖的集合，与 sync.js 的 SYNC_ARRAYS 保持一致
+  const TOMB_COLS = ['students', 'teachers', 'lessons', 'todos', 'events', 'templates', 'phrases'];
+  // 墓碑（tombstone）结构：各同步集合独立登记 { id: 删除时间戳 }，
+  // 用于让「删除」也能跨端传播——A 端删的记录，B/C 端合并时按墓碑剔除。
+  function blankDeleted() {
+    const o = {}; for (const c of TOMB_COLS) o[c] = {}; return o;
+  }
+
   function blank() {
     return {
       version: 1,
-      settings: { route: 'dashboard', ownerName: '我', night: false, financeSections: defaultFinanceSections(), dashboardLayout: defaultDashboardLayout(), customSub: {}, codeTemplate: '[日期]-[年级学科]-[家长]-[抽成]/[课时费]|[课时长]', brandLogo: '' },
+      settings: { route: 'dashboard', ownerName: '我', night: false, financeSections: defaultFinanceSections(), dashboardLayout: defaultDashboardLayout(), customSub: {}, brandLogo: '' },
       teachers: [], students: [], lessons: [], todos: [], events: [],
+      deleted: blankDeleted(),       // 墓碑：各集合已删除记录的 id→删除时间戳（跨端删除同步用）
       histIncome: {},                // 历史收入：按月总额 { 'YYYY-MM': 金额 }
+      histIncomeMt: {},              // 历史收入按月「最后写入时间」(LWW 合并用，避免改小的值被云端旧大值顶掉)
+      histIncomeDel: {},             // 历史收入按月「删除墓碑」(删除也能跨端传播)
       templates: defaultTemplates(), phrases: defaultPhrases(),
       meta: { lastLessonEdit: null, lastStudentEdit: null }
     };
   }
 
   /* ---------- 读写 ---------- */
-  // 先初始化为 blank()，避免首次载入演示数据（demoData→parseCode→getCodeTemplate）时
-  // 访问尚未赋值的 data 触发 TDZ 报错。
+  // 先初始化为 blank()，避免首次访问尚未赋值的 data 触发 TDZ 报错（演示数据在 load() 成功后按需填充）。
   let data = blank();
   data = load();
 
@@ -2220,7 +2126,11 @@ const DB = (() => {
       if (raw) {
         const d = JSON.parse(raw);
         const b = blank();
-        for (const k in b) if (d[k] === undefined) d[k] = b[k];
+        for (const k in b) {
+          if (d[k] === undefined) d[k] = b[k];
+          // 类型损坏兜底：数组字段被写成 null/对象时补空数组，避免首屏 render 时 .length/.filter 抛错白屏
+          else if (Array.isArray(b[k]) && !Array.isArray(d[k])) d[k] = [];
+        }
         d.settings = Object.assign(b.settings, d.settings || {});
         migrateSubjects(d);
         migrateHistIncome(d);
@@ -2260,14 +2170,29 @@ const DB = (() => {
     return d;
   }
 
-  function save() {
+  // opts.silent: true 时不触发云同步排队上传（用于同步模块内部拉取后落盘，避免循环上传）
+  // opts.preserveSavedAt: true 时不刷新 __savedAt（用于云端下载后保留远端时间戳，避免 baseSavedAt 对不上）
+  function save(opts) {
+    opts = opts || {};
+    // 本地复活：若某集合的记录仍存在于数组里（说明删除后又被重新录入/改回），
+    // 清掉其墓碑，使该记录在本机恢复为「存活」且不会把删除传播出去——
+    // 这正是「误删后、同步前复活」的实现：在真正上传前把墓碑抹掉，删除便不会扩散。
+    if (data.deleted) {
+      for (const col of TOMB_COLS) {
+        const arr = Array.isArray(data[col]) ? data[col] : null;
+        const dm = data.deleted[col];
+        if (arr && dm) {
+          for (const it of arr) { if (it && it.id != null && dm[String(it.id)] != null) delete dm[String(it.id)]; }
+        }
+      }
+    }
     try {
-      data.__savedAt = Date.now();
+      if (!opts.preserveSavedAt) data.__savedAt = Date.now();
       localStorage.setItem(KEY, JSON.stringify(data));
     }
     catch (e) { U.toast('保存失败：本地存储空间不足', 'warn'); }
     // 已连接云同步且开启自动同步时，改动后自动排队上传（去抖在 Sync 内处理）
-    if (window.Sync) window.Sync.schedulePush();
+    if (!opts.silent && window.Sync) window.Sync.schedulePush();
   }
 
   /* 记录各模块最近一次编辑时间（用于课表/财务页展示） */
@@ -2275,6 +2200,32 @@ const DB = (() => {
     const t = Date.now();
     if (kind === 'lesson' || kind === 'student') data.meta['last' + (kind === 'lesson' ? 'Lesson' : 'Student') + 'Edit'] = t;
     save();
+  }
+
+  /* ---------- 墓碑删除同步（tombstone） ----------
+     删除一条记录时，不真正从数组移除「远程副本」（本地立即移除，但云端合并需靠墓碑），
+     而是在 data.deleted[集合] 里登记 { id: 删除时间戳 }。合并时两端 deleted 取较大 delAt，
+     再剔除被标记的记录（除非该记录比删除时间更新=误删后、同步前又改动→复活）。
+     这样 A 端删的记录，B/C 端下一次同步也会消失，且本地误删后改动能复活。
+  */
+  function markDeleted(collection, id, delAt) {
+    if (!data.deleted) data.deleted = blankDeleted();
+    if (!data.deleted[collection]) data.deleted[collection] = {};
+    const k = String(id);
+    const t = delAt || Date.now();
+    data.deleted[collection][k] = Math.max(data.deleted[collection][k] || 0, t);
+  }
+  // 取消删除标记（复活）：记录重新出现且比墓碑更新时由合并逻辑调用，本地恢复也用得到
+  function unmarkDeleted(collection, id) {
+    if (data.deleted && data.deleted[collection]) delete data.deleted[collection][String(id)];
+  }
+  function isDeleted(collection, id) {
+    return !!(data.deleted && data.deleted[collection] && data.deleted[collection][String(id)]);
+  }
+  // 物理删除某集合某 id 并登记墓碑（供各删除入口统一调用，避免漏写墓碑）
+  function removeRecord(collection, id, delAt) {
+    if (Array.isArray(data[collection])) data[collection] = data[collection].filter(x => String(x.id) !== String(id));
+    markDeleted(collection, id, delAt);
   }
 
   /* ---------- 查询辅助 ---------- */
@@ -2346,6 +2297,14 @@ const DB = (() => {
     } else if (typeof d.histIncome === 'number') {
       d.histIncome = {};
     }
+    // 回填写入时间戳：老数据没有 histIncomeMt，给每个已填月份打一个「足够新」的时间戳，
+    // 使升级后第一轮同步时本机当前值被视为权威（不会被云端旧副本覆盖）。
+    if (d.histIncome && typeof d.histIncome === 'object' && !d.histIncomeMt) {
+      const seed = d.__savedAt || Date.now();
+      d.histIncomeMt = {};
+      Object.keys(d.histIncome).forEach(m => { if (d.histIncome[m]) d.histIncomeMt[m] = seed; });
+    }
+    if (!d.histIncomeDel) d.histIncomeDel = {};
     return d;
   }
 
@@ -2383,7 +2342,12 @@ const DB = (() => {
     if (!note.trim()) return 0;
     const matches = note.match(/\d+(\.\d+)?/g);
     if (!matches) return 0;
-    return matches.reduce((s, m) => s + parseFloat(m), 0);
+    return matches.reduce((s, m) => {
+      const v = parseFloat(m);
+      // 排除形如年份的四位整数（如「2026.3」里取到的 2026 不应计报销），避免误增报销、虚低到手
+      if (/^\d{4}$/.test(m) && v >= 1900 && v <= 2099) return s;
+      return s + v;
+    }, 0);
   }
   // 收入口径：实际到手收入 = 我的抽成 − 报销支出。
   // 兼容 v1.7.7/1.7.8 手动录入的 actualTakeHome（若显式填写则以它为准）；
@@ -2430,6 +2394,32 @@ const DB = (() => {
   function reset(withDemo) {
     data = blank();
     if (withDemo) Object.assign(data, demoData());
+    save();
+  }
+
+  // 跨端清空：清空用户数据集合，但为每条被清记录打墓碑，使删除能随「立即上传」传播到云端 / 其他端。
+  // 模板与话术保留工厂初始版本（与 reset(false) 一致），不清除、不打墓碑（各端一致，无需墓碑）。
+  // 关键：必须打墓碑，而不能直接 data=blank()——
+  // 否则 push 时 mergeDocs 按「本机 ∪ 云端」会把云端满数据补回来，
+  // 造成「清空 + 上传」后一点连接数据又全回来（v2.1.1 修复此 bug）。
+  function wipeSynced() {
+    const wipeCols = ['students', 'teachers', 'lessons', 'todos', 'events'];
+    const t = Date.now();
+    if (!data.deleted) data.deleted = blankDeleted();
+    for (const col of wipeCols) {
+      if (!Array.isArray(data[col])) data[col] = [];
+      if (!data.deleted[col]) data.deleted[col] = {};
+      for (const it of data[col]) {
+        if (it && it.id != null) {
+          const k = String(it.id);
+          data.deleted[col][k] = Math.max(data.deleted[col][k] || 0, t);
+        }
+      }
+      data[col] = [];                 // 清空数组，但墓碑已登记，删除会随上传传播
+    }
+    data.histIncome = {};             // 聚合统计一并清空（非按记录、无墓碑；三端都清空则合并后自然为空）
+    data.histIncomeMt = {}; data.histIncomeDel = {};   // 时间戳/删除墓碑一同清空
+    data.meta = { lastLessonEdit: null, lastStudentEdit: null };
     save();
   }
 
@@ -2496,7 +2486,10 @@ const DB = (() => {
   // 归一化一份外来数据到当前结构（补默认字段 + 迁移旧结构）
   function adoptData(d) {
     const b = blank();
-    for (const k in b) if (d[k] === undefined) d[k] = b[k];
+    for (const k in b) {
+      if (d[k] === undefined) d[k] = b[k];
+      else if (Array.isArray(b[k]) && !Array.isArray(d[k])) d[k] = [];  // 外来备份数组字段写成 null/对象时兜底，防后续 .filter 崩溃
+    }
     d.settings = Object.assign(blank().settings, d.settings || {});
     delete d.__locked;
     migrateSubjects(d);
@@ -2508,12 +2501,13 @@ const DB = (() => {
 
   // 导入备份。解析失败会在写入前抛错（原数据分毫不动）；
   // 写入前自动把当前数据存一份快照，可用 restorePreImport() 一键撤销。
-  function importJSON(text) {
+  // opts 透传给 save()：preserveSavedAt 用于云端下载后保留远端时间戳；silent 用于抑制自动上传。
+  function importJSON(text, opts) {
     const info = parseBackup(text);          // 失败即抛错，此时尚未触碰现有数据
     try { localStorage.setItem(PRE_IMPORT_KEY, JSON.stringify({ at: Date.now(), counts: backupCounts(data), raw: JSON.stringify(data) })); }
     catch (e) { /* 空间不足则跳过快照，不阻断导入 */ }
     data = adoptData(info.data);
-    save();
+    save(opts);
     return info;
   }
 
@@ -2562,10 +2556,12 @@ const DB = (() => {
 
   return {
     get data() { return data; },
+    // 允许外部整体替换数据（云同步合并后回写）；与 importJSON 内部 data= 行为一致
+    set data(v) { data = v; },
     save, reset, exportJSON, importJSON, parseBackup, preImportInfo, restorePreImport, buildSnapshot,
     touch, setRemoteHandler,
-    parseCode, buildCode, GRADES, SUBJECTS, normDate, defaultFinanceSections,
-    getCodeTemplate, tokenizeCode, presentFields, resolveField, DEFAULT_CODE_TEMPLATE,
+    markDeleted, isDeleted, unmarkDeleted, removeRecord, blankDeleted, wipeSynced,
+    GRADES, SUBJECTS, normDate, defaultFinanceSections,
     student, teacher, teacherName, studentLabel, lessonsIn, statIn, lessonBreakdown, defaultTemplates, defaultPhrases,
     DASH_MODULES, studentSubjects, primarySubject, studentCode, normDateFlexible, lessonSub, migrateSubjects,
     resolveTeacher, rememberGradesSubjects,
@@ -2650,14 +2646,23 @@ window.Sync = (() => {
     for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
     return arr.buffer;
   }
-  async function deriveKey(token) {
+  async function deriveKey(secret) {
     const c = getCrypto();
     const enc = new TextEncoder();
-    const hash = await c.subtle.digest('SHA-256', enc.encode(token));
+    const hash = await c.subtle.digest('SHA-256', enc.encode(secret || ''));
     return c.subtle.importKey('raw', hash, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
   }
-  async function seal(obj, token) {
-    const key = await deriveKey(token);
+  // 当前用于加密的「密钥源」：优先用独立的「同步密钥(pass)」，留空则回退到 Token。
+  // 这样多端只需填同一个「同步密钥」即可互相解密，不必强求各端 Token 完全一致——
+  // 此前密钥=Token，若两端 Token 不同，便永远解不开对方数据，表现为「下载失败 / 自动同步始终不通 / 小字消不掉」。
+  function activeSecret() {
+    const s = cfg();
+    const p = (s.pass || '').trim();
+    return p ? p : ((s.token || '').trim());
+  }
+  async function activeKey() { return deriveKey(activeSecret()); }
+  async function seal(obj, secret) {
+    const key = await deriveKey(secret);
     return sealWithKey(obj, key);
   }
   async function sealWithKey(obj, key) {
@@ -2666,8 +2671,8 @@ window.Sync = (() => {
     const ct = await c.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(obj)));
     return JSON.stringify({ v: 1, alg: 'AES-GCM', iv: b64u(iv.buffer), ct: b64u(ct) });
   }
-  async function open(sealed, token) {
-    const key = await deriveKey(token);
+  async function open(sealed, secret) {
+    const key = await deriveKey(secret);
     return openWithKey(sealed, key);
   }
   async function openWithKey(sealed, key) {
@@ -2678,11 +2683,151 @@ window.Sync = (() => {
     const pt = await c.subtle.decrypt({ name: 'AES-GCM', iv }, key, unb64u(env.ct));
     return JSON.parse(new TextDecoder().decode(pt));
   }
-  // 读远端内容：优先解密；失败则当作旧版明文兼容
+  // 读远端内容：优先用「同步密钥」解密，再回退到 Token；都解不开则当作旧版明文兼容。
+  // 多候选解密让「两端 Token 不同、但同步密钥相同」也能互相解密，彻底消除“下载失败 / 小字消不掉”。
   async function readRemote(rc, token) {
     if (!rc) return null;
-    try { return await open(rc, token); }
-    catch (e) { try { return JSON.parse(rc); } catch (_) { return null; } }
+    const s = cfg();
+    const secrets = [];
+    const p = (s.pass || '').trim();
+    if (p) secrets.push(p);
+    const t = (token || '').trim();
+    if (t) secrets.push(t);
+    for (const secret of secrets) {
+      try { return await open(rc, secret); } catch (e) { /* 试下一个候选密钥 */ }
+    }
+    // 以上密钥都解不开：当作旧版明文兼容（仅当确为非加密明文才返回，加密信封返回 null 避免误覆盖本地真实数据）
+    try {
+      const parsed = JSON.parse(rc);
+      if (parsed && parsed.alg === 'AES-GCM' && parsed.ct && parsed.iv) return null;
+      return parsed;
+    } catch (_) { return null; }
+  }
+
+  /* ---------- 云端拉取（统一封装：返回是否存在内容 + 解密结果） ---------- */
+  async function fetchCloud() {
+    const s = cfg();
+    try {
+      const res = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
+      if (res.status === 404) return { status: 404, content: null, remote: null, present: false };
+      if (!res.ok) return { status: res.status, content: null, remote: null, present: false };
+      const j = await res.json();
+      const content = j.files && j.files[FNAME] && j.files[FNAME].content;
+      if (!content) return { status: 200, content: null, remote: null, present: false };
+      const remote = await readRemote(content, s.token);
+      return { status: 200, content, remote, present: true };
+    } catch (e) { return { status: 0, content: null, remote: null, present: false, err: e }; }
+  }
+
+  /* ---------- 无损合并：按 id 取并集，绝不整体覆盖 ----------
+     这是「多端同步不会再丢失数据」的根本保障。
+     - 各数据集合（学员/老师/课节/提醒/日程/模板/话术）按记录 id 合并：
+       两端都有的 id 取「修改时间(_mt)较新者」；都没有 _mt 则按方向（拉取取远端、上传取本机）；
+       任一侧独有的 id 都保留 → 一端新增、另一端绝不会被覆盖丢失。
+     - histIncome 按月「最后修改时间」胜出(LWW) + 按月删除墓碑（不再取较大值，避免改小的值被云端旧大值顶掉）；meta 按字段取较大值。
+     - settings 整段保留本机（含 token/gistId 等连接信息），绝不从云端覆盖，避免一端连接被另一端清空。
+     - __savedAt 取两端较大值，保证时间戳单调、基线对得上。
+  */
+  const SYNC_ARRAYS = ['students', 'teachers', 'lessons', 'todos', 'events', 'templates', 'phrases'];
+  // 墓碑结构空壳（与 store.blankDeleted 的键保持一致），避免合并时漏字段
+  function emptyDeleted() {
+    const o = {};
+    for (const c of SYNC_ARRAYS) o[c] = {};
+    return o;
+  }
+  function mergeDocs(local, remote, direction) {
+    const merged = Object.assign({}, local);           // 浅拷贝：保留本机 settings 等所有字段
+    const r = remote || {};
+    for (const key of SYNC_ARRAYS) {
+      const la = Array.isArray(local[key]) ? local[key] : [];
+      const ra = Array.isArray(r[key]) ? r[key] : [];
+      const out = [];
+      for (const it of ra) { if (it && it.id != null) out.push(it); }   // 先放远端
+      for (const it of la) {
+        if (!it || it.id == null) { out.push(it); continue; }
+        const k = String(it.id);
+        const idx = out.findIndex(x => String(x.id) === k);
+        if (idx < 0) out.push(it);                      // 本机独有 → 保留
+        else {                                          // 冲突：按 _mt 或方向择优
+          const a = it, b = out[idx];
+          const ma = a._mt || 0, mb = b._mt || 0;
+          out[idx] = (ma && mb) ? (ma >= mb ? a : b) : (direction === 'pull' ? b : a);
+        }
+      }
+      merged[key] = out;
+    }
+    // ---- 墓碑（tombstone）合并：让「删除」也能跨端传播 ----
+    // 两端各集合的 deleted 按 id 取较大 delAt（删除时间更新者胜出，避免复活后又被旧删除时间误删）；
+    // 再据此剔除非复活的记录，使 A 端删的记录在 B/C 端合并时同样消失。
+    const ld = (local && local.deleted) || {};
+    const rd = (remote && remote.deleted) || {};
+    const mergedDeleted = emptyDeleted();
+    for (const col of SYNC_ARRAYS) {
+      const lm = (ld[col] && typeof ld[col] === 'object') ? ld[col] : {};
+      const rm = (rd[col] && typeof rd[col] === 'object') ? rd[col] : {};
+      for (const id of Object.keys(lm).concat(Object.keys(rm))) {
+        const a = lm[id] || 0, b = rm[id] || 0;
+        mergedDeleted[col][id] = Math.max(a, b);
+      }
+    }
+    // 应用墓碑：被删除的记录从合并结果剔除，除非该记录比删除时间更新
+    // （误删后、同步前又改动，或重新录入使 createdAt/ _mt 大于 delAt → 复活并移除墓碑）。
+    for (const col of SYNC_ARRAYS) {
+      const delMap = mergedDeleted[col] || {};
+      const out = [];
+      for (const it of (merged[col] || [])) {
+        if (!it || it.id == null) { out.push(it); continue; }
+        const delAt = delMap[String(it.id)] || 0;
+        if (!delAt) { out.push(it); continue; }
+        const bornAt = it._mt || it.createdAt || 0;
+        if (bornAt > delAt) {
+          delete mergedDeleted[col][String(it.id)];   // 复活：移除墓碑，保留记录
+          out.push(it);
+        }
+        // 否则（已删除）剔除
+      }
+      merged[col] = out;
+    }
+    merged.deleted = mergedDeleted;
+    // ---- 历史收入：按月「最后修改时间胜出(LWW)」+ 按月删除墓碑 ----
+    // 旧实现按月份取 Math.max，导致「把某月收入改小」会被云端旧的大值覆盖（改了又回来）。
+    // 现改为：同一个月比较两端写入时间戳，较新者胜；删除标记若比两端值都新，则该月真正移除（跨端删除也生效）。
+    const li = (local && local.histIncome && typeof local.histIncome === 'object') ? local.histIncome : {};
+    const ri = (r && r.histIncome && typeof r.histIncome === 'object') ? r.histIncome : {};
+    const lmt = (local && local.histIncomeMt && typeof local.histIncomeMt === 'object') ? local.histIncomeMt : {};
+    const rmt = (r && r.histIncomeMt && typeof r.histIncomeMt === 'object') ? r.histIncomeMt : {};
+    const ldel = (local && local.histIncomeDel && typeof local.histIncomeDel === 'object') ? local.histIncomeDel : {};
+    const rdel = (r && r.histIncomeDel && typeof r.histIncomeDel === 'object') ? r.histIncomeDel : {};
+    const hi = {}, himt = {}, hidel = {};
+    const months = new Set([...Object.keys(li), ...Object.keys(ri), ...Object.keys(ldel), ...Object.keys(rdel)]);
+    for (const m of months) {
+      const lv = (m in li) ? li[m] : null, rv = (m in ri) ? ri[m] : null;
+      const lt = lmt[m] || 0, rt = rmt[m] || 0;
+      const ldt = ldel[m] || 0, rdt = rdel[m] || 0;
+      // 删除墓碑：任一侧删除时间晚于两侧所有值写入时间 → 该月真正移除（跨端删除也生效）
+      const delAt = Math.max(ldt, rdt);
+      if (delAt > 0 && delAt > Math.max(lt, rt)) { hidel[m] = delAt; continue; }
+      // 值按最后修改时间(LWW)择优；时间相同则按方向（push 取本机、pull 取远端）
+      let val, ts;
+      if (lv != null && rv != null) {
+        if (lt > rt) { val = lv; ts = lt; }
+        else if (rt > lt) { val = rv; ts = rt; }
+        else { val = (direction === 'push') ? lv : rv; ts = lt; }
+      } else if (lv != null) { val = lv; ts = lt; }
+      else if (rv != null) { val = rv; ts = rt; }
+      else { continue; }   // 只有删除标记（已被上方 continue 处理），无值可留
+      if (val) { hi[m] = val; himt[m] = ts; }   // 0/空视为无收入，不入表（与填写端一致）
+    }
+    merged.histIncome = hi;
+    merged.histIncomeMt = himt;
+    merged.histIncomeDel = hidel;
+    const lm = (local && local.meta && typeof local.meta === 'object') ? local.meta : {};
+    const rm = (r && r.meta && typeof r.meta === 'object') ? r.meta : {};
+    const mt = Object.assign({}, lm);
+    for (const k in rm) mt[k] = Math.max(mt[k] || 0, rm[k] || 0);
+    merged.meta = mt;
+    merged.__savedAt = Math.max((local && local.__savedAt) || 0, (r && r.__savedAt) || 0);
+    return merged;
   }
 
   let timer = null, busy = false;
@@ -2729,14 +2874,14 @@ window.Sync = (() => {
 
     // 0) 容错：把粘贴的链接 / 多余空格规整成纯 ID（仅当确实能提取时才改写）
     const norm = normalizeGistId(s.gistId);
-    if (norm && norm !== s.gistId) { s.gistId = norm; DB.save(); }
+    if (norm && norm !== s.gistId) { s.gistId = norm; DB.save({ preserveSavedAt: true, silent: true }); }
 
     // 1) 格式校验：手动填的 ID 必须符合服务商格式，否则视为「留空」，自动新建。
     // 这是为了防止用户填自定义名（如 20260802）导致各端各自新建、无法同步同一份数据。
     // 关键修复：此前 GitHub 误用 20 位固定长度正则，会把正确的 32 位 ID 判为「格式非法」而清空新建。
     if (s.gistId && !idRe.test(s.gistId)) {
       s.gistId = '';
-      DB.save();
+      DB.save({ preserveSavedAt: true, silent: true });
     }
 
     // 2) 用户填了真实有效的 ID：尝试连接并验证，失败时报错，但绝不擅自丢弃该 ID。
@@ -2746,8 +2891,19 @@ window.Sync = (() => {
       try {
         const chk = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
         if (chk.ok) {
-          s.baseSavedAt = DB.data.__savedAt || Date.now();
-          DB.save();
+          // 关键修复：连接已存在空间时——
+          // ① 基线必须取「远端真实时间戳」，而非本机 __savedAt，否则会和云端对不上、误判冲突；
+          // ② 本次保存必须 silent（禁止触发 schedulePush），否则会把本机旧数据自动上传、把共享空间覆盖掉，
+          //    导致另一端永远拉不到正确数据、自动同步看似失效。连接后的真正同步由「立即拉取 + 自动拉取」完成。
+          let remoteBase = DB.data.__savedAt || Date.now();
+          try {
+            const cj = await chk.json();
+            const rc = cj.files && cj.files[FNAME] && cj.files[FNAME].content;
+            const remote = rc ? await readRemote(rc, s.token) : null;
+            if (remote && remote.__savedAt) remoteBase = remote.__savedAt;
+          } catch (e) { /* 解密失败则用本机时间戳兜底 */ }
+          s.baseSavedAt = remoteBase;
+          DB.save({ preserveSavedAt: true, silent: true });
           status('已连接到现有空间');
           return s.gistId;
         }
@@ -2765,7 +2921,7 @@ window.Sync = (() => {
     // 3) 留空或格式无效：新建空间
     if (!secureCtx()) throw new Error('insecure');
     status('正在创建加密同步空间…');
-    const body = await seal(DB.data, s.token);
+    const body = await sealWithKey(DB.data, await activeKey());
     const res = await fetch(apiBase(), {
       method: 'POST',
       headers: authHeaders(),
@@ -2778,7 +2934,7 @@ window.Sync = (() => {
     const j = await res.json();
     s.gistId = j.id;
     s.baseSavedAt = DB.data.__savedAt || Date.now();
-    DB.save();
+    DB.save({ preserveSavedAt: true, silent: true });
     status('加密同步空间已创建');
     return j.id;
   }
@@ -2790,23 +2946,15 @@ window.Sync = (() => {
     busy = true;
     try {
       await ensureGist();
-      // 冲突检测：拉取远端，比较 base
-      try {
-        const cur = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
-        if (cur.ok) {
-          const cj = await cur.json();
-          const rc = cj.files && cj.files[FNAME] && cj.files[FNAME].content;
-          const remote = await readRemote(rc, s.token);
-          const remoteBase = remote && (remote.__savedAt || 0);
-          if (remote && !force && s.baseSavedAt && remoteBase !== s.baseSavedAt) {
-            status('云端已有其他设备更新，请先「下载同步」避免覆盖', 'warn');
-            throw new Error('conflict');
-          }
-        }
-      } catch (e) { if (e.message === 'conflict') throw e; /* 网络抖动则忽略，继续推送 */ }
-
+      const fc = await fetchCloud();
+      // 网络异常 / 云端读不到：放弃本次上传，绝不拿本机旧数据去覆盖云端真实数据
+      if (!fc.present && fc.status !== 404) throw new Error('cloud-unreachable');
+      // 云端已有内容但本机解不开 → 密钥不匹配，绝不覆盖（否则会清空对方数据）
+      if (fc.present && !fc.remote) { status('密钥不匹配，无法上传（会清空对方数据）', 'warn'); throw new Error('key-mismatch'); }
+      // 合并本机与云端（取并集），即便本地「更旧」也绝不会丢失云端新增的记录
+      const merged = mergeDocs(DB.data, fc.remote, 'push');
       status('正在加密上传…');
-      const body = await seal(DB.data, s.token);
+      const body = await sealWithKey(merged, await activeKey());
       const res = await fetch(apiBase() + '/' + s.gistId, {
         method: 'PATCH',
         headers: authHeaders(),
@@ -2815,24 +2963,22 @@ window.Sync = (() => {
       if (!res.ok) {
         // 空间失效（404）时自动重建并重试一次，避免卡死在陈旧 ID
         if (res.status === 404) {
-          s.gistId = null; DB.save();
+          s.gistId = null; DB.save({ preserveSavedAt: true, silent: true });
           await ensureGist();
           const res2 = await fetch(apiBase() + '/' + s.gistId, {
-            method: 'PATCH',
-            headers: authHeaders(),
+            method: 'PATCH', headers: authHeaders(),
             body: JSON.stringify(withBody({ files: { [FNAME]: { content: body } } }))
           });
-          if (res2.ok) { /* 重试成功，继续下面的收尾 */ }
-          else { const t = await res2.text().catch(() => ''); throw new Error('上传失败(' + res2.status + ')：' + t.slice(0, 120)); }
-        } else {
-          const t = await res.text().catch(() => '');
-          throw new Error('上传失败(' + res.status + ')：' + t.slice(0, 120));
-        }
+          if (!res2.ok) { const t = await res2.text().catch(() => ''); throw new Error('上传失败(' + res2.status + ')：' + t.slice(0, 120)); }
+        } else { const t = await res.text().catch(() => ''); throw new Error('上传失败(' + res.status + ')：' + t.slice(0, 120)); }
       }
-      s.baseSavedAt = DB.data.__savedAt || Date.now();
+      s.baseSavedAt = merged.__savedAt;
       s.lastSync = Date.now();
-      DB.save();
+      // 落盘合并结果（保留 __savedAt，静默不触发上传），使本机与云端完全一致
+      DB.data = merged;
+      DB.save({ preserveSavedAt: true, silent: true });
       status('已加密上传 · ' + U.fmtTime(s.lastSync));
+      if (s.auto !== false) startAutoPull();
     } finally { busy = false; }
   }
 
@@ -2843,26 +2989,20 @@ window.Sync = (() => {
     busy = true;
     try {
       if (!quiet) status('正在下载…');
-      const res = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
-      if (!res.ok) {
-        const t = await res.text().catch(() => '');
-        throw new Error('下载失败(' + res.status + ')：' + t.slice(0, 120));
-      }
-      const j = await res.json();
-      const content = j.files && j.files[FNAME] && j.files[FNAME].content;
-      if (!content) throw new Error('云端暂无数据');
-      let data;
-      try { data = await open(content, s.token); }
-      catch (e) {
-        try { data = JSON.parse(content); }       // 旧版明文兼容
-        catch (_) { throw new Error('解密失败：若更换过 Token，请用原 Token 下载，或本地重新连接'); }
-      }
-      DB.importJSON(JSON.stringify(data));                 // 内部会 save()
-      s.baseSavedAt = DB.data.__savedAt || Date.now();
-      s.lastSync = Date.now();
-      DB.save();
+      const fc = await fetchCloud();
+      if (!fc.present) throw new Error('云端暂无数据');
+      if (!fc.remote) throw new Error('解密失败：密钥不匹配，请用原 Token / 同步密钥，或本地重新连接');
+      // 合并云端与本机（取并集），本机独有记录不会被云端覆盖丢失
+      const merged = mergeDocs(DB.data, fc.remote, 'pull');
+      DB.data = merged;
+      DB.save({ preserveSavedAt: true, silent: true });
+      const s2 = cfg();
+      s2.baseSavedAt = fc.remote.__savedAt || 0;
+      s2.lastSync = Date.now();
+      DB.save({ preserveSavedAt: true, silent: true });
       if (App && App.boot) App.boot();
-      status((quiet ? '已自动同步' : '已下载同步') + ' · ' + U.fmtTime(s.lastSync));
+      status((quiet ? '已自动同步' : '已下载同步') + ' · ' + U.fmtTime(s2.lastSync));
+      if (s2.auto !== false) startAutoPull();
     } finally { busy = false; }
   }
   function pull() { return doPull(false); }
@@ -2898,28 +3038,23 @@ window.Sync = (() => {
     const ae = (typeof document !== 'undefined') && document.activeElement;
     if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
     try {
-      const res = await fetch(withToken(apiBase() + '/' + s.gistId), { headers: authHeaders() });
-      if (!res.ok) { if (res.status === 404) stopAutoPull(); return; }
-      const j = await res.json();
-      const rc = j.files && j.files[FNAME] && j.files[FNAME].content;
-      if (!rc) return;
-      const remote = await readRemote(rc, s.token);
-      const remoteBase = remote && (remote.__savedAt || 0);
-      if (!remoteBase) return;
-      if (remoteBase === s.baseSavedAt) return;     // 没有新版本，直接跳过，不打扰
-      // 有更新：本机若有尚未上传的改动，先上传；若撞车则提示手动处理，本轮不覆盖
+      const fc = await fetchCloud();
+      if (!fc.present) return;                       // 云端空，跳过
+      if (!fc.remote) {                              // 有内容但解不开 → 密钥不匹配，停止自动同步并提示
+        stopAutoPull();
+        status('同步密钥不匹配，已暂停自动同步（请检查两端同步密钥 / Token 是否一致）', 'warn');
+        return;
+      }
+      const remoteBase = fc.remote.__savedAt || 0;
+      if (remoteBase === s.baseSavedAt) return;      // 无新版本，跳过，不打扰
+      // 本机若有未上传改动：先合并上传（上传内部也会先合并云端，绝不丢数据）；
+      // 上传失败（如密钥不匹配）也降级为仅拉取合并，保证本机拿到云端数据且不丢本机数据。
       const localDirty = (DB.data.__savedAt || 0) > (s.baseSavedAt || 0);
       if (localDirty) {
-        try { await push(); return; }               // 上传成功会同步 baseSavedAt
-        catch (e) {
-          if (e.message === 'conflict') {
-            stopAutoPull();   // 停止自动拉取，避免每 20s 重复弹同一警告刷屏
-            status('云端和本机都有改动，已暂停自动同步，请手动「下载同步」处理', 'warn');
-          }
-          return;
-        }
+        try { await push(); return; }
+        catch (e) { if (e.message === 'key-mismatch') { stopAutoPull(); return; } /* 其它失败则继续拉取 */ }
       }
-      await doPull(true);                           // 本机干净 → 静默拉取
+      await doPull(true);                            // 合并拉取，绝不丢本机数据
     } catch (e) { /* 网络抖动忽略，下个周期再试 */ }
   }
 
@@ -2932,8 +3067,9 @@ window.Sync = (() => {
   }
 
   return { cfg, schedulePush, push, pull, ensureGist, status, refreshStatus,
-           startAutoPull, stopAutoPull, fingerprint,
-           _crypto: { seal, open, sealWithKey, openWithKey, secureCtx } };
+           startAutoPull, stopAutoPull, fingerprint, readRemote, activeSecret,
+           _crypto: { seal, open, sealWithKey, openWithKey, secureCtx },
+           _merge: mergeDocs, _fetchCloud: fetchCloud, _autoActive: () => !!pullTimer };
 })();
 
 </script>
@@ -2958,6 +3094,8 @@ const Todo = (() => {
   const cycle = s => STATUS[s]?.next || 'done';
   let curDate = U.today();
   let filter = -1;
+  let tplSelMode = false;          // 每日模板库「批量删除」选择模式
+  const tplSel = new Set();        // 已选中的模板 id 集合
 
   /* --- 数据迁移：旧版 done 布尔值 → 三态 status --- */
   function migrate() {
@@ -3025,54 +3163,76 @@ const Todo = (() => {
   }
 
   /* --- 渲染 --- */
-  function render() {
-    const root = U.$('#view');
-    if (!root || App.route !== 'todo') return;
-    const list = ofDate(curDate);
-    const sortFn = (a, b) => (b.flag ? 1 : 0) - (a.flag ? 1 : 0)   // 旗标置顶
-      || a.priority - b.priority
-      || (a.time || '99:59').localeCompare(b.time || '99:59')
-      || a.createdAt - b.createdAt;
-    const undone = list.filter(t => t.status !== 'done').sort(sortFn);
-    const done = list.filter(t => t.status === 'done').sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
-    const shown = filter < 0 ? undone : undone.filter(t => t.priority === filter);
-    // 与 dashboard 一致的遗留判定：仅“非重复且过去日期未完成”的旧任务算遗留。
-    // 重复任务从不计入遗留——它们按发生日由 ofDate 在当天列表里自然出现，避免重复/错位。
+  function computeOverdue() {
     const today = U.today();
-    const overdue = DB.data.todos.filter(t => {
+    return DB.data.todos.filter(t => {
       if (t.status === 'done') return false;
       const r = U.recurRuleOf(t.repeat, t.date);
       if (r && r.type !== 'never') return false;   // 重复任务不进遗留
       return t.date < today;
     });
-    const isM = U.isMobile();
-    const segHTML = isM ? '' : `<div class="seg" style="margin-bottom:12px">
+  }
+  function buildSegHTML(isM, undone) {
+    if (isM) return '';
+    return `<div class="seg" style="margin-bottom:12px">
             <div class="opt ${filter < 0 ? 'on' : ''}" data-f="-1">全部</div>
             ${P.map(p => `<div class="opt ${filter === p.v ? 'on' : ''}" data-f="${p.v}">
               <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${p.color};margin-right:5px"></span>${p.name}
               <b style="margin-left:4px;color:inherit;opacity:.6">${undone.filter(t => t.priority === p.v).length}</b></div>`).join('')}
           </div>`;
-    const rightColHTML = isM ? '' : `<div style="display:flex;flex-direction:column;gap:16px">
+  }
+  /* 每日模板库：单条模板 chip（支持批量删除选择模式） */
+  function tplChipHTML(tpl, selMode, selected) {
+    const color = pInfo(tpl.priority).color;
+    if (selMode) {
+      return `<div class="tpl-chip sel" data-tpl="${tpl.id}" data-act="tplToggle" role="button" tabindex="0">
+        <span class="tpl-check ${selected ? 'on' : ''}">${selected ? '✓' : ''}</span>
+        <span class="pdot" style="background:${color}"></span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(tpl.title)}</div>
+          ${tpl.tag ? `<span class="tag gray" style="margin-top:3px">${U.esc(tpl.tag)}</span>` : ''}
+        </div>
+      </div>`;
+    }
+    return `<div class="tpl-chip" data-tpl="${tpl.id}">
+      <span class="pdot" style="background:${color}"></span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(tpl.title)}</div>
+        ${tpl.tag ? `<span class="tag gray" style="margin-top:3px">${U.esc(tpl.tag)}</span>` : ''}
+      </div>
+      <button class="btn btn-icon" data-act="useTpl" title="导入这条"><svg class="ico"><use href="#i-plus"/></svg></button>
+      <button class="btn btn-icon" data-act="editTpl" title="编辑"><svg class="ico"><use href="#i-edit"/></svg></button>
+      <button class="btn btn-icon" data-act="delTpl" title="删除"><svg class="ico"><use href="#i-trash"/></svg></button>
+    </div>`;
+  }
+
+  /* 每日模板库：批量删除操作条 */
+  function tplBatchBarHTML() {
+    const total = DB.data.templates.length;
+    const n = tplSel.size;
+    return `<div class="tpl-batch-bar">
+      <button class="btn btn-sm btn-ghost" data-act="tplSelAll">${n === total && total ? '取消全选' : '全选'}</button>
+      <span class="tpl-sel-count">已选 ${n} 项</span>
+      <button class="btn btn-sm btn-danger" data-act="tplDelSel" ${n ? '' : 'disabled'}>删除选中</button>
+      <button class="btn btn-sm btn-ghost" data-act="tplSelCancel">退出</button>
+    </div>`;
+  }
+
+  function buildRightColHTML(isM) {
+    if (isM) return '';
+    return `<div style="display:flex;flex-direction:column;gap:16px">
         <div class="card">
           <div class="card-h"><h3>每日模板库</h3>
+            <button class="btn btn-icon ${tplSelMode ? 'on' : ''}" data-act="tplBatch" title="${tplSelMode ? '退出批量删除' : '批量删除'}"><svg class="ico"><use href="#i-check"/></svg></button>
             <button class="btn btn-icon" data-act="addTpl" title="新增模板"><svg class="ico"><use href="#i-plus"/></svg></button>
           </div>
           <button class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:11px" data-act="importAll">
             一键导入全部到${curDate === U.today() ? '今天' : U.cnDate(curDate)}
           </button>
           <div style="display:flex;flex-direction:column;gap:7px">
-            ${DB.data.templates.length ? DB.data.templates.map(tpl => `
-              <div class="tpl-chip" data-tpl="${tpl.id}">
-                <span class="pdot" style="background:${pInfo(tpl.priority).color}"></span>
-                <div style="flex:1;min-width:0">
-                  <div style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(tpl.title)}</div>
-                  ${tpl.tag ? `<span class="tag gray" style="margin-top:3px">${U.esc(tpl.tag)}</span>` : ''}
-                </div>
-                <button class="btn btn-icon" data-act="useTpl" title="导入这条"><svg class="ico"><use href="#i-plus"/></svg></button>
-                <button class="btn btn-icon" data-act="editTpl" title="编辑"><svg class="ico"><use href="#i-edit"/></svg></button>
-                <button class="btn btn-icon" data-act="delTpl" title="删除"><svg class="ico"><use href="#i-trash"/></svg></button>
-              </div>`).join('') : `<p class="muted" style="font-size:12px">还没有模板，点右上角 + 添加</p>`}
+            ${DB.data.templates.length ? DB.data.templates.map(tpl => tplChipHTML(tpl, tplSelMode, tplSel.has(tpl.id))).join('') : `<p class="muted" style="font-size:12px">还没有模板，点右上角 + 添加</p>`}
           </div>
+          ${tplSelMode ? tplBatchBarHTML() : ''}
         </div>
 
         <div class="card">
@@ -3085,26 +3245,39 @@ const Todo = (() => {
           <div class="divider"></div>
         </div>
       </div>`;
-
-    const mobileTplHTML = isM ? `<div class="card">
+  }
+  function buildMobileTplHTML(isM) {
+    if (!isM) return '';
+    return `      <div class="card">
         <div class="card-h"><h3>每日模板库</h3>
+          <button class="btn btn-icon ${tplSelMode ? 'on' : ''}" data-act="tplBatch" title="${tplSelMode ? '退出批量删除' : '批量删除'}"><svg class="ico"><use href="#i-check"/></svg></button>
           <button class="btn btn-icon" data-act="addTpl" title="新增模板"><svg class="ico"><use href="#i-plus"/></svg></button>
         </div>
         <div style="display:flex;flex-direction:column;gap:7px">
-          ${DB.data.templates.length ? DB.data.templates.map(tpl => `
-            <div class="tpl-chip" data-tpl="${tpl.id}">
-              <span class="pdot" style="background:${pInfo(tpl.priority).color}"></span>
-              <div style="flex:1;min-width:0">
-                <div style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(tpl.title)}</div>
-                ${tpl.tag ? `<span class="tag gray" style="margin-top:3px">${U.esc(tpl.tag)}</span>` : ''}
-              </div>
-              <button class="btn btn-icon" data-act="useTpl" title="导入这条"><svg class="ico"><use href="#i-plus"/></svg></button>
-              <button class="btn btn-icon" data-act="editTpl" title="编辑"><svg class="ico"><use href="#i-edit"/></svg></button>
-              <button class="btn btn-icon" data-act="delTpl" title="删除"><svg class="ico"><use href="#i-trash"/></svg></button>
-            </div>`).join('') : `<p class="muted" style="font-size:12px">还没有模板，点右上角 + 添加</p>`}
+          ${DB.data.templates.length ? DB.data.templates.map(tpl => tplChipHTML(tpl, tplSelMode, tplSel.has(tpl.id))).join('') : `<p class="muted" style="font-size:12px">还没有模板，点右上角 + 添加</p>`}
         </div>
+        ${tplSelMode ? tplBatchBarHTML() : ''}
         <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:11px" data-act="importAll">一键导入全部到今天</button>
-      </div>` : '';
+      </div>`;
+  }
+
+  function render() {
+    const root = U.$('#view');
+    if (!root || App.route !== 'todo') return;
+    const list = ofDate(curDate);
+    const sortFn = (a, b) => (b.flag ? 1 : 0) - (a.flag ? 1 : 0)   // 旗标置顶
+      || a.priority - b.priority
+      || (a.time || '99:59').localeCompare(b.time || '99:59')
+      || a.createdAt - b.createdAt;
+    const undone = list.filter(t => t.status !== 'done').sort(sortFn);
+    const done = list.filter(t => t.status === 'done').sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+    const shown = filter < 0 ? undone : undone.filter(t => t.priority === filter);
+    const overdue = computeOverdue();
+    const isM = U.isMobile();
+    const segHTML = buildSegHTML(isM, undone);
+    const rightColHTML = buildRightColHTML(isM);
+
+    const mobileTplHTML = buildMobileTplHTML(isM);
 
     root.innerHTML = `
     <div class="grid todo-view" style="grid-template-columns:minmax(0,1fr) 320px">
@@ -3242,7 +3415,7 @@ const Todo = (() => {
           break;
         }
         case 'edit': editTodo(t); break;
-        case 'del': DB.data.todos = DB.data.todos.filter(x => x.id !== tid); DB.save(); render(); App.refreshBadge(); break;
+        case 'del': DB.removeRecord('todos', tid); DB.save(); render(); App.refreshBadge(); break;
         case 'pullOverdue':
           // 仅把「非重复」的过期未完成任务拉到今天；重复任务以 repeat 为锚点，
           // 改 date 会悄悄偏移发生日，故跳过（重复任务本就会在今天发生）。
@@ -3263,10 +3436,35 @@ const Todo = (() => {
         case 'editTpl': editTpl(tpl); break;
         case 'delTpl':
           U.confirm(`删除模板「${tpl.title}」？`, () => {
-            DB.data.templates = DB.data.templates.filter(x => x.id !== tpl.id); DB.save(); render();
+            DB.removeRecord('templates', tpl.id); DB.save(); render();
           }, '删除');
           break;
         case 'addTpl': editTpl(null); break;
+        /* ---- 每日模板库：批量删除 ---- */
+        case 'tplBatch': tplSelMode = !tplSelMode; if (!tplSelMode) tplSel.clear(); render(); break;
+        case 'tplToggle': {
+          const id = btn.closest('[data-tpl]').dataset.tpl;
+          if (tplSel.has(id)) tplSel.delete(id); else tplSel.add(id);
+          render(); break;
+        }
+        case 'tplSelAll': {
+          if (tplSel.size === DB.data.templates.length) tplSel.clear();
+          else DB.data.templates.forEach(t => tplSel.add(t.id));
+          render(); break;
+        }
+        case 'tplSelCancel': tplSelMode = false; tplSel.clear(); render(); break;
+        case 'tplDelSel': {
+          const ids = [...tplSel];
+          if (!ids.length) break;
+          U.confirm(`确定删除选中的 ${ids.length} 个模板？删除会跨端同步到其他设备`, () => {
+            ids.forEach(id => DB.removeRecord('templates', id));
+            DB.save();
+            tplSel.clear(); tplSelMode = false;
+            render();
+            U.toast(`已删除 ${ids.length} 个模板`, 'ok');
+          }, '删除');
+          break;
+        }
       }
     });
 
@@ -3603,6 +3801,9 @@ const Students = (() => {
       case 'importExcel': importExcelFlow(); break;
       case 'del':
         U.confirm(`删除「${s.parentName}」的档案？其名下 ${DB.data.lessons.filter(l => l.studentId === s.id).length} 节课记录也会一并删除。`, () => {
+          // 级联删除：该学员的课节也一并删除（写墓碑，让其他端同样消失）
+          DB.data.lessons.filter(l => l.studentId === s.id).forEach(l => DB.markDeleted('lessons', l.id));
+          DB.markDeleted('students', s.id);
           DB.data.students = DB.data.students.filter(x => x.id !== s.id);
           DB.data.lessons = DB.data.lessons.filter(l => l.studentId !== s.id);
           DB.save(); DB.touch('student'); render(); U.toast('已删除');
@@ -3678,61 +3879,70 @@ const Students = (() => {
       <div class="divider"></div>
       <div class="field"><label>备注 <span class="hint">家长性格、特殊要求、孩子情况</span></label>
         <textarea class="input" id="f_note" placeholder="例：妈妈很关注细节，每节课后一定要文字反馈；孩子函数薄弱。">${U.esc(init.note || '')}</textarea></div>`,
-      onOk: b => {
-        const dateStr = U.$('#f_date', b).value.trim();
-        const signDate = DB.normDateFlexible(dateStr);
-        if (!signDate) { U.toast('签约日期无法识别，请按 260820 或 2026.8.20 格式', 'warn'); return false; }
-        const parentName = U.$('#f_sname', b).value.trim();
-        if (!parentName) { U.toast('请填写学生姓名', 'warn'); return false; }
-        const rows = Array.from(U.$('#subjWrap', b).querySelectorAll('.subj-row'));
-        const subjects = [];
-        for (const r of rows) {
-          const grade = (r.querySelector('.sg') || {}).value || '';
-          const subject = (r.querySelector('.sj') || {}).value || '';
-          const tuition = +((r.querySelector('.fee') || {}).value || 0);
-          const commission = +((r.querySelector('.com') || {}).value || 0);
-          const duration = +((r.querySelector('.dur') || {}).value || 0);
-          if (!grade && !subject && !tuition && !commission && !duration) continue; // 跳过空行
-          if (!grade || !subject) { U.toast('学科行需填写年级与学科', 'warn'); return false; }
-          if (commission > tuition) { U.toast(`${grade}${subject}：抽成不能大于课时费`, 'warn'); return false; }
-          DB.rememberGradesSubjects(grade, subject);
-          subjects.push({ id: r.dataset.sid || U.uid('sbj'), grade, subject, tuition, commission, duration: duration || 60, fixed: ((DB.student(s ? s.id : '') || {}).subjects || []).find(x => x.id === r.dataset.sid)?.fixed || [] });
-        }
-        if (!subjects.length) { U.toast('请至少填写一个学科', 'warn'); return false; }
-        // 自定义字段：收集非空的 label+value
-        const customRows = Array.from(U.$('#customWrap', b).querySelectorAll('.cust-row'));
-        const customF = customRows.map(r => ({
-          id: r.dataset.cid || U.uid('cf'),
-          label: (r.querySelector('.cl') || {}).value.trim(),
-          value: (r.querySelector('.cv') || {}).value.trim()
-        })).filter(c => c.label || c.value);
-        const teacherId = DB.resolveTeacher(U.$('#f_tname', b).value);
-        const o = {
-          signDate, parentName, studentName: '',
-          teacherId, status: U.$('#f_st', b).value, freq: U.$('#f_freq', b).value || '',
-          trialDate: U.$('#f_trial', b).value, note: U.$('#f_note', b).value.trim(),
-          custom: customF,
-          grade: subjects[0].grade, subject: subjects[0].subject,
-          tuition: subjects[0].tuition, commission: subjects[0].commission, duration: subjects[0].duration,
-          subjects
-        };
-        o.code = DB.studentCode(Object.assign({ signDate, parentName }, { subjects }));
-        if (isNew) {
-          const dup = DB.data.students.find(x => (x.parentName || '').trim().toLowerCase() === parentName.toLowerCase());
-          if (dup && !window.confirm(`已存在同名学员「${dup.parentName}」，确定要再新建一个吗？\n若其实是同一人，建议直接编辑原档案即可。`)) {
-            return false;
-          }
-          DB.data.students.push(Object.assign({ id: U.uid('stu'), createdAt: Date.now() }, o));
-        }
-        else Object.assign(s, o);
-        DB.save(); DB.touch('student');
-        if (typeof Todo !== 'undefined' && Todo.checkAuto) { try { Todo.checkAuto(); } catch (_) {} }
-        if (typeof App !== 'undefined' && App.refreshBadge) { try { App.refreshBadge(); } catch (_) {} }
-        render();
-        U.toast(isNew ? '档案已创建' : '已保存');
-      }
+      onOk: b => { const r = gatherStudent(b, isNew, s); return r.ok; }
     });
 
+    wireStudentModal(m, subs, custom, cg, teachers, isNew, s);
+  }
+
+  /* 收集并校验学员表单 → 返回 {ok:true,o} 或 {ok:false}（已 toast 原因） */
+  function gatherStudent(b, isNew, s) {
+    const dateStr = U.$('#f_date', b).value.trim();
+    const signDate = DB.normDateFlexible(dateStr);
+    if (!signDate) { U.toast('签约日期无法识别，请按 260820 或 2026.8.20 格式', 'warn'); return { ok: false }; }
+    const parentName = U.$('#f_sname', b).value.trim();
+    if (!parentName) { U.toast('请填写学生姓名', 'warn'); return { ok: false }; }
+    const rows = Array.from(U.$('#subjWrap', b).querySelectorAll('.subj-row'));
+    const subjects = [];
+    for (const r of rows) {
+      const grade = (r.querySelector('.sg') || {}).value || '';
+      const subject = (r.querySelector('.sj') || {}).value || '';
+      const tuition = +((r.querySelector('.fee') || {}).value || 0);
+      const commission = +((r.querySelector('.com') || {}).value || 0);
+      const duration = +((r.querySelector('.dur') || {}).value || 0);
+      if (!grade && !subject && !tuition && !commission && !duration) continue; // 跳过空行
+      if (!grade || !subject) { U.toast('学科行需填写年级与学科', 'warn'); return { ok: false }; }
+      if (commission > tuition) { U.toast(`${grade}${subject}：抽成不能大于课时费`, 'warn'); return { ok: false }; }
+      DB.rememberGradesSubjects(grade, subject);
+      subjects.push({ id: r.dataset.sid || U.uid('sbj'), grade, subject, tuition, commission, duration: duration || 60, fixed: ((DB.student(s ? s.id : '') || {}).subjects || []).find(x => x.id === r.dataset.sid)?.fixed || [] });
+    }
+    if (!subjects.length) { U.toast('请至少填写一个学科', 'warn'); return { ok: false }; }
+    // 自定义字段：收集非空的 label+value
+    const customRows = Array.from(U.$('#customWrap', b).querySelectorAll('.cust-row'));
+    const customF = customRows.map(r => ({
+      id: r.dataset.cid || U.uid('cf'),
+      label: (r.querySelector('.cl') || {}).value.trim(),
+      value: (r.querySelector('.cv') || {}).value.trim()
+    })).filter(c => c.label || c.value);
+    const teacherId = DB.resolveTeacher(U.$('#f_tname', b).value);
+    const o = {
+      signDate, parentName, studentName: '',
+      teacherId, status: U.$('#f_st', b).value, freq: U.$('#f_freq', b).value || '',
+      trialDate: U.$('#f_trial', b).value, note: U.$('#f_note', b).value.trim(),
+      custom: customF,
+      grade: subjects[0].grade, subject: subjects[0].subject,
+      tuition: subjects[0].tuition, commission: subjects[0].commission, duration: subjects[0].duration,
+      subjects
+    };
+    o.code = DB.studentCode(Object.assign({ signDate, parentName }, { subjects }));
+    if (isNew) {
+      const dup = DB.data.students.find(x => (x.parentName || '').trim().toLowerCase() === parentName.toLowerCase());
+      if (dup && !window.confirm(`已存在同名学员「${dup.parentName}」，确定要再新建一个吗？\n若其实是同一人，建议直接编辑原档案即可。`)) {
+        return { ok: false };
+      }
+      DB.data.students.push(Object.assign({ id: U.uid('stu'), createdAt: Date.now() }, o));
+    }
+    else Object.assign(s, o);
+    DB.save(); DB.touch('student');
+    if (typeof Todo !== 'undefined' && Todo.checkAuto) { try { Todo.checkAuto(); } catch (_) {} }
+    if (typeof App !== 'undefined' && App.refreshBadge) { try { App.refreshBadge(); } catch (_) {} }
+    render();
+    U.toast(isNew ? '档案已创建' : '已保存');
+    return { ok: true };
+  }
+
+  /* 模态打开后：绑定学科/自定义字段动态增删、日期实时规整提示 */
+  function wireStudentModal(m, subs, custom, cg, teachers, isNew, s) {
     const wrap = U.$('#subjWrap', m.body);
     wrap.innerHTML = subs.map(subjRowHTML).join('');
     const refreshAddBtn = () => {
@@ -3778,28 +3988,6 @@ const Students = (() => {
     dateIn.oninput = upd; upd();
     const stSel = U.$('#f_st', m.body), trialWrap = U.$('#trialWrap', m.body);
     stSel.onchange = () => trialWrap.style.display = stSel.value === 'trial' ? 'flex' : 'none';
-  }
-
-  function previewHTML(p) {
-    const cell = (k, v, bad) => `<div class="parse-cell ${bad ? 'bad' : ''}"><span class="pk">${k}</span><span class="pv">${U.esc(v || '—')}</span></div>`;
-    return `<div class="parse-box">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px">
-        <b style="font-size:12.5px">解析预览</b>
-        <span class="tag ${p.ok ? 'leaf' : 'alert'}">${p.ok ? '格式正确' : '待完善'}</span>
-      </div>
-      <div class="parse-row">
-        ${cell('签约日期', p.signDate, !p.signDate)}
-        ${cell('年级', p.grade, !p.grade)}
-        ${cell('学科', p.subject, !p.subject)}
-        ${cell('学员名', p.parentName, !p.parentName)}
-        ${cell('我的抽成', p.commission ? U.money(p.commission) : '', !p.commission)}
-        ${cell('课时费', p.tuition ? U.money(p.tuition) : '', !p.tuition)}
-        ${cell('课时长', p.duration ? p.duration + ' 分钟' : '', !p.duration)}
-        ${cell('老师课酬', p.tuition ? U.money(p.tuition - p.commission) : '')}
-        ${cell('抽成比例', p.tuition ? Math.round(p.commission / p.tuition * 100) + '%' : '')}
-      </div>
-      ${p.errors.length ? `<div style="margin-top:9px;font-size:11.5px;color:#cf5252">${p.errors.map(U.esc).join('<br>')}</div>` : ''}
-    </div>`;
   }
 
   /* ---------- 档案详情 ---------- */
@@ -3966,15 +4154,38 @@ const Students = (() => {
     return { created, added };
   }
 
+  /* 把用户选择的 Excel / CSV / TXT 转成 parseSheet 能处理的文本。
+   * - Excel：用 XLSX 库转制表符分隔文本（避免单元格内逗号干扰）。
+   * - CSV / TXT：优先按 UTF-8 解码；Excel 在中文 Windows 上默认存的是 GBK/GB18030，
+   *   解码失败或乱码时自动 fallback 到 GB18030 / GBK。 */
+  async function fileToSheetText(f) {
+    const name = (f.name || '').toLowerCase();
+    const isExcel = name.endsWith('.xlsx') || name.endsWith('.xls');
+    if (isExcel) {
+      if (typeof XLSX === 'undefined') throw new Error('Excel 解析库未加载，请刷新页面');
+      const buf = await f.arrayBuffer();
+      const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+      if (!wb.SheetNames.length) throw new Error('Excel 文件为空');
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      return XLSX.utils.sheet_to_csv(ws, { FS: '\t', RS: '\n' });
+    }
+    const buf = await f.arrayBuffer();
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+    catch (e) {
+      try { return new TextDecoder('gb18030').decode(buf); }
+      catch (e2) { return new TextDecoder('gbk').decode(buf); }
+    }
+  }
+
   function importExcelFlow() {
     U.modal({
       title: '从 Excel / CSV 导入课时',
       wide: true,
       okText: '确认导入',
       body: `
-      <p class="muted" style="font-size:12px;margin:0 0 8px">把 Excel 另存为 <b>CSV（逗号分隔）</b> 后选择文件，或直接把表格内容粘贴到下方。需要包含列：<b>上课时间</b>、<b>孩子姓名</b>、<b>每次抽成</b>（课时费 / 年级 / 学科 / 时长 可选）。系统按姓名归入已有学员，没有的自动新建，并跳过完全重复的课程。</p>
-      <input type="file" id="excelFile" accept=".csv,text/csv" style="margin:8px 0 4px;display:block">
-      <textarea class="input" id="excelText" rows="6" placeholder="在此粘贴 CSV 内容（第一行写表头，例如：上课时间,孩子姓名,每次抽成）"></textarea>
+      <p class="muted" style="font-size:12px;margin:0 0 8px">选择 <b>Excel (.xlsx / .xls)</b> 或 <b>CSV / TXT</b> 文件，也可直接把表格内容粘贴到下方。需要包含列：<b>上课时间</b>、<b>孩子姓名</b>、<b>每次抽成</b>（课时费 / 年级 / 学科 / 时长 可选）。系统按姓名归入已有学员，没有的自动新建，并跳过完全重复的课程。</p>
+      <input type="file" id="excelFile" accept=".xlsx,.xls,.csv,.txt" style="margin:8px 0 4px;display:block">
+      <textarea class="input" id="excelText" rows="6" placeholder="在此粘贴表格内容（第一行写表头，例如：上课时间,孩子姓名,每次抽成）"></textarea>
       <div id="excelPreview" style="margin-top:10px"></div>`,
       onOk: b => {
         const txt = (U.$('#excelText', b).value || '').trim();
@@ -3988,11 +4199,15 @@ const Students = (() => {
       }
     });
     const fi = U.$('#excelFile'), ta = U.$('#excelText');
-    if (fi) fi.onchange = e => {
+    if (fi) fi.onchange = async e => {
       const f = e.target.files && e.target.files[0]; if (!f) return;
-      const r = new FileReader();
-      r.onload = () => { if (ta) { ta.value = r.result; renderImportPreview(ta.value); } };
-      r.readAsText(f, 'UTF-8');
+      try {
+        const text = await fileToSheetText(f);
+        if (ta) { ta.value = text; renderImportPreview(text); }
+      } catch (err) {
+        console.error('[students] 读取导入文件失败', err);
+        U.toast('读取文件失败：' + (err && err.message ? err.message : err), 'warn');
+      }
     };
     if (ta) ta.oninput = () => renderImportPreview(ta.value);
   }
@@ -4003,7 +4218,7 @@ const Students = (() => {
     render() { render(); }
   };
 
-  return { render, edit, STATUS, statOf, previewHTML };
+  return { render, edit, STATUS, statOf };
 })();
 
 </script>
@@ -4095,6 +4310,7 @@ const Teachers = (() => {
         case 'editT': editTeacher(t); break;
         case 'delT':
           U.confirm(`删除老师「${t.name}」？其名下学员会变为「未指派」，相关课时记录也会解除老师关联。`, () => {
+            DB.markDeleted('teachers', t.id);
             DB.data.teachers = DB.data.teachers.filter(x => x.id !== t.id);
             DB.data.students.forEach(s => { if (s.teacherId === t.id) s.teacherId = ''; });
             // 同步解除课表/日历事件中该老师的关联，避免按老师分组或日历出现幽灵项。
@@ -4138,6 +4354,8 @@ window.Views = window.Views || {};
 
 const Schedule = (() => {
   const DAY_START = 8 * 60, DAY_END = 23 * 60;   // 8:00 - 23:00，1 分钟 = 1px
+  const LESSON_ALPHA_DEFAULT = 0.32;             // 普通课块默认不透明度
+  const DEFAULT_LESSON_DURATION = 60;            // 默认课时长（分钟）
   // 电脑端默认月视图（最常用），手机端默认周视图（一眼看一周）
   let mode = U.isMobile() ? 'week' : 'month';
   let anchor = U.today();
@@ -4147,7 +4365,7 @@ const Schedule = (() => {
      导致 U.t2m 抛异常、renderWeek 整体失败。以下辅助函数用于过滤/容错。 */
   function validStart(l) { return typeof l.start === 'string' && /^\d{1,2}:\d{2}$/.test(l.start); }
   function safeT2m(l) { return validStart(l) ? U.t2m(l.start) : DAY_START; }
-  function safeEndMin(l) { return safeT2m(l) + (+l.duration || 60); }
+  function safeEndMin(l) { return safeT2m(l) + (+l.duration || DEFAULT_LESSON_DURATION); }
   const endMin = safeEndMin; // 兼容旧调用
 
   function includeLesson(l) {
@@ -4398,7 +4616,7 @@ const Schedule = (() => {
   }
   function lessonAlpha(l, conflict) {
     if (typeof l.alpha === 'number' && l.alpha >= 0 && l.alpha <= 1) return l.alpha;
-    return conflict ? 0.55 : 0.32;
+    return conflict ? 0.55 : LESSON_ALPHA_DEFAULT;
   }
   function overlapCfg() {
     const s = DB.data.settings;
@@ -4436,8 +4654,13 @@ const Schedule = (() => {
     const s = DB.student(l.studentId) || { parentName: '已删除' };
     const isImp = !!l.importedCommission;
     const bd = DB.lessonBreakdown(l);
-    const st = safeT2m(l), h = Math.max(24, +l.duration || 60);
+    const st = safeT2m(l), h = Math.max(24, +l.duration || DEFAULT_LESSON_DURATION);
     const top = st - DAY_START;
+    // 防溢出：周视图时间轴固定 8:00–23:00（高 900px）。晚课/超长课若超出轴底，截断显示高度并标「跨夜」，
+    // 真实课时长（l.duration）与数据不变，仅视觉截断，避免压住底部图例。
+    const axisBottom = DAY_END - DAY_START;
+    let hh = h, crossesNight = false;
+    if (top + h > axisBottom) { hh = Math.max(24, axisBottom - top); crossesNight = true; }
     const c = isImp ? '#b0b0b0' : lessonColorHex(l);
     const alpha = isImp ? (conflict ? 0.62 : 0.85) : lessonAlpha(l, conflict);
     // 标签放在「非重叠」区段，避免被同组另一节课盖住；无空档则贴顶
@@ -4449,16 +4672,17 @@ const Schedule = (() => {
       else { tight = true; }
     }
     // 空间不足时只显示名字（重叠课小课块常见）
-    const availH = conflict && group ? (segs[0] ? (segs[0][1] - segs[0][0]) : h) : h;
+    const availH = conflict && group ? (segs[0] ? (segs[0][1] - segs[0][0]) : hh) : hh;
     const minimal = availH < 52;
     const timeLine = minimal ? '' : `<div class="lm">${l.start}-${U.m2t(st + h)} · ${U.money(l.tuition)}${pub ? '' : ` <span style="color:var(--pink-600)">到手${U.money(bd.takeHome)}</span>`}</div>`;
-    const teacherLine = minimal ? '' : (h > 62 ? `<div class="lm">${U.esc(DB.teacherName(l.teacherId))}${l.status === 'done' ? ' · 已完成' : ''}</div>` : '');
+    const teacherLine = minimal ? '' : (hh > 62 ? `<div class="lm">${U.esc(DB.teacherName(l.teacherId))}${l.status === 'done' ? ' · 已完成' : ''}</div>` : '');
     const takeLine = minimal ? '' : `<div class="lm take">到手 ${U.money(bd.takeHome)}${l.incomeNote ? ' · 批注：' + U.esc(l.incomeNote) : ''}</div>`;
+    const nightBadge = crossesNight ? ' <span class="lm" style="color:#e0533d">· 跨夜↧</span>' : '';
     const label = `<div class="lesson-label ${tight ? 'tight' : ''} ${minimal ? 'minimal' : ''}" style="top:${labelTop}px;left:6px;right:6px">
-      <b>${nameOf(l)}</b>${timeLine}${conflict ? '' : teacherLine}${conflict ? '' : takeLine}
+      <b>${nameOf(l)}</b>${timeLine}${conflict ? '' : teacherLine}${conflict ? '' : takeLine}${nightBadge}
     </div>`;
     return `<div class="lesson ${l.status} ${conflict ? 'conflict' : ''} ${isImp ? 'imported' : ''}" draggable="${isM ? 'false' : 'true'}" data-lid="${l.id}"
-      style="top:${top}px;height:${h}px;left:2px;width:calc(100% - 4px);z-index:${conflict ? 3 : 2};
+      style="top:${top}px;height:${hh}px;left:2px;width:calc(100% - 4px);z-index:${conflict ? 3 : 2};
       border-left-color:${c};background:${rgba(c, alpha)}">
       ${label}
     </div>`;
@@ -4637,6 +4861,90 @@ const Schedule = (() => {
     return out.sort();
   }
 
+  function commitBook(b, stu, sub, done) {
+    if (!sub) { U.toast('请选择学科', 'warn'); return false; }
+    const d0 = U.$('#f_d', b).value, t0 = U.$('#f_t', b).value;
+    const len = +U.$('#f_len', b).value || sub.duration || DEFAULT_LESSON_DURATION;
+    const mode = U.$('#f_rep', b).value;
+    if (!d0 || !t0) { U.toast('请填写日期与时间', 'warn'); return false; }
+    let wds = [], weeks = 1;
+    if (mode === 'week' || mode === 'biweek') {
+      wds = Array.from(b.querySelectorAll('.wd-chk')).filter(c => c.checked).map(c => +c.value);
+      if (!wds.length) { U.toast('请至少勾选一个上课星期', 'warn'); return false; }
+      weeks = +U.$('#f_weeks', b).value || 12;
+    } else if (mode === 'contig') {
+      weeks = +U.$('#f_weeks', b).value || 12;
+    }
+    const dates = genDates(mode, wds, d0, weeks);
+    const seriesId = (mode !== 'none' && dates.length > 1) ? U.uid('ser') : null;
+    const incomeNote = U.$('#f_inote', b).value.trim();
+    let conf = 0;
+    const bcolor = U.$('#f_color', b).value, balpha = +U.$('#f_alpha', b).value || LESSON_ALPHA_DEFAULT;
+    dates.forEach(date => {
+      const l = {
+        id: U.uid('les'), studentId: stu.id, subjectId: sub.id,
+        grade: sub.grade, subject: sub.subject,
+        date, start: t0, duration: len,
+        tuition: sub.tuition, commission: sub.commission, teacherId: stu.teacherId,
+        status: U.$('#f_st', b).value, note: U.$('#f_n', b).value.trim(), seriesId,
+        incomeNote, color: bcolor, alpha: balpha
+      };
+      if (overlaps(l).length) conf++;
+      DB.data.lessons.push(l);
+    });
+    if (U.$('#f_fixed', b).checked && (mode === 'week' || mode === 'biweek')) {
+      sub.fixed = wds.map(wd => ({ wd, start: t0, duration: len }));
+    }
+    DB.save(); DB.touch('lesson'); render(); if (done) done();
+    U.toast(conf ? `已排 ${dates.length} 节课，其中 ${conf} 节与其它课时间重叠` : `已排 ${dates.length} 节课`, conf ? 'warn' : 'ok');
+  }
+  function wireBookChange(m) {
+    m.body.addEventListener('change', e => {
+      const rep = U.$('#f_rep'), wdWrap = U.$('#wdWrap'), weeksWrap = U.$('#weeksWrap');
+      if (e.target.id === 'f_s') {
+        const stu = DB.student(e.target.value);
+        const sb = DB.studentSubjects(stu)[0] || {};
+        U.$('#f_sub').innerHTML = DB.studentSubjects(stu).map(x => `<option value="${x.id}">${U.esc(x.grade + x.subject)} · ${U.money(x.tuition)}/${x.duration}分</option>`).join('');
+        const fx = sb.fixed || [];
+        if (fx.length) {
+          rep.value = 'week';
+          U.$('#wdWrap').querySelectorAll('.wd-chk').forEach(c => c.checked = fx.some(f => +f.wd === +c.value));
+          U.$('#f_fixed').checked = true;
+          U.$('#f_t').value = fx[0].start; U.$('#f_len').value = fx[0].duration;
+        } else {
+          U.$('#f_fixed').checked = false;
+          U.$('#f_len').value = sb.duration || DEFAULT_LESSON_DURATION;
+          const ls0 = lastStartFor(stu.id);
+          if (ls0) U.$('#f_t').value = ls0;
+        }
+      }
+      if (rep) {
+        const showWd = rep.value === 'week' || rep.value === 'biweek';
+        if (wdWrap) wdWrap.style.display = showWd ? 'flex' : 'none';
+        if (weeksWrap) weeksWrap.style.display = (rep.value === 'week' || rep.value === 'biweek' || rep.value === 'contig') ? 'flex' : 'none';
+      }
+    });
+  }
+  function commitEditLesson(b, l, future) {
+    const scope = future.length ? (b.querySelector('input[name="scope"]:checked') || {}).value || 'once' : 'once';
+    const set = scope === 'future' ? [l, ...future] : [l];
+    const date = U.$('#f_d', b).value, start = U.$('#f_t', b).value;
+    const dur = +U.$('#f_len', b).value || l.duration;
+    const fee = +U.$('#f_fee', b).value || 0;
+    const com = +U.$('#f_com', b).value || 0;
+    const incomeNote = U.$('#f_inote', b).value.trim();
+    const st = U.$('#f_st', b).value, tid = U.$('#f_tid', b).value, note = U.$('#f_n', b).value.trim();
+    const color = U.$('#f_color', b).value, alpha = +U.$('#f_alpha', b).value;
+    set.forEach(x => {
+      x.start = start; x.duration = dur; x.tuition = fee; x.commission = com; x.status = st; x.teacherId = tid; x.note = note;
+      x.incomeNote = incomeNote; x.color = color; x.alpha = alpha;
+      if (scope === 'once') { x.date = date; x.seriesId = null; }  // 仅此一次：日期也改，并脱离系列
+    });
+    const ocEl = U.$('#f_oc', b), oaEl = U.$('#f_oa', b);
+    if (ocEl && oaEl) { DB.data.settings.overlapColor = ocEl.value; DB.data.settings.overlapAlpha = +oaEl.value; }
+    DB.save(); DB.touch('lesson'); render(); U.toast(scope === 'future' ? '已应用到此后所有同一重复课程' : '已保存');
+  }
+
   function book(studentId, preset = {}, done) {
     const stus = DB.data.students.filter(s => s.status !== 'ended');
     if (!stus.length) { U.toast('请先创建学员档案', 'warn'); return; }
@@ -4649,7 +4957,7 @@ const Schedule = (() => {
     const presetWds = fixed0.map(f => f.wd);
     const initMode = fixed0.length ? 'week' : 'none';
     const initStart = preset.start || (fixed0.length ? fixed0[0].start : (lastStartFor(sid) || '19:00'));
-    U.modal({
+    const m = U.modal({
       title: '排课', okText: '确认排课',
       body: `
       <div class="field"><label>学员</label>
@@ -4692,67 +5000,10 @@ const Schedule = (() => {
       onOk: b => {
         const stu = DB.student(U.$('#f_s', b).value);
         const sub = (stu.subjects || []).find(x => x.id === U.$('#f_sub', b).value) || DB.studentSubjects(stu)[0];
-        if (!sub) { U.toast('请选择学科', 'warn'); return false; }
-        const d0 = U.$('#f_d', b).value, t0 = U.$('#f_t', b).value;
-        const len = +U.$('#f_len', b).value || sub.duration || 60;
-        const mode = U.$('#f_rep', b).value;
-        if (!d0 || !t0) { U.toast('请填写日期与时间', 'warn'); return false; }
-        let wds = [], weeks = 1;
-        if (mode === 'week' || mode === 'biweek') {
-          wds = Array.from(b.querySelectorAll('.wd-chk')).filter(c => c.checked).map(c => +c.value);
-          if (!wds.length) { U.toast('请至少勾选一个上课星期', 'warn'); return false; }
-          weeks = +U.$('#f_weeks', b).value || 12;
-        } else if (mode === 'contig') {
-          weeks = +U.$('#f_weeks', b).value || 12;
-        }
-        const dates = genDates(mode, wds, d0, weeks);
-        const seriesId = (mode !== 'none' && dates.length > 1) ? U.uid('ser') : null;
-        const incomeNote = U.$('#f_inote', b).value.trim();
-        let conf = 0;
-        const bcolor = U.$('#f_color', b).value, balpha = +U.$('#f_alpha', b).value || 0.32;
-        dates.forEach(date => {
-          const l = {
-            id: U.uid('les'), studentId: stu.id, subjectId: sub.id,
-            grade: sub.grade, subject: sub.subject,
-            date, start: t0, duration: len,
-            tuition: sub.tuition, commission: sub.commission, teacherId: stu.teacherId,
-            status: U.$('#f_st', b).value, note: U.$('#f_n', b).value.trim(), seriesId,
-            incomeNote, color: bcolor, alpha: balpha
-          };
-          if (overlaps(l).length) conf++;
-          DB.data.lessons.push(l);
-        });
-        if (U.$('#f_fixed', b).checked && (mode === 'week' || mode === 'biweek')) {
-          sub.fixed = wds.map(wd => ({ wd, start: t0, duration: len }));
-        }
-        DB.save(); DB.touch('lesson'); render(); if (done) done();
-        U.toast(conf ? `已排 ${dates.length} 节课，其中 ${conf} 节与其它课时间重叠` : `已排 ${dates.length} 节课`, conf ? 'warn' : 'ok');
-      }
-    }).body.addEventListener('change', e => {
-      const rep = U.$('#f_rep'), wdWrap = U.$('#wdWrap'), weeksWrap = U.$('#weeksWrap');
-      if (e.target.id === 'f_s') {
-        const stu = DB.student(e.target.value);
-        const sb = DB.studentSubjects(stu)[0] || {};
-        U.$('#f_sub').innerHTML = DB.studentSubjects(stu).map(x => `<option value="${x.id}">${U.esc(x.grade + x.subject)} · ${U.money(x.tuition)}/${x.duration}分</option>`).join('');
-        const fx = sb.fixed || [];
-        if (fx.length) {
-          rep.value = 'week';
-          U.$('#wdWrap').querySelectorAll('.wd-chk').forEach(c => c.checked = fx.some(f => +f.wd === +c.value));
-          U.$('#f_fixed').checked = true;
-          U.$('#f_t').value = fx[0].start; U.$('#f_len').value = fx[0].duration;
-        } else {
-          U.$('#f_fixed').checked = false;
-          U.$('#f_len').value = sb.duration || 60;
-          const ls0 = lastStartFor(stu.id);
-          if (ls0) U.$('#f_t').value = ls0;
-        }
-      }
-      if (rep) {
-        const showWd = rep.value === 'week' || rep.value === 'biweek';
-        if (wdWrap) wdWrap.style.display = showWd ? 'flex' : 'none';
-        if (weeksWrap) weeksWrap.style.display = (rep.value === 'week' || rep.value === 'biweek' || rep.value === 'contig') ? 'flex' : 'none';
+        return commitBook(b, stu, sub, done);
       }
     });
+    wireBookChange(m);
   }
 
   function bookFor(sid, cb) { book(sid, {}, cb); }
@@ -4764,7 +5015,7 @@ const Schedule = (() => {
     const sub = currentSub(l);
     const ov = overlaps(l);
     const future = l.seriesId ? DB.data.lessons.filter(x => x.seriesId === l.seriesId && x.date >= l.date && x.id !== l.id) : [];
-    const mm = U.modal({
+    const modal = U.modal({
       title: `${sub.grade}${sub.subject} · ${s.parentName}`,
       body: `
       ${future.length ? `<div class="field" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
@@ -4810,42 +5061,25 @@ const Schedule = (() => {
         <button class="btn btn-ghost btn-sm" id="btnDone">标记完成</button>
         <button class="btn btn-danger btn-sm" id="btnDel">删除这节课</button>
       </div>`,
-      onOk: b => {
-        const scope = future.length ? (b.querySelector('input[name="scope"]:checked') || {}).value || 'once' : 'once';
-        const set = scope === 'future' ? [l, ...future] : [l];
-        const date = U.$('#f_d', b).value, start = U.$('#f_t', b).value;
-        const dur = +U.$('#f_len', b).value || l.duration;
-        const fee = +U.$('#f_fee', b).value || 0;
-        const com = +U.$('#f_com', b).value || 0;
-        const incomeNote = U.$('#f_inote', b).value.trim();
-        const st = U.$('#f_st', b).value, tid = U.$('#f_tid', b).value, note = U.$('#f_n', b).value.trim();
-        const color = U.$('#f_color', b).value, alpha = +U.$('#f_alpha', b).value;
-        set.forEach(x => {
-          x.start = start; x.duration = dur; x.tuition = fee; x.commission = com; x.status = st; x.teacherId = tid; x.note = note;
-          x.incomeNote = incomeNote; x.color = color; x.alpha = alpha;
-          if (scope === 'once') { x.date = date; x.seriesId = null; }  // 仅此一次：日期也改，并脱离系列
-        });
-        const ocEl = U.$('#f_oc', b), oaEl = U.$('#f_oa', b);
-        if (ocEl && oaEl) { DB.data.settings.overlapColor = ocEl.value; DB.data.settings.overlapAlpha = +oaEl.value; }
-        DB.save(); DB.touch('lesson'); render(); U.toast(scope === 'future' ? '已应用到此后所有同一重复课程' : '已保存');
-      }
+      onOk: b => commitEditLesson(b, l, future),
     });
-    mm.body.addEventListener('click', e => {
+    modal.body.addEventListener('click', e => {
       if (e.target.id === 'btnDone') { l.status = 'done'; DB.save(); DB.touch('lesson'); render(); U.toast('已标记完成'); e.target.closest('.mask').remove(); }
       if (e.target.id === 'btnDel') {
         U.confirm('确定删除这一节课吗？此操作不可撤销。', () => {
+          DB.markDeleted('lessons', l.id);
           DB.data.lessons = DB.data.lessons.filter(x => x.id !== l.id); DB.save(); DB.touch('lesson'); render();
           U.toast('已删除'); e.target.closest('.mask').remove();
         }, '删除');
       }
     });
-    mm.body.addEventListener('input', e => {
-      if (e.target.id === 'f_alpha') { const v = U.$('#f_alpha_v', mm.body); if (v) v.textContent = Math.round(+e.target.value * 100) + '%'; }
-      if (e.target.id === 'f_oa') { const v = U.$('#f_oa_v', mm.body); if (v) v.textContent = Math.round(+e.target.value * 100) + '%'; }
+    modal.body.addEventListener('input', e => {
+      if (e.target.id === 'f_alpha') { const v = U.$('#f_alpha_v', modal.body); if (v) v.textContent = Math.round(+e.target.value * 100) + '%'; }
+      if (e.target.id === 'f_oa') { const v = U.$('#f_oa_v', modal.body); if (v) v.textContent = Math.round(+e.target.value * 100) + '%'; }
     });
     // 选「从此以后」时禁用日期（保持各节原日期），仅改时间/费用
-    if (future.length) mm.body.addEventListener('change', e => {
-      if (e.target.name === 'scope') { const d = U.$('#f_d', mm.body); if (d) d.disabled = (e.target.value === 'future'); }
+    if (future.length) modal.body.addEventListener('change', e => {
+      if (e.target.name === 'scope') { const d = U.$('#f_d', modal.body); if (d) d.disabled = (e.target.value === 'future'); }
     });
   }
 
@@ -5254,6 +5488,10 @@ const Finance = (() => {
           <td class="note">${U.esc(l.incomeNote || '')}</td>
         </tr>`;
       }).join('');
+      // 汇总框必须与实际明细行同口径（已完成且实际到手>0），避免「含待上课」或报销口径导致汇总≠明细之和的对账不平
+      const sumCommission = items.reduce((s, l) => s + DB.lessonBreakdown(l).commission, 0);
+      const sumReimb = items.reduce((s, l) => s + DB.lessonBreakdown(l).reimb, 0);
+      const sumTakeHome = items.reduce((s, l) => s + DB.lessonBreakdown(l).takeHome, 0);
       const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>逸云阁对账单</title>
 <style>
@@ -5275,10 +5513,10 @@ const Finance = (() => {
   <h1>逸云阁 · ${U.esc(title)}</h1>
   <div class="sub">统计区间：${from} 至 ${to} · 仅含已完成且实际到手 &gt; 0 的记录</div>
   <div class="summary">
-    <div class="sum-item"><div class="lab">我的抽成</div><div class="val">${U.money(st.commission)}</div></div>
-    <div class="sum-item"><div class="lab">报销支出</div><div class="val">${U.money(st.reimb)}</div></div>
-    <div class="sum-item"><div class="lab">实际到手</div><div class="val">${U.money(st.profit)}</div></div>
-    <div class="sum-item"><div class="lab">课时数</div><div class="val">${st.count} 节</div></div>
+    <div class="sum-item"><div class="lab">我的抽成</div><div class="val">${U.money(sumCommission)}</div></div>
+    <div class="sum-item"><div class="lab">报销支出</div><div class="val">${U.money(sumReimb)}</div></div>
+    <div class="sum-item"><div class="lab">实际到手</div><div class="val">${U.money(sumTakeHome)}</div></div>
+    <div class="sum-item"><div class="lab">课时数</div><div class="val">${items.length} 节</div></div>
   </div>
   <table>
     <thead><tr><th>日期</th><th>来源</th><th style="text-align:right">我的抽成</th><th style="text-align:right">报销支出</th><th style="text-align:right">实际到手</th><th>批注</th></tr></thead>
@@ -5421,6 +5659,180 @@ const Finance = (() => {
       } catch (e) { console.warn('财务拖动排序初始化失败', e); }
     }
 
+    /* --- rebind 各分支抽成独立处理函数（行为不变，仅为可维护性拆分） --- */
+    function onEditHist() {
+      // 历史收入：按月总额（不再按学员拆分，已经不在你这上课的学员不用再管）
+      const data = DB.data;
+      let months = Object.keys(data.histIncome || {});
+      // 默认补齐「当前月之前的连续 3 个月」，方便首次填写；已存在的月份不重复加
+      for (let k = 1; k <= 3; k++) {
+        const d = U.addMonths(U.monthFirst(U.today()), -k);
+        const mk = `${d.slice(0, 4)}-${U.pad(+d.slice(5, 7))}`;
+        if (!months.includes(mk)) months.push(mk);
+      }
+      months.sort();
+      const vals = {};
+      months.forEach(m => { vals[m] = (data.histIncome[m] != null ? String(data.histIncome[m]) : ''); });
+      const monthLabel = mk => `${mk.slice(0, 4)}年${(+mk.slice(5, 7))}月`;
+      const drawRow = m => `<tr data-m="${m}">
+        <td data-label="月份" style="white-space:nowrap;font-weight:600">${monthLabel(m)}</td>
+        <td><input class="input" data-m="${m}" type="number" min="0" step="0.01" style="width:180px" placeholder="0" value="${vals[m] != null ? vals[m] : ''}"></td>
+        <td style="text-align:center"><button class="btn btn-icon btn-sm" data-delm="${m}" title="删除该月"><svg class="ico"><use href="#i-trash"/></svg></button></td>
+      </tr>`;
+      const tableHTML = () => `<div id="histGrid" style="overflow:auto;max-height:62vh">
+        <table class="tbl" style="min-width:max-content;font-size:13px">
+          <thead><tr><th>月份</th><th style="white-space:nowrap">每月抽成总额（元）</th><th style="width:64px">操作</th></tr></thead>
+          <tbody>${months.length ? months.map(drawRow).join('') : '<tr><td colspan="3" class="muted" style="text-align:center;padding:18px">还没有填写任何月份，点下方「+ 添加月份」开始</td></tr>'}</tbody>
+        </table></div>`;
+      const modal = U.modal({
+        title: '编辑历史收入（用本工作台之前，按月填写总额）',
+        wide: true,
+        okText: '保存',
+        body: `<p class="muted" style="font-size:12px;margin:0 0 12px">这里只填 <b>每个月的总抽成</b>，不用拆到每个学员——已经不在你这上课的学员不用再管。每个月单独一行，月度走势图会把它们各自画成一根柱子；填 0 或留空 = 该月无收入。需要更早的月份点「+ 添加月份」，不想要的月份点行尾 🗑 删除。</p>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+          <input type="month" class="input" id="histNewMonth" style="width:184px" value="${U.today().slice(0, 7)}">
+          <button class="btn btn-sm btn-primary" data-addm>+ 添加月份</button>
+        </div>
+        ${tableHTML()}`,
+        onOk: b2 => {
+          const collected = {};
+          b2.querySelectorAll('input[data-m]').forEach(inp => {
+            const m = inp.dataset.m, v = +inp.value || 0;
+            if (v) collected[m] = v;
+          });
+          // 写入时间戳：填了值的月份记「最后写入时间」，被删掉的月份记「删除墓碑」，
+          // 让同步按 LWW 合并——改小的值不会被云端旧大值顶掉，删除也能跨端生效。
+          const now = Date.now();
+          if (!data.histIncomeMt) data.histIncomeMt = {};
+          if (!data.histIncomeDel) data.histIncomeDel = {};
+          const before = Object.keys(data.histIncome || {});
+          before.forEach(m => { if (!(m in collected)) data.histIncomeDel[m] = now; });  // 删掉的月份
+          Object.keys(collected).forEach(m => { data.histIncomeMt[m] = now; });          // 填了值的月份
+          data.histIncome = collected;
+          DB.save(); render();
+          U.toast('已保存历史收入', 'ok');
+        }
+      });
+      const grid = modal.body.querySelector('#histGrid');
+      if (grid) grid.addEventListener('click', e => {
+        const del = e.target.closest('[data-delm]');
+        if (del) {
+          const m = del.dataset.delm;
+          months = months.filter(x => x !== m);
+          delete vals[m];
+          grid.innerHTML = tableHTML();
+        }
+      });
+      const addBtn = modal.body.querySelector('[data-addm]');
+      if (addBtn) addBtn.onclick = () => {
+        const inp = modal.body.querySelector('#histNewMonth');
+        const m = inp ? inp.value : '';
+        if (!m || !/^\d{4}-\d{2}$/.test(m)) { U.toast('请先选择要添加的月份', 'warn'); return; }
+        if (months.includes(m)) { U.toast('该月份已经存在', 'warn'); return; }
+        months.push(m); months.sort(); vals[m] = '';
+        if (grid) grid.innerHTML = tableHTML();
+      };
+    }
+
+    function onAddCustom() {
+      const types = [['overview', '区间总览（抽成/流水/课酬/课时）'], ['teacher', '按老师课时排行'], ['grade', '按年级抽成'], ['student', '按学员抽成'], ['month', '按月抽成走势']];
+      U.modal({
+        title: '添加自定义统计块',
+        body: `<div class="form-row"><label>标题</label><input class="input" id="custTitle" placeholder="例如：暑期班抽成"></div>
+          <div class="form-row"><label>统计类型</label><select class="input" id="custType">${types.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}</select></div>
+          <p class="muted" style="font-size:12px">自定义块会出现在板块末尾，可随时改名、隐藏或删除。导出图片/CSV 时一并包含。</p>`,
+        okText: '添加',
+        onOk: () => {
+          const title = (U.$('#custTitle').value || '').trim() || '自定义统计块';
+          const type = U.$('#custType').value;
+          // 追加到原始配置数组，保留已有的 deleted 等标记，避免覆盖后「复活」已删除模块
+          const raw = (DB.data.settings.financeSections || []).slice();
+          raw.push({ key: 'custom_' + U.uid('c'), name: title, visible: true, custom: true, type });
+          DB.data.settings.financeSections = raw; DB.save(); render();
+          U.toast('已添加自定义模块', 'ok');
+        }
+      });
+      setTimeout(() => { const i = U.$('#custTitle'); if (i) { i.focus(); } }, 60);
+    }
+
+    function onRenameSec(b) {
+      const key = b.closest('.dash-module').dataset.sec;
+      const secs = getSections();
+      const sec = secs.find(s => s.key === key);
+      const oldName = sec.name;
+      const defName = DB.defaultFinanceSections().find(d => d.key === key);
+      const placeholder = defName ? defName.name : '';
+      U.modal({
+        title: '修改模块标题',
+        body: `<div class="form-row"><label>新标题</label><input class="input" id="secTitleInput" value="${U.esc(oldName)}" placeholder="${U.esc(placeholder)}">
+          <p class="muted" style="font-size:12px;margin-top:6px">留空 = 恢复默认标题</p></div>`,
+        okText: '保存',
+        onOk: () => {
+          const v = (U.$('#secTitleInput') || {}).value || '';
+          const def = defName ? defName.name : '';
+          sec.name = (!v.trim() || v.trim() === def) ? def : v.trim();
+          applySections(secs);
+          render();
+          U.toast('已更新', 'ok');
+        }
+      });
+      setTimeout(() => { const i = U.$('#secTitleInput'); if (i) { i.focus(); i.select(); } }, 60);
+    }
+
+    function onHideSec(b) {
+      const key = b.closest('.dash-module').dataset.sec;
+      const secs = getSections();
+      const sec = secs.find(s => s.key === key);
+      sec.visible = false;
+      applySections(secs);
+      render();
+      U.toast('已隐藏，可到上方「已隐藏的模块」恢复', 'ok');
+    }
+
+    function onDelSec(b) {
+      const key = b.closest('.dash-module').dataset.sec;
+      const isCustom = getSections().find(s => s.key === key && s.custom);
+      U.confirm(isCustom ? '删除这个自定义统计块？此操作不可恢复。' : '删除这个统计模块？删除后不再显示（点「恢复默认布局」可找回内置模块）。', () => {
+        const raw = (DB.data.settings.financeSections || []).slice();
+        const ex = raw.find(s => s.key === key);
+        if (ex) { ex.deleted = true; ex.visible = false; }
+        else raw.push({ key, deleted: true, visible: false });
+        DB.data.settings.financeSections = raw; DB.save(); render();
+        U.toast('已删除模块');
+      }, '删除');
+    }
+
+    function onShowSec(b) {
+      const key = b.closest('.dash-hidden-row').dataset.sec;
+      const secs = getSections();
+      const sec = secs.find(s => s.key === key);
+      sec.visible = true;
+      applySections(secs);
+      render();
+    }
+
+    function onMoveSec(b) {
+      const key = b.closest('.dash-module').dataset.sec;
+      const all = getSections();
+      const vis = all.filter(s => s.visible);
+      const idx = vis.findIndex(s => s.key === key);
+      const swap = b.dataset.act === 'moveUpSec' ? idx - 1 : idx + 1;
+      if (swap < 0 || swap >= vis.length) return;
+      [vis[idx], vis[swap]] = [vis[swap], vis[idx]];
+      const hidden = all.filter(s => !s.visible);
+      applySections([...vis, ...hidden]);
+      render();
+    }
+
+    function onResetLayout() {
+      U.confirm('恢复默认的模块布局（显示全部、恢复原名、重置顺序、移除自定义块）？', () => {
+        DB.data.settings.financeSections = DB.defaultFinanceSections();
+        DB.save();
+        render();
+        U.toast('已恢复默认布局');
+      }, '恢复');
+    }
+
     /* 事件绑定（务必最后执行，且上面的渲染细节即使抛错也不能让它失效） */
     U.rebind(root, 'fin', e => {
       const b = e.target.closest('[data-act]');
@@ -5431,175 +5843,15 @@ const Finance = (() => {
         case 'exportPdf': exportPDF(); break;
         case 'importCommission': if (window.CommissionImport) CommissionImport.pick(); break;
         case 'toggleEdit': editMode = !editMode; render(); break;
-
-        case 'editHist': {
-          // 历史收入：按月总额（不再按学员拆分，已经不在你这上课的学员不用再管）
-          const data = DB.data;
-          let months = Object.keys(data.histIncome || {});
-          // 默认补齐「当前月之前的连续 3 个月」，方便首次填写；已存在的月份不重复加
-          for (let k = 1; k <= 3; k++) {
-            const d = U.addMonths(U.monthFirst(U.today()), -k);
-            const mk = `${d.slice(0, 4)}-${U.pad(+d.slice(5, 7))}`;
-            if (!months.includes(mk)) months.push(mk);
-          }
-          months.sort();
-          const vals = {};
-          months.forEach(m => { vals[m] = (data.histIncome[m] != null ? String(data.histIncome[m]) : ''); });
-          const monthLabel = mk => `${mk.slice(0, 4)}年${(+mk.slice(5, 7))}月`;
-          const drawRow = m => `<tr data-m="${m}">
-            <td data-label="月份" style="white-space:nowrap;font-weight:600">${monthLabel(m)}</td>
-            <td><input class="input" data-m="${m}" type="number" min="0" step="0.01" style="width:180px" placeholder="0" value="${vals[m] != null ? vals[m] : ''}"></td>
-            <td style="text-align:center"><button class="btn btn-icon btn-sm" data-delm="${m}" title="删除该月"><svg class="ico"><use href="#i-trash"/></svg></button></td>
-          </tr>`;
-          const tableHTML = () => `<div id="histGrid" style="overflow:auto;max-height:62vh">
-            <table class="tbl" style="min-width:max-content;font-size:13px">
-              <thead><tr><th>月份</th><th style="white-space:nowrap">每月抽成总额（元）</th><th style="width:64px">操作</th></tr></thead>
-              <tbody>${months.length ? months.map(drawRow).join('') : '<tr><td colspan="3" class="muted" style="text-align:center;padding:18px">还没有填写任何月份，点下方「+ 添加月份」开始</td></tr>'}</tbody>
-            </table></div>`;
-          const ret = U.modal({
-            title: '编辑历史收入（用本工作台之前，按月填写总额）',
-            wide: true,
-            okText: '保存',
-            body: `<p class="muted" style="font-size:12px;margin:0 0 12px">这里只填 <b>每个月的总抽成</b>，不用拆到每个学员——已经不在你这上课的学员不用再管。每个月单独一行，月度走势图会把它们各自画成一根柱子；填 0 或留空 = 该月无收入。需要更早的月份点「+ 添加月份」，不想要的月份点行尾 🗑 删除。</p>
-            <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
-              <input type="month" class="input" id="histNewMonth" style="width:184px" value="${U.today().slice(0, 7)}">
-              <button class="btn btn-sm btn-primary" data-addm>+ 添加月份</button>
-            </div>
-            ${tableHTML()}`,
-            onOk: b2 => {
-              const collected = {};
-              b2.querySelectorAll('input[data-m]').forEach(inp => {
-                const m = inp.dataset.m, v = +inp.value || 0;
-                if (v) collected[m] = v;
-              });
-              data.histIncome = collected;
-              DB.save(); render();
-              U.toast('已保存历史收入', 'ok');
-            }
-          });
-          const grid = ret.body.querySelector('#histGrid');
-          if (grid) grid.addEventListener('click', e => {
-            const del = e.target.closest('[data-delm]');
-            if (del) {
-              const m = del.dataset.delm;
-              months = months.filter(x => x !== m);
-              delete vals[m];
-              grid.innerHTML = tableHTML();
-            }
-          });
-          const addBtn = ret.body.querySelector('[data-addm]');
-          if (addBtn) addBtn.onclick = () => {
-            const inp = ret.body.querySelector('#histNewMonth');
-            const m = inp ? inp.value : '';
-            if (!m || !/^\d{4}-\d{2}$/.test(m)) { U.toast('请先选择要添加的月份', 'warn'); return; }
-            if (months.includes(m)) { U.toast('该月份已经存在', 'warn'); return; }
-            months.push(m); months.sort(); vals[m] = '';
-            if (grid) grid.innerHTML = tableHTML();
-          };
-          break;
-        }
-
-        case 'addCustom': {
-          const types = [['overview', '区间总览（抽成/流水/课酬/课时）'], ['teacher', '按老师课时排行'], ['grade', '按年级抽成'], ['student', '按学员抽成'], ['month', '按月抽成走势']];
-          U.modal({
-            title: '添加自定义统计块',
-            body: `<div class="form-row"><label>标题</label><input class="input" id="custTitle" placeholder="例如：暑期班抽成"></div>
-              <div class="form-row"><label>统计类型</label><select class="input" id="custType">${types.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}</select></div>
-              <p class="muted" style="font-size:12px">自定义块会出现在板块末尾，可随时改名、隐藏或删除。导出图片/CSV 时一并包含。</p>`,
-            okText: '添加',
-            onOk: () => {
-              const title = (U.$('#custTitle').value || '').trim() || '自定义统计块';
-              const type = U.$('#custType').value;
-              // 追加到原始配置数组，保留已有的 deleted 等标记，避免覆盖后「复活」已删除模块
-              const raw = (DB.data.settings.financeSections || []).slice();
-              raw.push({ key: 'custom_' + U.uid('c'), name: title, visible: true, custom: true, type });
-              DB.data.settings.financeSections = raw; DB.save(); render();
-              U.toast('已添加自定义模块', 'ok');
-            }
-          });
-          setTimeout(() => { const i = U.$('#custTitle'); if (i) { i.focus(); } }, 60);
-          break;
-        }
-
-        case 'renameSec': {
-          const key = b.closest('.dash-module').dataset.sec;
-          const secs = getSections();
-          const sec = secs.find(s => s.key === key);
-          const oldName = sec.name;
-          const defName = DB.defaultFinanceSections().find(d => d.key === key);
-          const placeholder = defName ? defName.name : '';
-          U.modal({
-            title: '修改模块标题',
-            body: `<div class="form-row"><label>新标题</label><input class="input" id="secTitleInput" value="${U.esc(oldName)}" placeholder="${U.esc(placeholder)}">
-              <p class="muted" style="font-size:12px;margin-top:6px">留空 = 恢复默认标题</p></div>`,
-            okText: '保存',
-            onOk: () => {
-              const v = (U.$('#secTitleInput') || {}).value || '';
-              const def = defName ? defName.name : '';
-              sec.name = (!v.trim() || v.trim() === def) ? def : v.trim();
-              applySections(secs);
-              render();
-              U.toast('已更新', 'ok');
-            }
-          });
-          setTimeout(() => { const i = U.$('#secTitleInput'); if (i) { i.focus(); i.select(); } }, 60);
-          break;
-        }
-        case 'hideSec': {
-          const key = b.closest('.dash-module').dataset.sec;
-          const secs = getSections();
-          const sec = secs.find(s => s.key === key);
-          sec.visible = false;
-          applySections(secs);
-          render();
-          U.toast('已隐藏，可到上方「已隐藏的模块」恢复', 'ok');
-          break;
-        }
-        case 'delSec': {
-          const key = b.closest('.dash-module').dataset.sec;
-          const isCustom = getSections().find(s => s.key === key && s.custom);
-          U.confirm(isCustom ? '删除这个自定义统计块？此操作不可恢复。' : '删除这个统计模块？删除后不再显示（点「恢复默认布局」可找回内置模块）。', () => {
-            const raw = (DB.data.settings.financeSections || []).slice();
-            const ex = raw.find(s => s.key === key);
-            if (ex) { ex.deleted = true; ex.visible = false; }
-            else raw.push({ key, deleted: true, visible: false });
-            DB.data.settings.financeSections = raw; DB.save(); render();
-            U.toast('已删除模块');
-          }, '删除');
-          break;
-        }
-        case 'showSec': {
-          const key = b.closest('.dash-hidden-row').dataset.sec;
-          const secs = getSections();
-          const sec = secs.find(s => s.key === key);
-          sec.visible = true;
-          applySections(secs);
-          render();
-          break;
-        }
+        case 'editHist': onEditHist(); break;
+        case 'addCustom': onAddCustom(); break;
+        case 'renameSec': onRenameSec(b); break;
+        case 'hideSec': onHideSec(b); break;
+        case 'delSec': onDelSec(b); break;
+        case 'showSec': onShowSec(b); break;
         case 'moveUpSec':
-        case 'moveDownSec': {
-          const key = b.closest('.dash-module').dataset.sec;
-          const all = getSections();
-          const vis = all.filter(s => s.visible);
-          const idx = vis.findIndex(s => s.key === key);
-          const swap = b.dataset.act === 'moveUpSec' ? idx - 1 : idx + 1;
-          if (swap < 0 || swap >= vis.length) break;
-          [vis[idx], vis[swap]] = [vis[swap], vis[idx]];
-          const hidden = all.filter(s => !s.visible);
-          applySections([...vis, ...hidden]);
-          render();
-          break;
-        }
-        case 'resetLayout': {
-          U.confirm('恢复默认的模块布局（显示全部、恢复原名、重置顺序、移除自定义块）？', () => {
-            DB.data.settings.financeSections = DB.defaultFinanceSections();
-            DB.save();
-            render();
-            U.toast('已恢复默认布局');
-          }, '恢复');
-          break;
-        }
+        case 'moveDownSec': onMoveSec(b); break;
+        case 'resetLayout': onResetLayout(); break;
       }
     });
   }
@@ -5685,7 +5937,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             if (!res.records.length) { U.toast('没有解析到任何抽成记录，请检查表格格式', 'err'); return; }
             C.preview(res);
           } catch (err) {
-            console.error(err);
+            console.error('[commission-import] 解析 Excel 失败：', err);
             U.toast('解析失败：' + (err && err.message ? err.message : err), 'err');
           }
         };
@@ -5705,8 +5957,19 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       return m ? m[0] : null;
     },
     parseDate(s) {
-      if (!s) return null;
-      const m = String(s).match(/(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})/);
+      if (s == null) return null;
+      const rawStr = String(s).trim();
+      // 处理 Excel 日期序列号：默认解析下日期单元格为数字（如 45000），正则匹配不到会导致整行被跳过、记录大量丢失
+      const num = Number(rawStr);
+      if (isFinite(num) && /^\d{4,6}(\.\d+)?$/.test(rawStr) && num > 20000 && num < 80000) {
+        const adj = num > 60 ? num - 1 : num;                 // 修正 Excel 1900 伪闰年（序列号>60 减 1 天）
+        const d = new Date((adj - U.EXCEL_EPOCH) * U.MS_PER_DAY);     // Excel 序列号 → JS 时间戳（UTC）
+        if (!isNaN(d.getTime())) {
+          const y = d.getUTCFullYear(), M = d.getUTCMonth() + 1, D = d.getUTCDate();
+          if (M >= 1 && M <= 12 && D >= 1 && D <= 31) return `${y}-${String(M).padStart(2, '0')}-${String(D).padStart(2, '0')}`;
+        }
+      }
+      const m = rawStr.match(/(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})/);
       if (!m) return null;
       const y = +m[1], M = +m[2], D = +m[3];
       if (M < 1 || M > 12 || D < 1 || D > 31) return null;
@@ -5829,7 +6092,11 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       const s = String(t || '');
       const m = s.match(/\d+(\.\d+)?/g);
       if (!m) return 0;
-      return m.reduce((a, v) => a + parseFloat(v), 0);
+      return m.reduce((a, v) => {
+        const n = parseFloat(v);
+        if (/^\d{4}$/.test(v) && n >= 1900 && n <= 2099) return a;  // 排除年份（如 2026），避免误计报销支出
+        return a + n;
+      }, 0);
     },
 
     commit(res) {
@@ -5946,7 +6213,7 @@ const Phrases = (() => {
         case 'edit': edit(p); break;
         case 'copy': U.copy(p.content); p.hits = (p.hits || 0) + 1; DB.save(); break;
         case 'del': U.confirm(`删除话术「${p.title}」？`, () => {
-          DB.data.phrases = DB.data.phrases.filter(x => x.id !== p.id); DB.save(); render();
+          DB.removeRecord('phrases', p.id); DB.save(); render();
         }, '删除'); break;
       }
     });
@@ -6269,7 +6536,7 @@ const Calendar = (() => {
         // 否则在周三列勾掉重复实例会被记成 anchor（周一），导致跨视图与今日统计错位。
         const day = a.closest('[data-day]')?.dataset.day || anchor;
         const rule = U.recurRuleOf(x.repeat, x.date);
-        const occursHere = U.recurOccursOn(day, rule);   // 是否就是这个发生日
+        const occursHere = rule.type !== 'never' && U.recurOccursOn(day, rule);   // 仅真正重复任务走「按日期勾选」；非重复任务(never)走 status 分支
         if (occursHere) {
           // 重复任务：按发生日单独勾选完成
           x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
@@ -6294,7 +6561,7 @@ const Calendar = (() => {
       else if (a.dataset.act === 'delEvent') {
         const id = a.closest('[data-eid]').dataset.eid;
         U.confirm('删除这条日程？', () => {
-          DB.data.events = DB.data.events.filter(y => y.id !== id); DB.save(); render(); U.toast('已删除日程');
+          DB.removeRecord('events', id); DB.save(); render(); U.toast('已删除日程');
         }, '删除');
       }
     });
@@ -6877,7 +7144,7 @@ const Dashboard = (() => {
           if (x) {
             const rule = U.recurRuleOf(x.repeat, x.date);
             let justDone = false;
-            if (U.recurOccursOn(t, rule)) {
+            if (rule.type !== 'never' && U.recurOccursOn(t, rule)) {
               x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
               const i = x.completedDates.indexOf(t);
               if (i >= 0) { x.completedDates.splice(i, 1); x.doneAt = null; }
@@ -6903,6 +7170,139 @@ const Dashboard = (() => {
   }
 
   /* ---------- 顶层 render：拆 left/right 列 + 单列 full ---------- */
+  /* 主页事件绑定（从 render 抽离为独立函数，行为不变） */
+  function bindDashboard(root, t) {
+    U.rebind(root, 'dash', e => {
+      const go = e.target.closest('[data-go]');
+      if (go) { App.go(go.dataset.go); return; }
+      const b = e.target.closest('[data-act]');
+      if (!b) {
+        const li = e.target.closest('[data-lid]');
+        if (li) Schedule.editLesson(li.dataset.lid);
+        return;
+      }
+        switch (b.dataset.act) {
+        case 'toggleInc': DB.data.settings.dashIncScheduled = !DB.data.settings.dashIncScheduled; DB.save(); render(); U.toast(DB.data.settings.dashIncScheduled ? '主页抽成已含待上课（预计）' : '主页抽成仅统计已上课（实际）', 'ok'); break;
+        case 'backup': {
+          const name = DB.exportJSON();
+          U.toast(name ? `已导出「${name}」，请到浏览器「下载」里查看` : '导出失败', name ? 'ok' : 'warn');
+          break;
+        }
+        case 'toggleEdit': editMode = !editMode; render(); break;
+        case 'book': Schedule.book(null, {}, () => render()); break;
+        case 'finish': {
+          const l = DB.data.lessons.find(x => x.id === b.closest('[data-lid]').dataset.lid);
+          l.status = 'done'; DB.save(); render(); U.toast('已标记完成');
+          break;
+        }
+        case 'toggleTodo': {
+          const x = DB.data.todos.find(y => y.id === b.closest('[data-tid]').dataset.tid);
+          if (x) {
+            const rule = U.recurRuleOf(x.repeat, x.date);
+            let justDone = false;
+            if (rule.type !== 'never' && U.recurOccursOn(t, rule)) {
+              x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
+              const i = x.completedDates.indexOf(t);
+              if (i >= 0) { x.completedDates.splice(i, 1); x.doneAt = null; }
+              else { x.completedDates.push(t); x.doneAt = Date.now(); justDone = true; }
+            } else {
+              x.status = Todo.cycle(x.status);
+              x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
+              if (x.status === 'done') justDone = true;
+            }
+            DB.save(); render(); App.refreshBadge();
+            if (justDone) U.toast('完成一件');
+          }
+          break;
+        }
+        case 'importTpl': {
+          let n = 0;
+          DB.data.templates.forEach(tpl => {
+            if (DB.data.todos.some(x => x.date === t && x.tplId === tpl.id)) return;
+            Todo.add({ title: tpl.title, priority: tpl.priority, tag: tpl.tag, tplId: tpl.id, date: t }); n++;
+          });
+          DB.save(); render(); App.refreshBadge();
+          U.toast(n ? `已导入 ${n} 条模板任务` : '今天已经导入过了', n ? 'ok' : 'warn');
+          break;
+        }
+        case 'copyPh': {
+          const p = DB.data.phrases.find(x => x.id === b.closest('[data-pid]').dataset.pid);
+          U.copy(p.content); p.hits = (p.hits || 0) + 1; DB.save();
+          break;
+        }
+        case 'addTpl': Todo.editTpl(null, render); break;
+        case 'editTpl': {
+          const tpl = DB.data.templates.find(x => x.id === b.closest('[data-tpl]').dataset.tpl);
+          Todo.editTpl(tpl, render); break;
+        }
+        case 'useTpl': {
+          const tpl = DB.data.templates.find(x => x.id === b.closest('[data-tpl]').dataset.tpl);
+          Todo.importTemplates([tpl.id]); render(); break;
+        }
+        case 'delTpl': {
+          const tpl = DB.data.templates.find(x => x.id === b.closest('[data-tpl]').dataset.tpl);
+          U.confirm(`删除模板「${tpl.title}」？`, () => {
+            DB.removeRecord('templates', tpl.id); DB.save(); render();
+          }, '删除');
+          break;
+        }
+        case 'importAll': Todo.importTemplates(); render(); break;
+
+        /* 模块管理 */
+        case 'editMod': {
+          const key = b.closest('.dash-module').dataset.mod;
+          U.modal({
+            title: '编辑模块标题',
+            body: `<div class="form-row"><label>新标题</label><input class="input" id="modTitleInput" value="${U.esc(resolveTitle(key))}" placeholder="${U.esc(defaultTitle(key))}">
+              <p class="muted" style="font-size:12px;margin-top:6px">留空 = 恢复默认标题「${U.esc(defaultTitle(key))}」</p></div>`,
+            okText: '保存',
+            onOk: () => {
+              const v = (U.$('#modTitleInput') || {}).value || '';
+              const custom = DB.data.settings.dashboardLayout.customTitle || {};
+              if (!v.trim() || v.trim() === defaultTitle(key)) delete custom[key];
+              else custom[key] = v.trim();
+              DB.data.settings.dashboardLayout.customTitle = custom;
+              DB.save(); render();
+              U.toast('已更新', 'ok');
+            }
+          });
+          setTimeout(() => { const i = U.$('#modTitleInput'); if (i) { i.focus(); i.select(); } }, 60);
+          break;
+        }
+        case 'hideMod': {
+          const key = b.closest('.dash-module').dataset.mod;
+          const L = getLayout();
+          if (!L.hidden.includes(key)) L.hidden.push(key);
+          saveLayout({ hidden: L.hidden });
+          render();
+          U.toast('已隐藏，可到顶部「已隐藏的模块」恢复', 'ok');
+          break;
+        }
+        case 'restoreMod': {
+          const key = b.closest('.dash-hidden-row').dataset.mod;
+          const L = getLayout();
+          L.hidden = L.hidden.filter(k => k !== key);
+          saveLayout({ hidden: L.hidden });
+          render();
+          break;
+        }
+        case 'moveUp':
+        case 'moveDown': {
+          const key = b.closest('.dash-module').dataset.mod;
+          const L = getLayout();
+          const idx = L.order.indexOf(key);
+          if (idx < 0) break;
+          const swap = b.dataset.act === 'moveUp' ? idx - 1 : idx + 1;
+          if (swap < 0 || swap >= L.order.length) break;
+          [L.order[idx], L.order[swap]] = [L.order[swap], L.order[idx]];
+          saveLayout({ order: L.order });
+          render();
+          break;
+        }
+      }
+    });
+  }
+
   function render() {
     const root = U.$('#view');
     if (!root || App.route !== 'dashboard') return;
@@ -6986,136 +7386,7 @@ const Dashboard = (() => {
       });
     }
 
-    /* 事件绑定 */
-    U.rebind(root, 'dash', e => {
-      const go = e.target.closest('[data-go]');
-      if (go) { App.go(go.dataset.go); return; }
-      const b = e.target.closest('[data-act]');
-      if (!b) {
-        const li = e.target.closest('[data-lid]');
-        if (li) Schedule.editLesson(li.dataset.lid);
-        return;
-      }
-        switch (b.dataset.act) {
-        case 'toggleInc': DB.data.settings.dashIncScheduled = !DB.data.settings.dashIncScheduled; DB.save(); render(); U.toast(DB.data.settings.dashIncScheduled ? '主页抽成已含待上课（预计）' : '主页抽成仅统计已上课（实际）', 'ok'); break;
-        case 'backup': {
-          const name = DB.exportJSON();
-          U.toast(name ? `已导出「${name}」，请到浏览器「下载」里查看` : '导出失败', name ? 'ok' : 'warn');
-          break;
-        }
-        case 'toggleEdit': editMode = !editMode; render(); break;
-        case 'book': Schedule.book(null, {}, () => render()); break;
-        case 'finish': {
-          const l = DB.data.lessons.find(x => x.id === b.closest('[data-lid]').dataset.lid);
-          l.status = 'done'; DB.save(); render(); U.toast('已标记完成');
-          break;
-        }
-        case 'toggleTodo': {
-          const x = DB.data.todos.find(y => y.id === b.closest('[data-tid]').dataset.tid);
-          if (x) {
-            const rule = U.recurRuleOf(x.repeat, x.date);
-            let justDone = false;
-            if (U.recurOccursOn(t, rule)) {
-              x.completedDates = Array.isArray(x.completedDates) ? x.completedDates : [];
-              const i = x.completedDates.indexOf(t);
-              if (i >= 0) { x.completedDates.splice(i, 1); x.doneAt = null; }
-              else { x.completedDates.push(t); x.doneAt = Date.now(); justDone = true; }
-            } else {
-              x.status = Todo.cycle(x.status);
-              x.doneAt = x.status === 'done' ? Date.now() : (x.status === 'pending' ? null : x.doneAt);
-              if (x.status === 'done') justDone = true;
-            }
-            DB.save(); render(); App.refreshBadge();
-            if (justDone) U.toast('完成一件');
-          }
-          break;
-        }
-        case 'importTpl': {
-          let n = 0;
-          DB.data.templates.forEach(tpl => {
-            if (DB.data.todos.some(x => x.date === t && x.tplId === tpl.id)) return;
-            Todo.add({ title: tpl.title, priority: tpl.priority, tag: tpl.tag, tplId: tpl.id, date: t }); n++;
-          });
-          DB.save(); render(); App.refreshBadge();
-          U.toast(n ? `已导入 ${n} 条模板任务` : '今天已经导入过了', n ? 'ok' : 'warn');
-          break;
-        }
-        case 'copyPh': {
-          const p = DB.data.phrases.find(x => x.id === b.closest('[data-pid]').dataset.pid);
-          U.copy(p.content); p.hits = (p.hits || 0) + 1; DB.save();
-          break;
-        }
-        case 'addTpl': Todo.editTpl(null, render); break;
-        case 'editTpl': {
-          const tpl = DB.data.templates.find(x => x.id === b.closest('[data-tpl]').dataset.tpl);
-          Todo.editTpl(tpl, render); break;
-        }
-        case 'useTpl': {
-          const tpl = DB.data.templates.find(x => x.id === b.closest('[data-tpl]').dataset.tpl);
-          Todo.importTemplates([tpl.id]); render(); break;
-        }
-        case 'delTpl': {
-          const tpl = DB.data.templates.find(x => x.id === b.closest('[data-tpl]').dataset.tpl);
-          U.confirm(`删除模板「${tpl.title}」？`, () => {
-            DB.data.templates = DB.data.templates.filter(x => x.id !== tpl.id); DB.save(); render();
-          }, '删除');
-          break;
-        }
-        case 'importAll': Todo.importTemplates(); render(); break;
-
-        /* 模块管理 */
-        case 'editMod': {
-          const key = b.closest('.dash-module').dataset.mod;
-          U.modal({
-            title: '编辑模块标题',
-            body: `<div class="form-row"><label>新标题</label><input class="input" id="modTitleInput" value="${U.esc(resolveTitle(key))}" placeholder="${U.esc(defaultTitle(key))}">
-              <p class="muted" style="font-size:12px;margin-top:6px">留空 = 恢复默认标题「${U.esc(defaultTitle(key))}」</p></div>`,
-            okText: '保存',
-            onOk: () => {
-              const v = (U.$('#modTitleInput') || {}).value || '';
-              const custom = DB.data.settings.dashboardLayout.customTitle || {};
-              if (!v.trim() || v.trim() === defaultTitle(key)) delete custom[key];
-              else custom[key] = v.trim();
-              DB.data.settings.dashboardLayout.customTitle = custom;
-              DB.save(); render();
-              U.toast('已更新', 'ok');
-            }
-          });
-          setTimeout(() => { const i = U.$('#modTitleInput'); if (i) { i.focus(); i.select(); } }, 60);
-          break;
-        }
-        case 'hideMod': {
-          const key = b.closest('.dash-module').dataset.mod;
-          const L = getLayout();
-          if (!L.hidden.includes(key)) L.hidden.push(key);
-          saveLayout({ hidden: L.hidden });
-          render();
-          U.toast('已隐藏，可到顶部「已隐藏的模块」恢复', 'ok');
-          break;
-        }
-        case 'restoreMod': {
-          const key = b.closest('.dash-hidden-row').dataset.mod;
-          const L = getLayout();
-          L.hidden = L.hidden.filter(k => k !== key);
-          saveLayout({ hidden: L.hidden });
-          render();
-          break;
-        }
-        case 'moveUp':
-        case 'moveDown': {
-          const key = b.closest('.dash-module').dataset.mod;
-          const L = getLayout();
-          const idx = L.order.indexOf(key);
-          if (idx < 0) break;
-          const swap = b.dataset.act === 'moveUp' ? idx - 1 : idx + 1;
-          if (swap < 0 || swap >= L.order.length) break;
-          [L.order[idx], L.order[swap]] = [L.order[swap], L.order[idx]];
-          saveLayout({ order: L.order });
-          render();
-          break;
-        }
-      }
-    });
+    bindDashboard(root, t);
   }
 
   Views.dashboard = {
@@ -7189,7 +7460,7 @@ const Settings = (() => {
           <button class="btn btn-ghost" data-act="demo">载入演示数据</button>
           <button class="btn btn-danger" data-act="clear">清空全部数据</button>
         </div>
-        <div class="edit-time ${lastBk && Date.now() - d.settings.lastBackupAt > 7 * 86400000 ? 'warn' : ''}" style="margin-top:10px">
+        <div class="edit-time ${lastBk && Date.now() - d.settings.lastBackupAt > 7 * U.MS_PER_DAY ? 'warn' : ''}" style="margin-top:10px">
           <svg class="ico"><use href="#i-check"/></svg>
           ${lastBk ? `上次导出备份：${lastBk}` : '还没有导出过备份，建议现在导出一份存到手机或网盘'}</div>
         ${preImp ? `<div class="edit-time hide-on-mobile" style="margin-top:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -7244,7 +7515,7 @@ const Settings = (() => {
         <div class="card-h"><h3>云同步（免费 · 三端统一）</h3><span class="sub sync-status" id="syncStatus">未连接</span></div>
         <p class="muted" style="font-size:12.5px;margin-bottom:12px">
           把数据存到一份加密的私密空间，手机 / 平板 / 电脑三端自动同步、统一数据。
-          <b>隐私保护：上传前数据会先在本机用 AES 加密（密钥由你的 Token 生成），明文绝不出本机；即便空间链接泄露，他人也只看到乱码。</b>
+          <b>隐私保护：上传前数据会先在本机用 AES 加密（密钥默认由你的 Token 生成，也可在下方单独设置「同步密钥」）。多端同步只需各端填<b>同一个同步密钥</b>即可互相解密。</b>
           Token 仅保存在本机浏览器。<b style="color:#b5587a">国内访问 GitHub 经常连不上，建议选「码云 Gitee（国内更稳）」。</b></p>
         <div class="field" style="max-width:440px">
           <label>同步服务商</label>
@@ -7256,6 +7527,10 @@ const Settings = (() => {
         <div class="field" style="max-width:440px">
           <label id="syncTokenLabel">访问令牌 Token</label>
           <input class="input" id="syncToken" type="password" placeholder="ghp_xxx（GitHub）或 gitee_xxx（Gitee）" value="${(sc.token || '').replace(/"/g, '&quot;')}">
+        </div>
+        <div class="field" style="max-width:440px">
+          <label>同步密钥（口令）<span class="hint">加密密钥由它决定，<b>所有设备填同一个密钥</b>即可互相解密同步（推荐）。留空则回退用上方 Token 作密钥——此时必须保证各端 Token 也一致。建议三端统一填一个相同的密钥，这样即使各端 Token 不同也能正常同步。</span></label>
+          <input class="input" id="syncPass" type="password" placeholder="多端共用请填相同的密钥（留空则用 Token 作密钥）" value="${(sc.pass || '').replace(/"/g, '&quot;')}">
         </div>
         <div class="field" style="max-width:440px">
           <label>同步空间 ID<span class="hint">留空则自动创建新空间。<b>多端共用同一份数据：</b>请在电脑端连接后，复制下方自动生成的<b>真实空间 ID（一长串字符）</b>填到这里。⚠️ 不要自己起名（如 20260802）——GitHub 不认自定义名，各端会各自新建、无法同步。</span></label>
@@ -7304,6 +7579,7 @@ const Settings = (() => {
       // 先同步云同步两个输入框到配置（多设备共用需填同一 Token + 同一空间 ID）
       Sync.cfg().token = U.$('#syncToken', root).value.trim();
       Sync.cfg().gistId = U.$('#syncGistId', root).value.trim();
+      Sync.cfg().pass = U.$('#syncPass', root).value.trim();
       const provSel = U.$('#syncProvider', root);
       if (provSel) Sync.cfg().provider = provSel.value;
         switch (b.dataset.act) {
@@ -7351,12 +7627,12 @@ const Settings = (() => {
           break;
         case 'clear':
           U.confirm('清空后无法恢复（模板与话术会保留初始版本），建议先导出备份。确定清空？', () => {
-            DB.reset(false); App.boot(); U.toast('已清空');
+            DB.wipeSynced(); App.boot(); U.toast('已清空（已标记跨端删除，点「立即上传」后各端同步清空）');
           }, '确认清空');
           break;
         case 'connect':
           if (!Sync.cfg().token) { U.toast('请先填写 Token', 'warn'); break; }
-          DB.save();
+          DB.save({ silent: true });
           const hadGistId = !!(Sync.cfg().gistId || '').trim();
           Sync.ensureGist().then(() => {
             const _id = Sync.cfg().gistId || '';
@@ -7367,13 +7643,16 @@ const Settings = (() => {
               const _fp = U.$('#syncFpShown', root); if (_fp) _fp.textContent = Sync.fingerprint(_id) || '（无法识别）';
               _tip.style.display = 'block';
             }
-            if (hadGistId) {
-              U.toast('已连接到现有空间！请确认下方「空间指纹」与另一端的指纹一致，即说明两端连到同一份数据', 'ok', 6000);
-            } else {
-              U.toast('已连接！已生成真实空间 ID，请复制它到其他设备共用（不要自己起名）', 'ok', 6000);
-            }
-            Sync.refreshStatus();
-            Sync.startAutoPull();
+            // 关键修复：连接后立刻「拉取一次」云端数据（以云端为基准），避免本机旧数据占位、且不等 20s 自动轮询
+            Sync.pull().catch(() => {}).finally(() => {
+              if (hadGistId) {
+                U.toast('已连接到现有空间并同步云端数据！请确认下方「空间指纹」与另一端一致', 'ok', 6000);
+              } else {
+                U.toast('已连接！已生成真实空间 ID，请复制它到其他设备共用（不要自己起名）', 'ok', 6000);
+              }
+              Sync.refreshStatus();
+              Sync.startAutoPull();
+            });
           }).catch(err => U.toast('连接失败：' + syncErrHint(err), 'warn'));
           break;
         case 'push':
@@ -7531,9 +7810,14 @@ const Settings = (() => {
       let html = window.__OFFLINE_TEMPLATE__;
 
       const meta = { builtAt: new Date().toISOString(), withData: !!withData, from: location.host };
-      let inject = `<script>window.__OFFLINE_BUILD__=${JSON.stringify(meta)};<\/script>`;
-      if (withData) inject += `<script>window.__EMBEDDED_BACKUP__=${JSON.stringify(snapshot.obj)};<\/script>`;
-      html = html.replace('</head>', inject + '</head>');
+      // 转义 < >：防止课程/学员/备注等字段含 <\/script> 时提前闭合脚本块（数据损坏 + 存储型 XSS）
+      const escJson = s => JSON.stringify(s).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+      let inject = `<script>window.__OFFLINE_BUILD__=${escJson(meta)};<\/script>`;
+      if (withData) inject += `<script>window.__EMBEDDED_BACKUP__=${escJson(snapshot.obj)};<\/script>`;
+      // 模板缺失 </head> 时退而求其次注入 </body>，再不行追加到末尾，避免静默丢失离线数据
+      if (html.includes('</head>')) html = html.replace('</head>', inject + '</head>');
+      else if (html.includes('</body>')) html = html.replace('</body>', inject + '</body>');
+      else html += inject;
       html = html.replace(/<title>([^<]*)<\/title>/, '<title>$1 · 离线版</title>');
 
       const p = n => String(n).padStart(2, '0');
@@ -7785,10 +8069,10 @@ const AI = (() => {
       return `当前共有 ${n} 条未完成的提醒事项（含历史遗留）。打开「提醒事项」可以查看和处理，也可以一键导入每日模板。`;
     }
     if (/(学员|学生|档案|家长)/.test(q)) {
-      return `现在有 ${DB.data.students.length} 位学员档案。可直接逐项填写学生姓名、年级学科、课时费、抽成等；也支持用标准编码一键拆解（默认格式：日期-年级学科-学员名-抽成/课时费|时长），例如 240815-高二数学-李明-50/300|90。`;
+      return `现在有 ${DB.data.students.length} 位学员档案。新建学员可直接逐项填写学生姓名、年级学科、课时费、抽成等，保存后系统自动生成学员编码，无需手动拆解。`;
     }
     if (/(格式|编码|怎么填|怎么新建|怎么录)/.test(q)) {
-      return '学员可逐项填写，也可用标准编码一键拆解：默认格式 [日期]-[年级学科]-[家长]-[抽成]/[课时费]|[课时长]\n例：240815-高二数学-李妈妈-50/300|90\n系统会自动拆成结构化字段，分别记录对家长的课时费和我内部的抽成。编码模板目前用系统默认格式。';
+      return '学员可逐项填写姓名、年级学科、课时费、抽成等，保存后系统自动生成学员编码（格式：日期-年级学科-家长-抽成/课时费|时长）。目前不支持粘贴式编码拆解录入，请逐项填写。';
     }
     if (/(课表|排课|冲突|时间)/.test(q)) {
       return '课表支持周/月/年视图，可拖拽改时间；同一时段允许排两节课，重叠会自动并排并红框提示，方便你确认。';
@@ -7852,8 +8136,8 @@ const Help = (() => {
     const root = U.$('#view');
     if (!root || App.route !== 'help') return;
     const faq = [
-      ['快速上手', '左侧（手机端底部）切换模块。主页聚合今日课程、提醒事项与模板；提醒事项支持模板一键导入；学员按标准编码自动拆解；老师名册是独立模块，可在学员档案下方找到。'],
-      ['学员编码与录入', '新建学员可逐项填写，也可用标准编码一键拆解：默认 [日期]-[年级学科]-[家长]-[抽成]/[课时费]|[课时长]\n例：240815-高二数学-李妈妈-50/300|90\n系统自动拆成结构化字段（课时费、我的抽成）。'],
+      ['快速上手', '左侧（手机端底部）切换模块。主页聚合今日课程、提醒事项与模板；提醒事项支持模板一键导入；学员逐项填写后系统自动生成编码；老师名册是独立模块，可在学员档案下方找到。'],
+      ['学员编码与录入', '新建学员逐项填写姓名、年级学科、课时费、抽成、时长等即可；保存后系统按「日期-年级学科-家长-抽成/课时费|时长」自动生成学员编码（例如 240815-高二数学-李妈妈-50/300|90），无需手动拆解。'],
       ['中间人三本账', '每节课记录我的抽成与报销支出，实际到手 = 我的抽成 − 报销支出（报销支出从批注数字提取）。抽成存绝对金额、每节课冗余存价格快照，保证历史账目不被改写。'],
       ['可视化课表', '周视图时间轴可拖拽改时间，重叠自动并排+红框提示；月视图看密度；年视图看淡旺季。同一时段允许排两节课。'],
       ['试课回访', '学员标记「试课中」+ 填试课日期，次日自动在提醒事项生成「回访XX妈妈试课体验」，幂等只生成一次。'],
@@ -7927,311 +8211,248 @@ const Link = (() => {
 
 /* ---------- 更新日志 ---------- */
 const Changelog = (() => {
+  /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
+     新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
+  const CHANGELOG = [
+    { ver: `v2.2.1`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>修复：财务「历史收入」改了又回来（同步回潮，最关键的 bug）</b>：历史收入是按月总额 <code>histIncome</code>，旧合并对同月取 <code>Math.max</code>——你把某月改小后上传，云端旧的大值会在下次合并时把它覆盖回去，于是「一转头又回来了」。现改为<b>按月 LWW（最后写入时间胜出）</b>：新增 <code>histIncomeMt</code>（按月写入时间戳）与 <code>histIncomeDel</code>（按月删除墓碑），合并时同月取时间戳较新的一方、删掉的月份用墓碑真正移除，<b>不再比大小</b>。老数据升级后第一轮同步本机当前值被视为权威（给已填月份打「足够新」时间戳）。<code>wipeSynced()</code> 清空时也一并清理这三项。`,
+        `<b>修复：可视化课表周视图 8:00 时间轴显示不全</b>：时间槽的 <code>top:-7px</code> 负偏移被周视图滚动容器顶部裁切，现改为 flex 垂直居中、移除负偏移，8:00 完整显示。`,
+        `<b>修复：日历「今天」方框太小、看着紧巴巴</b>：月视图 today 由细 <code>outline</code> 内收描边改为粉色填充 + 2px 实边 + 轻投影、内边距加大、日期字号调大；年视图 today 也加同款实边与投影，整体更大气。`,
+        `<b>修复：更新日志记录莫名换行、排版丑</b>：列表样式 <code>.log-list</code> 被一处「财务模块死样式」重复定义并污染了更新日志（它从未在 JS 中使用），现删除该冲突规则；版本号与日期合并成一行表头 <code>.log-head</code>，条目加 <code>word-break:break-word</code> 与舒适行距，长行不再乱折。`,
+        `<b>回归锁定</b>：<code>sync-delete-test.js</code> 扩到 47 条断言全绿，新增场景 11（改小的 3000 胜出旧云端 5000，不回潮）、场景 12（删除墓碑使该月真正移除）、场景 13（pull/push 均取较新一方）、场景 14（复刻现场：H1 改小 3000 上传后 H2 拉取得到 3000）；<code>sync-loss-test.js</code> 改为断言 LWW 并补「较小但较新胜出」锁定（26/0）。连同 3device/key/fix/timestamp 共 6 套 105 条断言 0 失败，三处版本常量同步 bump 至 v2.2.1。`] },
+    { ver: `v2.2.0`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>每日模板库新增「批量删除」</b>：模板多了想一次清掉几条？点模板库标题右侧的 <b>✓ 批量删除</b> 进入选择模式，逐条点选（或点「全选」），再点「删除选中」即可一次删多条；删除一样走墓碑（tombstone）机制，<b>删除会跨端同步</b>——A 端批量删的模板，B/C 端下次同步后也消失，其余模板保留。误删可在同步前退出选择模式取消，或在同步前重新录入覆盖。桌面端（提醒事项页右侧）与手机端（提醒事项页底部卡片）均已支持。`] },
+    { ver: `v2.1.1`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>修复「清空全部数据 + 上传后，一点连接数据又全回来」的致命 bug（v2.1.0 删除同步的漏网之鱼）</b>：v2.1.0 给单条删除加了墓碑（tombstone）跨端同步，但「设置 → 清空全部数据」用的是 <code>DB.reset(false)</code> 硬重置——它把数组和墓碑映射<code>deleted</code>一起清空、没给任何记录打墓碑。于是你三端清空、点「立即上传」时，<code>push</code> 内部按「本机 ∪ 云端」合并，把云端里那份满数据又补回上传了，云端根本没被清空；再点「连接」（pull）就把满数据拉回来——数据「复活」。`,
+        `<b>修复方式</b>：新增 <code>DB.wipeSynced()</code> 替代清空的硬重置——清空学员/老师/课节/提醒/日程前，<b>先为每条被清记录打墓碑</b>，再清空数组并保留 <code>deleted</code> 映射，最后 <code>save()</code>。这样「立即上传」时合并会按墓碑把云端对应记录也过滤掉，云端被真正清空；其他端下次同步（上传或下载）后同样变空。<b>模板与话术仍保留工厂初始版本</b>（与清空承诺一致，不在此清除、不打墓碑）。`,
+        `<b>回归锁定</b>：<code>sync-delete-test.js</code> 扩到 33 条断言全绿，新增场景 6（清空+上传→云端清空、他端拉取也空）、场景 7（复刻你的现场：三端都清空+上传再连接，数据不再回来；并用全新设备拉云端确认云端真被清空）、场景 8（对照组：旧式 <code>reset(false)</code>+上传后数据确实回潮，证明修复必要）。连同既有 5 套同步套件（共 56 条）零回归。三处版本常量同步 bump 至 v2.1.1。`] },
+    { ver: `v2.1.0`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>云同步「删除也能跨端同步」终于补齐（tombstone 墓碑方案，你 v2.0.5 就催的补丁）</b>：此前 v2.0.5 把同步改成「按 id 并集合并」后，新增/修改已全量同步，但<b>删除只在本机移除、不会传到另一端</b>——你在一端删掉一条记录，别的端还会一直显示着。本版引入<b>墓碑（tombstone）删除同步</b>：删除时不再真正擦掉远程副本，而是在独立的 <code>deleted</code> 映射（按集合分桶 <code>{id: 删除时间戳}</code>）登记删除；合并时先取两端 <code>deleted</code> 的并集（同 id 取较新的删除时间），再据此把被标记的记录从合并结果里剔除——于是 <b>A 端删的记录，B/C 端下次同步后也消失</b>，且合并模型仍保持「绝不丢数据」的不变量。`,
+        `<b>误删可在「未同步前复活」</b>：本地 <code>DB.save()</code> 落盘前会扫描——若某集合里某条记录仍存在于数组（说明删除后又被重新录入/改回），就<b>清掉它的墓碑</b>，使这次删除根本不会随上传传播出去。也就是说，你误删一条、还没来得及同步，只要在同步前重新录入或改回，另一端就不会被删掉，无需手动去云端捞数据。`,
+        `<b>级联删除跨端生效</b>：删学员时会连带把其课节写两张墓碑（学员 + 课节），删老师在关联课时里把 <code>teacherId</code> 置空（不删记录、故不加墓碑）；这些墓碑同样并入同步，另一端也会同步删掉学员与对应课节。<b>删除时间边界不误伤</b>：若某记录的存在时间（<code>_mt</code>/<code>createdAt</code>）严格晚于其墓碑删除时间，视为「删除后又被新数据覆盖」，自动复活并移除墓碑，避免较新记录被旧墓碑错误过滤。`,
+        `<b>回归锁定</b>：新增 <code>sync-delete-test.js</code>（20 条断言全绿），覆盖「mergeDocs 墓碑语义（6 条）+ A 端删→B 端消失 + 误删重新录入复活（B 端也保留）+ 传播到第三端 C + 学员级联删课节跨端生效 + 较新记录删除边界不误伤」；连同既有 5 套同步套件（loss/3device/key/fix/timestamp 共 56 条）零回归，确认删除同步未破坏既有合并正确性。三处版本常量同步 bump 至 v2.1.0。`] },
+    { ver: `v2.0.5`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>云同步底层重写：多端同步「绝不丢失数据」（你反复丢数据的根因彻底解决）</b>。v2.0.4 只修了「连接即覆盖」，但同步内核仍是<b>整文档后写覆盖 + 任何保存都误标脏 + 冲突即 stopAutoPull</b> 的致命组合——于是你一切换页面/改设置，本机就被标记「有改动」并自动把旧数据上传覆盖云端，把另一端刚填的内容抹掉；而接收端一旦检测到云端更新就被停掉自动同步。本版把同步从「整文档覆盖」改为<b>按记录 id 合并（并集）</b>：① 任一端独有的记录都保留，新增内容永不被另一端覆盖丢失；② 上传前先与云端合并（取并集）再上传，本机「旧」也绝不丢云端的新增；③ 永远不因为「冲突」停止自动同步，冲突也走合并；④ 切换路由等纯 UI 保存改为 <code>silent</code>，不再误触发上传。新增 <code>sync-loss-test.js</code>（24/0）专门复现「平板填→电脑脏→平板被删」并锁定「数据不再丢失」不变量。注：删除操作暂不会跨端同步（新增/修改已全同步），下一版补删除传播。`] },
+    { ver: `v2.0.4`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>真·修复：云同步「连接即覆盖 / 自动同步失效」根因（你三端同 Token 同 ID 却不同步的真正元凶）</b>：此前在「设置 → 连接 / 初始化」时，<code>ensureGist</code> 内部多次 <code>DB.save()</code> 未加 <code>silent</code>，会触发 <code>schedulePush</code>——于是连接后约 1.5s，本机旧数据被自动上传、<b>把共享空间整个覆盖掉</b>，而真正的下载要等 3s 以后才发生；结果：另一端永远拉不到正确数据、自动同步看似失效、冲突提示反复出现。本版：① 连接全流程保存一律 <code>silent</code>，<b>连接绝不再上传本机数据</b>；② 连接后<b>立即拉取一次云端</b>（以云端为基准），并让基线取「远端真实时间戳」；③ 新建空间 / 404 重建时的保存也改 <code>silent</code>。现三端连接同一 ID 后：本机旧数据不会覆盖共享空间，连接即同步云端数据，之后改完自动上传、他端约 3s 自动拉取。新增 <code>sync-3device-test.js</code>（11/0，含「连接不覆盖共享空间」防回归断言）锁定该行为。`] },
+    { ver: `v2.0.3`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>热修复：云同步「跨设备解不开对方数据 / 下载失败」根因——密钥不再绑死 Token</b>：此前加密密钥 = SHA-256(Token)，两端 Token 不同时，任一方都解不开另一方上传的密文，表现为「平板/电脑点下载也没反应、自动同步始终不通、冲突提示小字消不掉」。本版引入独立的<b>同步密钥（口令）</b>作为加密密钥的唯一来源（留空则回退 Token，向后兼容）；多端只要填<u>同一个同步密钥</u>即可互相解密，Token 是否一致不再影响同步。读取端按「同步密钥 → Token」顺序尝试解密，旧 Token 加密的数据仍能读。设置页新增「同步密钥」输入框与说明。新增 <code>sync-key-test.js</code>（6/0）锁定该行为。`] },
+    { ver: `v2.0.2`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>热修复：云同步自动实时同步彻底修复（小字反复出现 / 必须手动点下载的根因）</b>：v2.0.1 的修复仍残留一处时间戳污染——<code>doPull</code> 收尾的 <code>DB.save({silent:true})</code> 未传 <code>preserveSavedAt</code>，把刚保留的远端时间戳抹成当前时间，导致 <code>__savedAt</code> 与 <code>baseSavedAt</code> 永久错位；<code>ensureGist</code> 每次 <code>DB.save()</code> 也无参、刷新 <code>__savedAt</code>，使自动上传被「本机有改动」误判为冲突而拒绝。本版：① <code>doPull</code> 一次性 <code>importJSON(preserveSavedAt+silent)</code> 后，收尾保存也 <code>preserveSavedAt</code>，保证 <code>__savedAt === baseSavedAt === 远端</code> 闭环；② <code>ensureGist</code> 全部 <code>DB.save</code> 改 <code>preserveSavedAt</code>，消除误判冲突；③ <code>push</code> 冲突检测加「本机确有未上传改动(localDirty)」前提，无改动设备永不被冲突拦截。现电脑端改完自动上传、平板端 20 秒内自动拉取，且「请手动下载同步」提示在真正下载后消失、不再反复出现。新增 <code>sync-fix-test.js</code>（11 断言全绿）回归锁死该闭环。`] },
+    { ver: `v2.0.1`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>热修复：课时导入恢复 Excel 直传 + 云同步真正自动实时同步</b>：针对上线后你反馈的两个阻塞性问题紧急修复。`,
+        `<b>修复：课时导入被改成 CSV 后乱码 / 识别差</b>——原先「从 Excel / CSV 导入课时」只接受 <code>.csv</code> 且用 UTF-8 读取，Excel 默认另存的 CSV 在中文 Windows 上是 GBK/GB18030，导致中文乱码；同时不支持直接传 <code>.xlsx</code>。现改为：① 文件选择同时支持 <b>.xlsx / .xls / .csv / .txt</b>；② Excel 用 XLSX 库解析并转成制表符分隔文本；③ CSV/TXT 做 UTF-8 → GB18030 → GBK 自动编码探测；④ 保留粘贴框。`,
+        `<b>修复：云同步不会自动实时同步，且「请手动下载同步」提示点了下载还在</b>——根因是 <code>doPull</code> 下载后调用 <code>DB.importJSON</code> 会刷新 <code>__savedAt</code> 为当前时间，导致本地 <code>baseSavedAt</code> 与云端时间戳不一致，下一次同步又被误判为冲突；冲突后 <code>stopAutoPull</code> 也永久停掉自动轮询。现：① <code>DB.save</code> 新增 <code>preserveSavedAt</code> / <code>silent</code> 选项；② 下载后保留远端时间戳、保存同步配置时不触发上传；③ 手动上传 / 下载成功后自动恢复 <code>startAutoPull</code>，实现「电脑端改完自动上传、平板端自动拉取」。`] },
+    { ver: `v2.0.0`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>「最彻底 · 最深度」第五轮：P2/P3 清理 + 两项定向深挖（随 v2.0.0 发布）</b>：按你的要求对上一轮结构检查遗留的 P2/P3 项逐条修复（均行为不变、harness 回归全绿），并针对此前<b>未涉及</b>的维度新开两项定向深挖。`,
+        `<b>代码质量（P2/P3 清理）</b>：① 移除已下线的「档案编码格式可自定义」整套死代码（parseCode/buildCode/tokenizeCode 等）并修正 4 处仍在宣传该功能的文案；② 修复电脑端周视图晚课（22:30+90min）溢出时间轴、压住图例的布局问题（clamp 块高 + 跨夜标记，数据不变）；③ 拆分财务页 15-case 事件总控 god-handler 为按功能子函数；④ 将 329 行硬编码更新日志改为本「数据数组 + 通用渲染器」（即此改法）；⑤ 抽取魔法数字为命名常量（每日毫秒 / Excel 纪元 / 默认透明度 / 默认课时长等）并统一三处 VERSION 注释；⑥ 重命名 schedule/finance 模糊的 modal 句柄 mm/ret → modal，并为裸 console.error 补全上下文。`,
+        `<b>定向深挖 A · 动态 XSS 渗透（新维度）</b>：jsdom 真实渲染下，向家长名 / 学员名 / 待办 / 备注 / 批注 / 话术等所有 U.esc 入口注入 &lt;img onerror&gt;、&lt;script&gt;、&lt;svg onload&gt;、&gt;&lt; 等恶意 payload，验证渲染后全部转义、脚本不执行、无 DOM 注入。结论：<b>0 漏洞</b>，U.esc 与离线版 makeOffline 转义到位。`,
+        `<b>定向深挖 B · 大数据量性能压测（新维度）</b>：jsdom 下灌入 1000 学员 / 10000 课时 / 5000 待办 / 10 年每日重复任务，测渲染 / 筛选 / statIn 统计 / 序列化 / localStorage 体积。结论：<b>各项亚秒级</b>，无 O(n²) 爆炸；最重路径（财务 statIn）≈ 0.8 ms，离线序列化 ≈ 17 ms，存储 ≈ 3100 KB。`] },
+    { ver: `v1.9.11`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<li><b>「最彻底 · 最深度」第四轮全模块审计 + 实测核验后发布（10 项真实缺陷修复）</b>：按你的要求，本轮不再声称「完成」，而是<b>逐模块对抗性审计</b>——自读 sync / commission-import，并派两个独立子代理深挖 store/students/teachers 与 finance/settings/pwa/app。每发现一个问题都<b>真实运行代码核验</b>（jsdom 无头 harness 加载全部模块、注入 webcrypto、驱动真实数据），确凿定位 13 个缺陷，修复其中 10 个，3 个显式保留为已知边界（见下）。本轮新增 4 套专项 harness（cryptotest / refint / recurfull / fuzz），与原有 11 套基线合计 <b>15 套、243 条断言全绿</b>、冒烟 0 运行时错误。</li>`,
+        `<li><b>修复：云同步加密信封被误当明文导入（高危数据丢失）</b>——远端返回 AES-GCM 信封 <code>{v,alg,iv,ct}</code> 时，旧逻辑当作普通数据 JSON.parse，导致解密失败 / 整库被空对象覆盖。<code>readRemote</code> 现识别信封结构直接拒绝（返回 null），<code>doPull</code> 复用同一实现并明确抛「解密失败」。</li>`,
+        `<li><b>修复：Excel 日期序列号丢失</b>——导入课酬表时，若日期列以 Excel 序列号（如 45000）存储，旧 <code>parseDate</code> 正则匹配不到会返回 NaN，排课/课时日期错乱。<code>parseDate</code> 现识别 20000–80000 数字并按 1900 伪闰年（序号&gt;60 减 1 天）换算。</li>`,
+        `<li><b>修复：本地存储数组字段类型损坏导致白屏 / 崩溃</b>——若 localStorage 中 <code>students/lessons/todos</code> 等被覆盖成 null 或对象（数据损坏 / 旧版残留），<code>load</code> 与 <code>adoptData</code> 直接当数组遍历而崩。现 JSON.parse 后对所有数组字段做类型损坏兜底（损坏则回退空数组），首屏不再白屏。</li>`,
+        `<li><b>修复：报销金额误计四位年份</b>——<code>extractNumbers</code> 与 <code>reimburseOf</code> 提取报销数字时把备注里的四位年份（如 2026）当金额累加，报销统计虚高。现排除 1900–2099 四位年份。</li>`,
+        `<li><b>修复：对账单 PDF 汇总与明细不平</b>——导出 PDF 时汇总框用 <code>st.count</code> / 旧字段，与明细三本账（家长流水 = 到手 + 课酬 + 报销）口径不一致、合计 ≠ 各行之和。现改用明细 reduce 的 <code>lessonBreakdown</code> 口径，汇总框与明细彻底一致。</li>`,
+        `<li><b>修复：离线版 HTML 内联数据 XSS（安全）</b>——<code>makeOffline</code> 把用户数据内联进离线 HTML 时未转义 <code>&lt;/script&gt;</code>，异常 / 恶意数据可提前闭合脚本注入代码。现对内联 JSON 转义 <code>&lt;</code> / <code>&gt;</code>。</li>`,
+        `<li><b>修复：自定义图标注入（安全）</b>——<code>Brand.logoHTML</code> 此前对任意 URL 直接拼 <code>&lt;img src&gt;</code>，非 data:image 链接（如 javascript:）可注入。<code>仅信任</code> data:image/ 前缀，其余忽略。</li>`,
+        `<li><b>修复：离线构建缺 &lt;/head&gt; 崩溃</b>——<code>makeOffline</code> 找不到 <code>&lt;/head&gt;</code> 时构建脚本抛错。现退路到 <code>&lt;/body&gt;</code>，再退路到末尾追加。</li>`,
+        `<li><b>修复：PWA 安装按钮同步抛错未捕获</b>——<code>beforeinstallprompt</code> 的 <code>prompt()</code> 同步抛错未 try/catch，导致安装按钮逻辑崩。<code>promptInstall</code> 现包裹 try/catch，异常时安全降级。</li>`,
+        `<li><b>已知边界（本轮显式不修，避免破坏同步 / 导入核心模型）</b>：① <b>跨标签页并发覆盖</b>（B5）——同步以「整库快照」为单位、单写者模型，多标签并发本就是已知限制，改为行级合并会破坏同步正确性，不修；② <b>导入数据三本账口径</b>（B8）——导入按「家长流水」单列建模、不强制拆分到手/课酬，是有意的导入轻量模型，不破坏性改；③ <b>逐行舍入差 0.01</b>（B9）——经典的逐行四舍五入累积误差，属口径问题，改会破坏用户已对账数据，不修。三处版本常量同步 bump 至 v1.9.11。</li>`] },
+    { ver: `v1.9.10`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<li><b>修复：非重复待办在日历 / 首页勾选不生效（深度审计补漏）</b>——v1.9.9 的待办勾选守卫修复只覆盖了「待办列表」一处入口，遗漏了日历日视图 / 周视图（calendar.js:268）与首页两处小组件（dashboard.js:373、511）三处等价入口：非重复待办在那里勾选时仍走「按日期单独勾选」分支，只写 completedDates、不动 status，导致对勾不显示、未读数不减。第三轮按「入口等价性」逐一对齐，给三处统一加 <code>rule.type !== 'never'</code> 守卫。新增 <code>toggleall</code> 全入口覆盖测试（待办列表 / 日历日 / 周 / 月结构 / 首页），与 10 套基线合计 11 套 harness 零回归。三处版本常量同步 bump 至 v1.9.10。</li>`] },
+    { ver: `v1.9.9`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<li><b>「最彻底 · 最深度」全身体检 2 轮 + 实测核验后发布正式版</b>：在 v1.9.x 三轮体检基础上，按你的要求再做<b>两轮独立深度审计</b>（第一轮按数据/财务/导入导出/模块/修复分维度查；第二轮从零重建状态、跨视图端到端串联数据流复检），每发现一个问题都<b>真实运行代码核验</b>后才声明修复，绝不口头糊弄。新增 4 套无头测试（deepaudit / corrupt / edgecases / datacrunch），与原有 6 套基线合计 <b>10 套 harness、115 条断言全绿</b>、冒烟 0 运行时错误。</li>`,
+        `<li><b>修复：待办勾选级联真 bug</b>——非重复待办在「自己的到期日」点击完成时，toggle 守卫误把 never 任务当重复任务走「按日期单独勾选」分支（只写 completedDates、不动 status），导致<b>对勾不显示、未读数不减、列表仍显示未完成</b>。现守卫仅对真正重复的任务（type!=='never'）走按日期分支，非重复任务正确置 status=done。</li>`,
+        `<li><b>修复：首页「今日课程」崩溃</b>——任一课时缺失 start 字段时 <code>U.t2m(undefined)</code> 抛错、整页仪表盘挂掉。新增 <code>U.safeT2m</code>（缺失/非法时间回退 8:00），首页改用它，与课表已有防御一致。</li>`,
+        `<li><b>修复：财务合计抽成率双百分号</b>——合计行单元格渲染成 <code>18%%</code>。去掉多余 <code>%</code>。</li>`,
+        `<li><b>修复：财务合计与明细口径不一致</b>——<code>statIn</code> 此前不实现「含导入数据」过滤，导致默认（不勾选）视图下明细行按文案应排除导入课、但合计行仍包含导入课（<b>合计 ≠ 各行之和</b>）。<code>statIn</code> 新增 <code>opt.includeImported</code>（默认 true 向后兼容，仪表盘/日历不受影响），财务页全部统计透传该开关，明细行 / 合计 / CSV / 月份走势口径彻底一致。</li>`,
+        `<li><b>修复：抽成率口径（v1.9.x 遗留）</b>——合计行抽成率此前分子用「实际到手 = 抽成 − 报销」，比「我的抽成」列低、互相矛盾。现统一为 <code>我的抽成 ÷ 家长流水</code>，与明细表一致。三处版本常量同步 bump 至 v1.9.9。</li>`] },
+    { ver: `v1.9.8`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<li><b>补修全身体检遗漏项 #17</b>：导入学员时若记录仅含「抽成」、未提供「课时费」，此前会误把课时费填成抽成金额，导致 takeHome（到手 = 课时费 − 抽成）被算成 0、财务统计失真。现改为：有课时费才填课时费，否则课时费留 0 仅记录抽成。三处版本常量同步 bump，回归 43 条全绿。</li>`] },
+    { ver: `v1.9.7`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<li><b>全身体检（第二批）：逐文件 + 跨模块 + 双盲审计，共修复 17 项</b>：① <b>重复任务跨视图一致</b>——周视图勾选重复实例改用被点单元格真实日期（此前误记成周焦点，导致跨视图错位）；重复完成态在日历/待办/首页统一读 completedDates 并显示绿色勾选。② <b>遗留列表不再误收重复任务</b>——重复任务只在其发生日出现，不再永久塞进「遗留」。③ <b>「拉到今天」不再偏移重复锚点</b>——仅移动非重复过期任务。④ <b>本地数据损坏不再静默覆盖</b>——损坏时保留原串并尝试从内嵌备份恢复，否则明确提示而非用示例数据覆盖真实数据。⑤ <b>ServiceWorker 离线首开崩溃修复</b>——预缓存键剥离 ?v 查询串，装到主屏离线打开不再把 index.html 当 JS 返回。⑥ <b>删老师级联解绑课时</b>，避免财务按老师分组出现幽灵项；⑦ 年重复以 2/29 为起点时非闰年规整为 2/28；⑧ 自动同步冲突后停止轮询，避免每 20s 重复弹警告；⑨ 删除单节课加确认；⑩ 首页/小助手写死白色背景改用主题变量（夜览不再白块）；⑪ 补全 favicon；⑫ 保存学员时对 Todo/App 做存在性守护等若干稳健性修复。</li>`,
+        `<li>回归测试扩充至 43 条全绿；全流程 79 条、冒烟 0 运行时错误，三套全绿。</li>`] },
+    { ver: `v1.9.6`, date: `2026-08-04`, held: false, divider: false,
+      items: [`<li><b>全身体检修复（4 项真实问题）</b>：① 修复<b>跨标签页同步未跑数据迁移</b>——同一浏览器多标签时，旧结构数据同步到本页会缺失 repeat / 完成记录等字段，导致重复与完成逻辑错乱；现已复用迁移逻辑，两端数据严格一致。② 修复<b>年视图热力图不展开重复</b>——此前年度统计把重复日程/提醒按原始日期计数，漏掉重复实例，现改为按重复规则逐天展开。③ 修复<b>首页「遗留未完成」误判</b>——重复任务（如每周一回访）因基准日早于今天被全部算作遗留，导致首页拥塞；现仅把「今天不再发生、且未完成」的旧任务判为遗留。④ <b>重复任务勾选视觉一致</b>——当天勾掉的重复待办，勾选框正确显示为已勾选态。</li>`,
+        `<li>回归测试新增 8 条（旧字符串 weekly 兼容、跨标签页迁移字段补齐、overdue 误判修复前后对照），重复引擎专项测试达 34 条全绿；全流程 79 条、冒烟 0 运行时错误，三套全绿。</li>`] },
+    { ver: `v1.9.5`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li><b>提醒事项 / 日程「重复」全面自定义</b>：不再只有固定的「每天/每周/每月」等预设。新增<b>自定义重复</b>——可选择每 N 天 / 周 / 个月 / 年，按星期多选（例如<b>每周一、周四、周五</b>），并设置<b>结束方式</b>：永不 / 直到某天 / 重复 N 次。旧版固定值（如 daily / weekly）自动兼容，无需重新录入。</li>`,
+        `<li><b>重复真正展开</b>：日历的日 / 周 / 月视图、提醒事项列表、工作台首页、小助手都会按重复规则<b>逐日展开</b>显示，不再只记一条看不见。</li>`,
+        `<li><b>单次完成</b>：重复任务可在某一天单独勾选完成（记录到该发生日），<b>不会一次勾掉全部</b>；把日历 / 列表切到其它天仍会正常显示未完成的实例。</li>`,
+        `<li><b>提醒事项对齐 iOS 提醒页</b>：编辑 / 新建页补全<b>「重复」</b>与<b>「标记（旗标）」</b>两项——标记项会<b>置顶高亮</b>，并在列表上显示 🚩 与 🔁 重复说明。</li>`] },
+    { ver: `v1.9.4`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li><b>云同步体验增强（解决「两端是否连到同一空间」困扰）</b>：连接成功后，下方以<b>醒目绿色卡片</b>展示本机的<b>真实空间 ID</b> 与一键「复制此 ID」；并新增<b>空间指纹</b>（取 ID 首尾各 4 位，如 <code>5a9c-191b</code>）。两端连到<b>同一份</b>数据时指纹必然相同，用户只要对比指纹即可确认两端是否同步到同一份，不再靠肉眼比对一长串 ID。</li>`,
+        `<li><b>复制按钮升级为醒目主按钮</b>，并延长成功提示停留时间（2s → 6s），确保「已连接 / 请核对指纹」的关键提示不被快速淹没。</li>`,
+        `<li><b>Toast 支持自定义时长</b>：<code>U.toast(msg, type, dur)</code> 新增可选的 <code>dur</code> 毫秒参数。</li>`,
+        `<li><b>ID 格式复核</b>：用户提供的自动生成 ID <code>5a9c0cabf5a31b0802b6ce20a385191b</code>（32 位十六进制）经验证为合法 GitHub Gist ID，可在新版正则下正确识别、不会新建。</li>`] },
+    { ver: `v1.9.3`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li><b>全站「零错误」体检通过</b>：新建一套真正加载全部 19 个脚本（含两个第三方库）、启动 App、逐一渲染全部 17 个视图（仪表盘 / 提醒事项 / 学员 / 老师 / 课表 / 财务 / 日历 / 话术 / 设置 / 我的 / AI / 帮助 / 关联 / 更新日志等）、并触发各视图主要交互（打开新建弹窗、切换日历日 / 周 / 月 / 年、打开搜索、夜间模式切换等）的无头浏览器冒烟测试，全程捕获 <code>console.error</code> / 未捕获异常 / <code>unhandledrejection</code>。结果：<b>运行时错误总数 = 0</b>，并与原有 79 项全流程断言、7 项云同步 ID 断言一同全部通过。</li>`,
+        `<li><b>一致性微修</b>：<code>Search</code>（全局搜索）补挂到 <code>window</code>（与 <code>CommissionImport</code> / <code>Brand</code> / <code>Sync</code> 等工具模块一致），避免任何通过 <code>window.Search</code> 调用的路径在未来出错。</li>`] },
+    { ver: `v1.9.2`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li><b>云同步「正确 ID 也被新建」彻底修复（核心 bug，正是你反馈的现象）</b>：之前 GitHub 的 ID 校验正则错误地写成「固定 20 位十六进制」，而 GitHub 真实 Gist ID 是 <b>32 位</b>。于是你从一端复制出来的正确 32 位 ID，在另一端被判定为「格式非法」→ 自动清空 → 重新生成新空间，于是三端连不到同一份数据（尽管网络 / Token / ID 本身都没问题）。现已改正为「20~40 位均可」，并新增「粘贴完整链接也能自动识别 ID」的容错（如 <code>https://gist.github.com/用户名/32位ID</code>）。随附回归测试用真实 32 位 ID 覆盖 断网 / 404 / 成功 / 空 / 格式非法 / 完整链接 共 7 项，全部通过：<b>格式合法的 ID 在任何情况下都不会被丢弃新建</b>。</li>`,
+        `<li><b>健壮性</b>：日期解析 <code>U.parse</code> 增加空值 / 非法值守卫，避免任何空日期调用导致整页崩溃（防未来隐患）。</li>`,
+        `<li><b>体验一致性</b>：日历页右下「+」按钮现在走日历自己的「新建（日程 / 提醒事项）」弹窗，与其它页面行为统一；之前日历页 FAB 走的是通用快捷菜单。</li>`] },
+    { ver: `v1.9.1`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li><b>修复「遗留提醒」误把已完成项算进去（核心 bug）</b>：v1.7.9 把提醒事项从「完成 / 未完成」两态升级为「未完成 / 已完成 / 今日无法完成」三态后，主页「遗留未完成」计数、AI 助手「未完成提醒数」、关联中心「可关联列表」、以及「全部拉到今天」动作这 4 处仍沿用旧的两态 <code>.done</code> 布尔字段判断。迁移后的新数据已不含 <code>.done</code> 字段（恒为 undefined），导致「是否完成」永远判定为假——<b>已完成的提醒也会被当成遗留项、被一键拉到今天</b>，且主页遗留计数虚高。现 4 处统一改为按三态 <code>status !== 'done'</code> 判断，并已加自动化回归测试（含已完成 / 未完成 / 今日无法完成三种迁移数据）覆盖。</li>`,
+        `<li><b>文案一致性</b>：主页模块默认标题「今日待办」改为「今日提醒事项」，与全站重命名统一（用户不可见的内部配置项）。</li>`,
+        `<li><b>清理</b>：财务合计行的抽成率调用去掉一处未定义变量兜底；主页模块注释同步更新。</li>`] },
+    { ver: `v1.9.0`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li><b>新增「日程」模块（参考 iOS 日历 / 提醒事项分工）</b>：① 日历现同时承载两类条目——「日程」彩色时间块、<b>无需打勾</b>（如上课、会议、考试）；「提醒事项」保留原有需打勾的勾选框（如回访、待办）。两者在日 / 周 / 月 / 年视图分区展示（「日程 · N」「提醒事项 · N」），互不混淆。② 日程支持：标题、地点、全天开关、起止日期与时间、重复、提醒、颜色分类（考研课程 / 工作 / 个人 / 家庭 / 健康 / 社交 / 其它）、备注；跨天多日日程自动按天聚合显示。③ 日历右上「新建」按钮改为 iOS 风格选择弹窗，先选「日程」或「提醒事项」再进入对应编辑页。</li>`,
+        `<li><b>全站「待办」正式更名为「提醒事项」</b>：导航、首页、日历、设置、学员试课回访提示、搜索、AI 助手、帮助与链接中心等所有出现「待办」之处统一改为「提醒事项」，与新增的「日程」形成清晰分工。</li>`,
+        `<li><b>云同步「粘贴真实空间 ID 被重新生成」彻底修复（核心 bug）</b>：旧逻辑在点击连接时，只要遇到任何网络异常（断网 / Token 错 / GitHub 不可达）就会把用户粘贴的 ID 清空并新建空间，导致三端永远连不到同一处。现拆分为「格式校验」与「连接尝试」两步：凡是格式合法（GitHub 20 位 hex / Gitee 32 位 hex）的 ID，无论网络 / 鉴权失败一律报错并<b>保留原 ID</b>，只有「留空」或「格式非法」才会自动新建；并随附自动化回归测试覆盖 断网 / 404 / 401 / 403 / 成功 / 空 / 格式非法 共 7 种场景，全部通过。</li>`,
+        `<li><b>全流程回归测试清零</b>：重做 jsdom 测试框架，真实加载全部脚本、经 App.go 驱动路由守卫，覆盖启动 / 全部视图渲染 / 提醒事项增删改状态流转 / 学员新建与空学科校验 / 排课与冲突检测 / 财务与抽成表解析 / 日历日程与提醒 / 云同步连接上传下载冲突保护 / 数据导入导出 / reset 共 75 项断言，全绿。</li>`] },
+    { ver: `v1.8.11`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li><b>云同步「后台自动下载」（准实时多端同步）</b>：① 之前同步只有「改动后自动上传」，另一端需手动点「下载同步」才能看到；现在连接后程序会每 20 秒自动检查云端，一旦发现其他端有更新且本机无未上传改动，就静默拉取并刷新当前页面——实现「平板输入、电脑约 20 秒内自动变好」。② 已连设备重新打开页面也会自动开始后台同步。③ 安全兜底：当本机和云端都有各自改动（撞车）时，自动同步会暂停并提示手动「下载同步」处理，绝不偷偷覆盖任一方数据；你正在输入框打字时也会跳过本周期，避免重渲染清空输入。④「自动同步」开关现同时控制上传与自动下载，取消勾选即停止后台轮询。</li>`] },
+    { ver: `v1.8.10`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li><b>云同步引导修复</b>：① 修正设置页误导文案——此前提示「多设备填同一个自定义 ID（如 20260802）即可同步」，但 GitHub 的同步空间 ID 由服务器自动分配、不支持自定义名，导致三端各自新建空间无法同步；现改为「留空自动创建，多端共用请复制一端生成的真实空间 ID」。② 连接成功后醒目显示完整真实空间 ID 并提供「复制此 ID」按钮，已连接设备进入设置页也会显示。③ 在 <code>Sync.ensureGist</code> 增加格式校验：手动填写的 ID 若不符合 GitHub(20位hex)/Gitee(32位hex) 格式，直接当无效自动新建，从根上避免再踩坑。</li>`] },
+    { ver: `v1.8.9`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li><b>全流程体检修复</b>：补做跨模块符号审计时发现并修复一个真 bug——<code>Todo.importTemplates</code> / <code>Todo.editTpl</code> 两个方法此前未挂到 <code>Todo</code> 导出对象，导致 dashboard「模板库」的「导入 / 编辑 / 使用模板」按钮点击即崩溃（渲染不报错，仅点击触发）。已补入导出，跨模块审计清零。</li>`] },
+    { ver: `v1.8.8`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li><b>可视化课表小课块标签优化 + 日历「今天」按钮对齐</b>：① 重叠课块空间不足时自动省略时间/金额/抽成，仅显示课程名字，避免文字被截断；② 电脑/平板端日历头部「今天」按钮统一为 30px 高度并垂直居中，与左右 ‹ › 按钮对齐（手机端样式不变）。</li>`] },
+    { ver: `v1.8.7`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li><b>可视化课表重叠课的配色自定义</b>：① 编辑单节课弹窗里新增「课程颜色 + 透明度」滑块，每节课独立可调（不再依赖全局模板）；② 重叠区域新增第 3 种颜色与透明度（「重叠区颜色 / 重叠区透明度」），与上面那节、下面那节各自独立，3 种颜色全部由你自己选；③ 满宽整列渲染保留，重叠课块不被缩窄；④ 课块补回「上课时间 + 到手抽成」信息，普通课与重叠课透明度分别独立控制。⑤ 日历「今天」按钮移到最右侧（日期与 › 不再被分开）；⑥ 日历周视图标题省略年份（如 08.03 — 08.09），一行完整显示。⑦ 自动云同步默认服务商确认为 GitHub（Gist 加密备份）。</li>`] },
+    { ver: `v1.8.6`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li><b>根治可视化课表「空白」+ 全站稳定性体检</b>：① 修掉 v1.8.5 引入的两个真 bug——safeT2m 函数写成自己调用自己导致栈溢出崩溃、WEEK_MUTED 周视图淡色映射忘记从 U 导出导致每节普通课渲染即崩溃；② 修掉 v1.8.5 更新日志里的反引号导致 extra.js 语法错误、更新日志页打不开；③ 用 Node 把全部 13 个视图逐一真实渲染跑了一遍，确认无异常；④ 全校验跨模块符号引用，确认无「引用未导出」类隐患。</li>`] },
+    { ver: `v1.8.5`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li><b>真正修复可视化课表「空白」</b>：电脑/平板端周视图只显示头部、整个 grid 不渲染，根因是部分课程数据异常（如上课时间 start 字段缺失/格式错误），导致 U.t2m 抛异常、renderWeek 整体失败。已加多层防御：① includeLesson 过滤掉 start 无效的课程；② 新增 safeT2m/safeEndMin 遇到异常时间不再抛错；③ 排序/冲突分组时把 id 强转字符串，避免 undefined.localeCompare 崩溃；④ renderWeek/renderWeekMobile 外层包 try-catch，再出错会在页面显示具体错误信息而不是空白。</li>`] },
+    { ver: `v1.8.4`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li><b>修复可视化课表周视图课块「隐身」</b>：课块背景由 #RRGGBBAA 8 位十六进制透明度改为 rgba() 写法，兼容 iPad / 旧版 Safari 及各类浏览器；同时把周视图课块不透明度从 25% 提升到 32%、重叠区 55%、月视图/手机端课卡 12%，让课程在桌面 / 平板端清晰可见，不再和白色背景融为一体。</li>`] },
+    { ver: `v1.8.3`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li><b>用户反馈 3 项修复</b>：① 手机端课表 / 日历头部——标签独占一行，日期标题与「今天 / 回到今天」按钮严格同一行完整显示，不再截断、不再折行；② 手机端「今日待办」复选框由 22px 缩至 17px 并加左内边距，不再过大、不再贴卡片边缘被裁切；③ 主页 / 财务的柱状走势图补上「暂无数据」兜底（此前无数据时退化为看不见的小桩，桌面 / 平板端看着像空白）。</li>`] },
+    { ver: `v1.8.2`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li><b>手机端布局整改（用户反馈 8 项）</b>：① 主页彻底删除模板库，模板库改放到导航第 3 个「待办」页「今日待办」下方；② 手机端老师名册改为一行 2 个卡片、卡片内部去空白更紧凑；③ 三端日历 / 课表「今天」按钮强制单行完整显示、不截断不换行；④ 手机端「我的」页「导入数据 / 云同步」由上下两块改为左右并排；⑤ 财务顶部「含未上课程」复选框与按钮保持同一行且不超出屏幕；⑥ 财务账单列表去除横向滑动、去除居中布局；⑦ 手机端明细统计卡片中间空白收紧；⑧ 三端周视图重叠课程恢复横条占满整列，重叠区域改用半透明渐变叠加过渡，课程名显示在各自非重叠区域。</li>`] },
+    { ver: `v1.8.1`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li><b>v1.8.0 遗留项补全整改</b>：① 三端日历 / 课表「今天」按钮与日期标题严格同一行；② 手机端月视图课程右下角金额不再与课程重叠（改为正常文档流 + 移动端单格最多 2 条课程）；③ 财务列表无批注的项不再显示「批注：导入抽成」，且去除头像列；④ 三端周视图重叠课程改为并列错开、互不压字；⑤ 手机端周视图按 iOS 风格重做为按天议程清单。</li>`] },
+    { ver: `v1.8.0`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li><b>手机端主页精简美化</b>：2×2 快捷入口缩小、卡片间距收紧，确保 iPhone 14 Pro Max 一屏可见无需滚动；「今日待办」上移到「今日课程」之上，「每日模板库」紧跟待办。</li>`,
+        `<li><b>三端主页统一</b>：删除「近半年抽成走势 / 本月年级贡献 / 高频话术 / 本月财务」四块，主页更聚焦；同时删去模板库下方的小字说明。</li>`,
+        `<li><b>学员状态筛选美化</b>：顶部状态标签简化、不拥挤，「试课中」与计数数字强制同一行不折行。</li>`,
+        `<li><b>周视图 iOS 风格重排</b>：星期与日期上下分层、今日日期用粉色实心圆高亮；两节课重叠时列仍占满，改用「重叠」色块角标标识，不再横向压窄。</li>`,
+        `<li><b>日历「今天」按钮与日期同一行</b>，不再另起一行留空。</li>`,
+        `<li><b>财务改版</b>：「实际到手」列改为「我的收入」；删除「谁带的最多」副标题；「老师课时排行」整体移到「老师名册」板块最上方；删除「学员抽成贡献」板块。</li>`,
+        `<li><b>导入抽成表预览可编辑</b>：预览弹窗的日期 / 学员匹配 / 抽成金额 / 备注均改为可输入框，可手动修正识别错的行再确认导入。</li>`,
+        `<li><b>导入账单清爽化</b>：直接显示「名字 + 实际收入」，去掉「家教 - 抽成（导入）」标题与「抽」图标；无批注时不显示「有批注」。</li>`,
+        `<li><b>删除「安装到桌面」模块</b>（应用图标、外观设置保留）。</li>`,
+        `<li><b>底部「更多」图标</b>由 3×3 点阵改为更简洁的三点样式；年视图不再显示「排课」按钮；编辑模块在 iPhone 上不再超出界面边界。</li>`] },
+    { ver: `v1.7.12`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li>手机端主页：底部「学员 / 老师 / 课表 / 财务」快捷入口由一行 4 个小图标改为 <b>2×2 大图标网格</b>，图标放大至 50px 并加圆角粉色底，新增「快捷入口」标题，主页不再空旷。</li>`] },
+    { ver: `v1.7.11`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li>收入模型重定义：实际到手 = 我的抽成 − 报销支出；报销支出 = 从「批注」里自动提取的数字之和（如批注写「买资料50、交通30」即报销 80）。排课/编辑弹窗不再手填「实际到手」，只保留「批注（报销支出）」。</li>`,
+        `<li>Excel 抽成表导入：单元格数值视为「实际到手收入」，Excel 批注同步导入为课节批注（incomeNote），点开账单即可查看；批注中的数字自动提取为「报销支出」；系统按「到手 + 报销」反推出「我的抽成」，保证三本账自洽并同步到财务统计。</li>`,
+        `<li>主页财务速览：桌面端 KPI 卡片改为「本月我的抽成 / 报销支出 / 实际到手 / 到手趋势（环比）」；手机端主页新增「本月财务」三列卡片，抽成、报销、到手一目了然。</li>`,
+        `<li>一键备份与丢失预警：数据管理页新增显眼的「立即备份」按钮；启动时若超过 7 天未备份会自动尝试静默备份，超过 7 天 toast 提醒、超过 14 天弹窗强提醒，降低 iPad 清缓存导致数据丢失的风险。</li>`,
+        `<li>财务统计 · 新增「导出 PDF」按钮，可生成带汇总 + 明细的月度 / 年度对账单（调用浏览器打印 → 另存为 PDF）。</li>`,
+        `<li>平板端财务页可操作化：财务卡片增加横向滚动避免表格被压扁；「含导入数据」「含未上课程」复选框加大点击区域；账单「编辑」按钮触控区域放大，iPad 上可正常编辑账单。</li>`,
+        `<li>Service Worker：新增 network-first 策略的 SW，优先拉取最新资源、失败则回退缓存，解决 PWA 主屏幕图标缓存旧版问题，同时支持离线打开。</li>`,
+        `<li>手机端主页：底部「学员 / 老师 / 课表 / 财务」快捷入口图标进一步放大，解决页面偏空。</li>`,
+        `<li>全站口径统一：财务概览、明细统计、老师课时排行、学员档案、课表年视图，均改为突出「我的抽成 / 报销支出 / 实际到手」，弱化家长流水与老师课酬；原「其余支出」统一更名为「报销支出」。</li>`,
+        `<li>老师课时排行：列改为「课酬（=Σ(课时费−我的抽成)）」与「实际到手」，不再显示含义含糊的「其余支出」。</li>`,
+        `<li>账单明细：新增「含导入数据」开关；勾选后导入抽成纳入账单，且明细统计不再显示抽成率。点账单任意一行可展开查看「批注」（钱花哪了）。</li>`,
+        `<li>修复 bug：财务账单「编辑」按钮此前因全局变量判定方式（window.Schedule 在浏览器顶层 const 下并不挂到 window）而点击无反应，已修复，现可正常打开编辑弹窗。</li>`] },
+    { ver: `v1.7.10`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li>缓存破坏：给所有 JS / CSS 资源加 <code>?v</code> 版本号，强制 iPad / 手机端主屏幕 PWA 与浏览器放弃旧缓存，避免设备间版本不一致、加载到旧版界面。</li>`] },
+    { ver: `v1.7.9`, date: `2026-08-04`, held: false, divider: true,
+      items: [`<li>待办事项升级为三态：「未完成 / 已完成 / 今日无法完成」。旧版「完成/未完成」数据自动迁移；列表点击状态图标可循环切换，编辑弹窗也可直接选择。</li>`,
+        `<li>课节「批注」文案简化：排课/编辑弹窗的标签从「批注（其余钱去哪了）」改为仅「批注」，placeholder 示例保留。</li>`,
+        `<li>手机端可视化课表 iOS 风格重排：工具栏分两行不拥挤，周视图日期头放大、今日为圆点高亮，重叠课程自动纵向堆叠不再挤成一坨；月/年视图格子更圆更克制。</li>`,
+        `<li>手机端待办页简化：隐藏顶部常驻输入区，点右下角 + 弹出极简新建弹窗（事项 + 可选时间），页面更清爽。</li>`,
+        `<li>手机端主页：底部「学员 / 老师 / 课表 / 财务」快捷入口图标放大，解决页面偏空。</li>`,
+        `<li>手机端我的页：移除「老师名册」入口，剩余 8 个入口正好排成两行 4 列。</li>`] },
+    { ver: `v1.7.8`, date: `2026-08-03`, held: false, divider: true,
+      items: [`<li>课节新增「实际到手收入」独立字段：排课/编辑弹窗都可填写，未填写时自动回退到「我的抽成」（兼容旧数据）。后续所有收入统计、财务、课表、学员档案、主页全部以「实际到手」为口径。</li>`,
+        `<li>课节新增「批注」：可填写老师课酬、资料费等说明；可视化课表周视图内联显示、月视图悬浮提示；财务日账单每一条同步显示。</li>`,
+        `<li>财务统计 · 日账单标题随「周/月/年/自定义」动态切换，不再固定显示「日账单」；每笔记录右侧新增「编辑」按钮，可直接修改该课节的实际到手与批注。</li>`,
+        `<li>统一口径复盘：store.statIn / finance.effectiveRate / finance.group / schedule 各视图 / dashboard / students.js 全部改为从 DB.lessonBreakdown 读取 takeHome，避免 67/70 这类不一致。</li>`] },
+    { ver: `v1.7.7`, date: `2026-08-03`, held: false, divider: true,
+      items: [`<li>可视化课表 · 每节课新增「实际到手收入（抽成）」与「批注：其余＝老师课酬」，周视图内联显示、月视图悬浮提示，导入抽成卡片也标注实际到手。</li>`,
+        `<li>财务统计 · 日账单每一条同步显示「实际到手收入」与「批注（其余＝老师课酬）」，与课表两端一致。</li>`,
+        `<li>排课 · 默认开始时间改为按该学员上一次上课的开始时间自动带出（无历史则回落 19:00），切换学员即时更新。</li>`,
+        `<li>更新日志 · 修正版本顺序（1.7.3 置于 1.7.2 之上）与最早版本日期标注。</li>`] },
+    { ver: `v1.7.6`, date: `2026-08-03`, held: false, divider: true,
+      items: [`<li>财务统计 · 抽成率改为按「真实课时」且自 8 月 1 日起计算，导入的抽成表数据不再参与抽成率（仍计入收入流水与按学员/年级统计）。</li>`,
+        `<li>可视化课表 · 导入的抽成表记录现在会同步显示在课表年/月/周视图中（默认显示），并提供工具栏复选框「显示导入抽成」随时开关；导入记录不写具体时间，以灰色卡片/条目展示。</li>`,
+        `<li>财务统计 · 新增「日账单」模块（默认显示在底部）：按日期倒序列出每天的收入明细，提供「周账单 / 月账单 / 年账单 / 自定义」切换，参考记账 App 的账单样式，收入以绿色显示。</li>`] },
+    { ver: `v1.7.5`, date: `2026-08-03`, held: false, divider: true,
+      items: [`<li>手机端专项美化（不影响电脑/平板）：主页改为<b>一屏精简仪表</b>，只保留今日问候、3 个关键数字、今日课程/待办各前 3 条和 4 个快捷入口，删减走势/年级/话术/模板等纯展示模块。</li>`,
+        `<li>手机端待办页：移除「全部/紧急重要/重要不紧急…」筛选芯片和右侧的「四象限说明」/「每日模板库」，标题与日期计数保持单行，列表更紧凑。</li>`,
+        `<li>手机端我的页：云同步卡片移到页面最底部；模块入口改为 4 列紧凑网格，隐藏描述文字，8 个入口一屏可见。</li>`,
+        `<li>手机端日历：月视图改为<b>彩色圆点</b>表示有课（参考 iOS 日历，不显示完整文字），周视图改为纵向日程列表，去掉 7 列拥挤排版；整体更紧凑、一屏看完。</li>`] },
+    { ver: `v1.7.4`, date: `2026-08-03`, held: false, divider: true,
+      items: [`<li>财务统计 · 新增「导入抽成表」：选 .xlsx 后，先弹出<b>预览</b>（日期 / 学员 / 匹配或新建 / 抽成 / 备注），确认后才写入。表头自动取纯名字（忽略前缀数字与时薪、「X/Y」括号后缀），日期去星期，批注原文搬入备注（自动去 iPad: 前缀、过滤 Excel 系统批注）。</li>`,
+        `<li>财务统计 · 导入的抽成按「每天每家长」生成课时记录（抽成 = 单元格金额，状态已完成），并自动按姓名归入现有学员、缺失则新建；抽成计入财务月度走势与按学员统计，但为不打扰课表，这些记录不在日历周视图/月历中渲染，也不计入老师「累计课时」。</li>`] },
+    { ver: `v1.7.3`, date: `2026-08-03`, held: false, divider: true,
+      items: [`<li>老师名册 · 修复「累计课时」显示为 0 的问题：课节缺失老师时，加载/导入时自动按所属学员当前老师补上 teacherId（历史排课、Excel 导入的课也可能没带老师），老师名册与财务「按老师课时排行」现在都能正确统计已完成课时。</li>`] },
+    { ver: `v1.7.2`, date: `2026-08-03`, held: false, divider: true,
+      items: [`<li>可视化课表 · 课程卡片标题简化为只显示<b>孩子姓名</b>，不再显示年级 + 学科前缀，解决名字被截断、显示不全的问题。</li>`,
+        `<li>可视化课表 · 课程卡片颜色/学科信息改为跟随学员档案中的最新课程设置同步，避免档案改了「新概念」后课表仍显示旧学科。</li>`,
+        `<li>可视化课表 · 取消时间重叠的红色圆点标注（保留自动并排和编辑时的文字提示，仅去掉红点）。</li>`,
+        `<li>待办 · 编辑任务弹窗新增「标记为完成 / 标记为未完成」按钮，误勾后可一键恢复未完成状态。</li>`] },
+    { ver: `v1.7.1`, date: `2026-08-03`, held: false, divider: true,
+      items: [`<li>财务统计 · 历史收入改为「按月总额」填写：不再需要按学员逐个拆分——已经不在你这上课的学员不用再管，直接在「历史收入」弹窗里填 <b>每个月的总抽成</b> 即可，每个月一行，月度走势图照样各自画成一根柱子。</li>`,
+        `<li>财务统计 · 历史收入弹窗新增「删除月份」权限：每行末尾的 🗑 可删除不想要的月份；并用「月份选择器 + 添加月份」替代原来的「+ 更早月份」按钮，避免误加重复月份（修复之前编辑时多冒出一个月的问题）。</li>`,
+        `<li>财务统计 · 明细表与 CSV 导出不再按学员拆分「历史收入」列（因历史收入已改为全局按月总额、与当前课程区间无关），历史收入总额仍在「区间总览」卡片与月度走势中体现。</li>`] },
+    { ver: `v1.6.0`, date: `2026-08-03`, held: false, divider: true,
+      items: [`<li>学员档案：编辑档案时移除「家长称呼」字段，仅保留「学生姓名」并作为档案主名称（更简洁，契合只用学生姓名的习惯）。</li>`,
+        `<li>学员档案：新增「手动排序」——每位学员卡片可 ↑/↓ 移动顺序（桌面端支持拖拽），并可一键「按频率重排」恢复自动序，顺序自动保存。</li>`,
+        `<li>财务统计：新增「历史收入（按月）」编辑（财务页「历史收入」按钮）——按 <b>月份 × 学员</b> 表格填写开始用本工作台之前的每月抽成（元），每个月单独一列；月度走势图会把 8 月前的每个月各自画成一根柱子，总抽成与明细表 / CSV 导出均含「历史收入」列（非累计 lump sum）。</li>`,
+        `<li>学员档案：新增「从 Excel / CSV 导入课时」——粘贴或选择 CSV（列含 上课时间 / 孩子姓名 / 每次抽成，课时费 / 年级 / 学科 / 时长 可选），自动识别列、按姓名归入已有学员、自动新建缺失学员、跳过完全重复的课程。</li>`,
+        `<li>重复校验：新建学员时若同名（忽略大小写 / 空格）已存在会提示确认；导入课时时按姓名匹配已有学员而非重复建，并跳过同一人同日期同抽成的重复课程。</li>`] },
+    { ver: `v1.5.0`, date: `2026-08-03`, held: false, divider: true,
+      items: [`<li>数据管理：移除「档案编码格式」自定义模块与「中间人三本账说明」模块（编码恢复为系统默认格式，三本账逻辑保持不变）。</li>`,
+        `<li>数据管理：移除「应用锁」与「分享链接」功能，相关数据改为仅通过「云同步」加密传输，登录不再需要密码。</li>`,
+        `<li>云同步：明确「同步空间 ID」格式——留空自动创建，手动填写需为纯数字或数字 + 连字符（如 20260802 或 sakura-2026），手机 / 平板 / 电脑填同一个即可同步同一份数据。</li>`,
+        `<li>学员档案：新增「上课频率」字段（每周 1 次 ~ 每天 / 不固定），学员列表按频率自动排序，高频学员排前面，便于优先跟进。</li>`,
+        `<li>手机端：主页支持模块删除权限（编辑模式下可隐藏不需要的模块）。</li>`,
+        `<li>手机端：待办页「今日待办」模块精简排版，去掉拥挤内容、更清爽。</li>`,
+        `<li>手机端：我的页图标换为小人图标，并新增「导入数据」功能（选电脑端导出的 JSON 备份即可导入）。</li>`,
+        `<li>三端统一：删除四象限说明底部「试课学员」一行小字提示。</li>`] },
+    { ver: `v1.4.0`, date: `2026-08-03`, held: false, divider: true,
+      items: [`<li>学员档案：固定字段（家长称呼、学生姓名等）可直接编辑 / 修改 / 删除；「学科与课时」的年级、学科改为可自填（预设项 + 自定义输入）。</li>`,
+        `<li>学员档案：授课老师可自定义填写，保存后自动归入「老师名册」，并按姓名去重——同名老师只建一条，可对应多个学生。</li>`,
+        `<li>学员档案：新增「自定义信息」字段，可自由添加、改名、删除（如家长微信、试课备注等），并在档案卡上展示。</li>`,
+        `<li>待办：新增事项可设置具体时间（例如晚上 7 点）；日历中显示时间，没填时间则忽略，填了按时间先后排序。</li>`,
+        `<li>离线版：修复「生成离线版」无论含不含数据都提示「打包失败」的问题——改为不依赖网络请求，稳定生成单文件离线网页。</li>`,
+        `<li>主题：整体更柔和可爱（糖果色柔光背景、更圆润的卡片、渐变标题），PC / 平板布局不变，手机端保持简洁。</li>`,
+        `<li>手机端：底部固定 4 个入口（主页 / 日历 / 待办 / 我的），学员档案等入口收进「我的」；手机端不提供导入 / 导出，统一用「云同步」传输数据，并完善了同步状态提示。</li>`,
+        `<li>所有页面统一移除标题下的小字副标题行。</li>`] },
+    { ver: `v1.3.0`, date: `2026-08-03`, held: false, divider: true,
+      items: [`<li>档案编码格式可自定义：在「数据管理 → 档案编码格式」里用 [日期][年级学科][家长][抽成][课时费][课时长] 占位、自定分隔符与顺序，支持实时试解析预览。（注：该「自定义模板 + 粘贴式一键拆解录入」能力已在后续版本移除，现学员编码由系统按结构化字段自动生成，详见 v2.0.0 更新日志。）</li>`,
+        `<li>已存档案不受影响——年级/课时费/抽成等结构化字段独立保存，仅新建/编辑时按新格式解析。</li>`] },
+    { ver: `v1.2.0`, date: `2026-08-02`, held: false, divider: true,
+      items: [`<li>财务统计：板块支持拖动排序 / 隐藏 / 改名（编辑模块），并支持「恢复默认布局」。</li>`,
+        `<li>新增「自定义统计块」：可自主添加 区间总览 / 按老师 / 按年级 / 按学员 / 按月走势 等图表块，随时改名、隐藏或删除。</li>`,
+        `<li>财务页新增「导出图片（PNG）」与「导出 CSV」，方便留存与对账（CSV 含合计，适配 Excel）。</li>`,
+        `<li>安全加固：云同步采用端到端加密（AES-GCM），数据只存你自己的私密 Gist，明文绝不出本机；Token 仅存本机浏览器。</li>`,
+        `<li>三端统一：手机 / 平板 / 电脑共用同一 GitHub Token + 同步空间 ID 即可自动同步数据，并在任意 WiFi / 手机流量下通过公网地址打开。</li>`] },
+    { ver: `v1.1.0`, date: `2026-08-02`, held: false, divider: true,
+      items: [`<li>焕新命名为「逸云阁」，仪表盘更名为「主页」。</li>`,
+        `<li>主页新增可编辑/可删除的「每日模板库」模块。</li>`,
+        `<li>新增 iOS 风格个人日历（日/周/月/年），事项挂在日期下，可勾选完成。</li>`,
+        `<li>老师名册拆为独立模块，放在「学员档案」下方；设置精简为「数据管理」。</li>`,
+        `<li>可视化课表支持 年/月/周 三种视图自由切换；财务统计恢复中间人三本账展示。</li>`,
+        `<li>全面适配手机端：底部 5 等分导航、单列重排、表格转列表、触控≥44px、无横向滚动。</li>`,
+        `<li>「我的」只保留搜索、AI 助手、帮助、更新日志四个工具入口。</li>`] },
+    { ver: `v1.0.0`, date: `2026-08-02`, held: false, divider: false,
+      items: [`<li>初始版本：待办（模板/四象限/归档）、学员档案（标准编码解析）、可视化课表（周/月/年）、财务三本账、常用话术库、设置与备份。</li>`] }
+  ];
+
   function render() {
     const root = U.$('#view');
     if (!root || App.route !== 'changelog') return;
-    root.innerHTML = `
-    <div class="card">
-      <div class="card-h"><h3>更新日志</h3></div>
-
-      <div class="log-ver">v2.0.0</div><div class="log-date">2026-08-05</div>
-      <ul class="log-list">
-        <li><b>「最彻底 · 最深度」全身体检 2 轮 + 实测核验后发布正式版</b>：在 v1.9.x 三轮体检基础上，按你的要求再做<b>两轮独立深度审计</b>（第一轮按数据/财务/导入导出/模块/修复分维度查；第二轮从零重建状态、跨视图端到端串联数据流复检），每发现一个问题都<b>真实运行代码核验</b>后才声明修复，绝不口头糊弄。新增 4 套无头测试（deepaudit / corrupt / edgecases / datacrunch），与原有 6 套基线合计 <b>10 套 harness、115 条断言全绿</b>、冒烟 0 运行时错误。</li>
-        <li><b>修复：待办勾选级联真 bug</b>——非重复待办在「自己的到期日」点击完成时，toggle 守卫误把 never 任务当重复任务走「按日期单独勾选」分支（只写 completedDates、不动 status），导致<b>对勾不显示、未读数不减、列表仍显示未完成</b>。现守卫仅对真正重复的任务（type!=='never'）走按日期分支，非重复任务正确置 status=done。</li>
-        <li><b>修复：首页「今日课程」崩溃</b>——任一课时缺失 start 字段时 <code>U.t2m(undefined)</code> 抛错、整页仪表盘挂掉。新增 <code>U.safeT2m</code>（缺失/非法时间回退 8:00），首页改用它，与课表已有防御一致。</li>
-        <li><b>修复：财务合计抽成率双百分号</b>——合计行单元格渲染成 <code>18%%</code>。去掉多余 <code>%</code>。</li>
-        <li><b>修复：财务合计与明细口径不一致</b>——<code>statIn</code> 此前不实现「含导入数据」过滤，导致默认（不勾选）视图下明细行按文案应排除导入课、但合计行仍包含导入课（<b>合计 ≠ 各行之和</b>）。<code>statIn</code> 新增 <code>opt.includeImported</code>（默认 true 向后兼容，仪表盘/日历不受影响），财务页全部统计透传该开关，明细行 / 合计 / CSV / 月份走势口径彻底一致。</li>
-        <li><b>修复：抽成率口径（v1.9.x 遗留）</b>——合计行抽成率此前分子用「实际到手 = 抽成 − 报销」，比「我的抽成」列低、互相矛盾。现统一为 <code>我的抽成 ÷ 家长流水</code>，与明细表一致。三处版本常量同步 bump 至 v2.0.0。</li>
-      </ul>
-
-      <div class="log-ver">v1.9.8</div><div class="log-date">2026-08-05</div>
-      <ul class="log-list">
-        <li><b>补修全身体检遗漏项 #17</b>：导入学员时若记录仅含「抽成」、未提供「课时费」，此前会误把课时费填成抽成金额，导致 takeHome（到手 = 课时费 − 抽成）被算成 0、财务统计失真。现改为：有课时费才填课时费，否则课时费留 0 仅记录抽成。三处版本常量同步 bump，回归 43 条全绿。</li>
-      </ul>
-
-      <div class="log-ver">v1.9.7</div><div class="log-date">2026-08-05</div>
-      <ul class="log-list">
-        <li><b>全身体检（第二批）：逐文件 + 跨模块 + 双盲审计，共修复 17 项</b>：① <b>重复任务跨视图一致</b>——周视图勾选重复实例改用被点单元格真实日期（此前误记成周焦点，导致跨视图错位）；重复完成态在日历/待办/首页统一读 completedDates 并显示绿色勾选。② <b>遗留列表不再误收重复任务</b>——重复任务只在其发生日出现，不再永久塞进「遗留」。③ <b>「拉到今天」不再偏移重复锚点</b>——仅移动非重复过期任务。④ <b>本地数据损坏不再静默覆盖</b>——损坏时保留原串并尝试从内嵌备份恢复，否则明确提示而非用示例数据覆盖真实数据。⑤ <b>ServiceWorker 离线首开崩溃修复</b>——预缓存键剥离 ?v 查询串，装到主屏离线打开不再把 index.html 当 JS 返回。⑥ <b>删老师级联解绑课时</b>，避免财务按老师分组出现幽灵项；⑦ 年重复以 2/29 为起点时非闰年规整为 2/28；⑧ 自动同步冲突后停止轮询，避免每 20s 重复弹警告；⑨ 删除单节课加确认；⑩ 首页/小助手写死白色背景改用主题变量（夜览不再白块）；⑪ 补全 favicon；⑫ 保存学员时对 Todo/App 做存在性守护等若干稳健性修复。</li>
-        <li>回归测试扩充至 43 条全绿；全流程 79 条、冒烟 0 运行时错误，三套全绿。</li>
-      </ul>
-
-      <div class="log-ver">v1.9.6</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li><b>全身体检修复（4 项真实问题）</b>：① 修复<b>跨标签页同步未跑数据迁移</b>——同一浏览器多标签时，旧结构数据同步到本页会缺失 repeat / 完成记录等字段，导致重复与完成逻辑错乱；现已复用迁移逻辑，两端数据严格一致。② 修复<b>年视图热力图不展开重复</b>——此前年度统计把重复日程/提醒按原始日期计数，漏掉重复实例，现改为按重复规则逐天展开。③ 修复<b>首页「遗留未完成」误判</b>——重复任务（如每周一回访）因基准日早于今天被全部算作遗留，导致首页拥塞；现仅把「今天不再发生、且未完成」的旧任务判为遗留。④ <b>重复任务勾选视觉一致</b>——当天勾掉的重复待办，勾选框正确显示为已勾选态。</li>
-        <li>回归测试新增 8 条（旧字符串 weekly 兼容、跨标签页迁移字段补齐、overdue 误判修复前后对照），重复引擎专项测试达 34 条全绿；全流程 79 条、冒烟 0 运行时错误，三套全绿。</li>
-      </ul>
-
-      <div class="log-ver">v1.9.5</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li><b>提醒事项 / 日程「重复」全面自定义</b>：不再只有固定的「每天/每周/每月」等预设。新增<b>自定义重复</b>——可选择每 N 天 / 周 / 个月 / 年，按星期多选（例如<b>每周一、周四、周五</b>），并设置<b>结束方式</b>：永不 / 直到某天 / 重复 N 次。旧版固定值（如 daily / weekly）自动兼容，无需重新录入。</li>
-        <li><b>重复真正展开</b>：日历的日 / 周 / 月视图、提醒事项列表、工作台首页、小助手都会按重复规则<b>逐日展开</b>显示，不再只记一条看不见。</li>
-        <li><b>单次完成</b>：重复任务可在某一天单独勾选完成（记录到该发生日），<b>不会一次勾掉全部</b>；把日历 / 列表切到其它天仍会正常显示未完成的实例。</li>
-        <li><b>提醒事项对齐 iOS 提醒页</b>：编辑 / 新建页补全<b>「重复」</b>与<b>「标记（旗标）」</b>两项——标记项会<b>置顶高亮</b>，并在列表上显示 🚩 与 🔁 重复说明。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.9.4</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li><b>云同步体验增强（解决「两端是否连到同一空间」困扰）</b>：连接成功后，下方以<b>醒目绿色卡片</b>展示本机的<b>真实空间 ID</b> 与一键「复制此 ID」；并新增<b>空间指纹</b>（取 ID 首尾各 4 位，如 <code>5a9c-191b</code>）。两端连到<b>同一份</b>数据时指纹必然相同，用户只要对比指纹即可确认两端是否同步到同一份，不再靠肉眼比对一长串 ID。</li>
-        <li><b>复制按钮升级为醒目主按钮</b>，并延长成功提示停留时间（2s → 6s），确保「已连接 / 请核对指纹」的关键提示不被快速淹没。</li>
-        <li><b>Toast 支持自定义时长</b>：<code>U.toast(msg, type, dur)</code> 新增可选的 <code>dur</code> 毫秒参数。</li>
-        <li><b>ID 格式复核</b>：用户提供的自动生成 ID <code>5a9c0cabf5a31b0802b6ce20a385191b</code>（32 位十六进制）经验证为合法 GitHub Gist ID，可在新版正则下正确识别、不会新建。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.9.3</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li><b>全站「零错误」体检通过</b>：新建一套真正加载全部 19 个脚本（含两个第三方库）、启动 App、逐一渲染全部 17 个视图（仪表盘 / 提醒事项 / 学员 / 老师 / 课表 / 财务 / 日历 / 话术 / 设置 / 我的 / AI / 帮助 / 关联 / 更新日志等）、并触发各视图主要交互（打开新建弹窗、切换日历日 / 周 / 月 / 年、打开搜索、夜间模式切换等）的无头浏览器冒烟测试，全程捕获 <code>console.error</code> / 未捕获异常 / <code>unhandledrejection</code>。结果：<b>运行时错误总数 = 0</b>，并与原有 79 项全流程断言、7 项云同步 ID 断言一同全部通过。</li>
-        <li><b>一致性微修</b>：<code>Search</code>（全局搜索）补挂到 <code>window</code>（与 <code>CommissionImport</code> / <code>Brand</code> / <code>Sync</code> 等工具模块一致），避免任何通过 <code>window.Search</code> 调用的路径在未来出错。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.9.2</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li><b>云同步「正确 ID 也被新建」彻底修复（核心 bug，正是你反馈的现象）</b>：之前 GitHub 的 ID 校验正则错误地写成「固定 20 位十六进制」，而 GitHub 真实 Gist ID 是 <b>32 位</b>。于是你从一端复制出来的正确 32 位 ID，在另一端被判定为「格式非法」→ 自动清空 → 重新生成新空间，于是三端连不到同一份数据（尽管网络 / Token / ID 本身都没问题）。现已改正为「20~40 位均可」，并新增「粘贴完整链接也能自动识别 ID」的容错（如 <code>https://gist.github.com/用户名/32位ID</code>）。随附回归测试用真实 32 位 ID 覆盖 断网 / 404 / 成功 / 空 / 格式非法 / 完整链接 共 7 项，全部通过：<b>格式合法的 ID 在任何情况下都不会被丢弃新建</b>。</li>
-        <li><b>健壮性</b>：日期解析 <code>U.parse</code> 增加空值 / 非法值守卫，避免任何空日期调用导致整页崩溃（防未来隐患）。</li>
-        <li><b>体验一致性</b>：日历页右下「+」按钮现在走日历自己的「新建（日程 / 提醒事项）」弹窗，与其它页面行为统一；之前日历页 FAB 走的是通用快捷菜单。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.9.1</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li><b>修复「遗留提醒」误把已完成项算进去（核心 bug）</b>：v1.7.9 把提醒事项从「完成 / 未完成」两态升级为「未完成 / 已完成 / 今日无法完成」三态后，主页「遗留未完成」计数、AI 助手「未完成提醒数」、关联中心「可关联列表」、以及「全部拉到今天」动作这 4 处仍沿用旧的两态 <code>.done</code> 布尔字段判断。迁移后的新数据已不含 <code>.done</code> 字段（恒为 undefined），导致「是否完成」永远判定为假——<b>已完成的提醒也会被当成遗留项、被一键拉到今天</b>，且主页遗留计数虚高。现 4 处统一改为按三态 <code>status !== 'done'</code> 判断，并已加自动化回归测试（含已完成 / 未完成 / 今日无法完成三种迁移数据）覆盖。</li>
-        <li><b>文案一致性</b>：主页模块默认标题「今日待办」改为「今日提醒事项」，与全站重命名统一（用户不可见的内部配置项）。</li>
-        <li><b>清理</b>：财务合计行的抽成率调用去掉一处未定义变量兜底；主页模块注释同步更新。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.9.0</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li><b>新增「日程」模块（参考 iOS 日历 / 提醒事项分工）</b>：① 日历现同时承载两类条目——「日程」彩色时间块、<b>无需打勾</b>（如上课、会议、考试）；「提醒事项」保留原有需打勾的勾选框（如回访、待办）。两者在日 / 周 / 月 / 年视图分区展示（「日程 · N」「提醒事项 · N」），互不混淆。② 日程支持：标题、地点、全天开关、起止日期与时间、重复、提醒、颜色分类（考研课程 / 工作 / 个人 / 家庭 / 健康 / 社交 / 其它）、备注；跨天多日日程自动按天聚合显示。③ 日历右上「新建」按钮改为 iOS 风格选择弹窗，先选「日程」或「提醒事项」再进入对应编辑页。</li>
-        <li><b>全站「待办」正式更名为「提醒事项」</b>：导航、首页、日历、设置、学员试课回访提示、搜索、AI 助手、帮助与链接中心等所有出现「待办」之处统一改为「提醒事项」，与新增的「日程」形成清晰分工。</li>
-        <li><b>云同步「粘贴真实空间 ID 被重新生成」彻底修复（核心 bug）</b>：旧逻辑在点击连接时，只要遇到任何网络异常（断网 / Token 错 / GitHub 不可达）就会把用户粘贴的 ID 清空并新建空间，导致三端永远连不到同一处。现拆分为「格式校验」与「连接尝试」两步：凡是格式合法（GitHub 20 位 hex / Gitee 32 位 hex）的 ID，无论网络 / 鉴权失败一律报错并<b>保留原 ID</b>，只有「留空」或「格式非法」才会自动新建；并随附自动化回归测试覆盖 断网 / 404 / 401 / 403 / 成功 / 空 / 格式非法 共 7 种场景，全部通过。</li>
-        <li><b>全流程回归测试清零</b>：重做 jsdom 测试框架，真实加载全部脚本、经 App.go 驱动路由守卫，覆盖启动 / 全部视图渲染 / 提醒事项增删改状态流转 / 学员新建与空学科校验 / 排课与冲突检测 / 财务与抽成表解析 / 日历日程与提醒 / 云同步连接上传下载冲突保护 / 数据导入导出 / reset 共 75 项断言，全绿。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.8.11</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li><b>云同步「后台自动下载」（准实时多端同步）</b>：① 之前同步只有「改动后自动上传」，另一端需手动点「下载同步」才能看到；现在连接后程序会每 20 秒自动检查云端，一旦发现其他端有更新且本机无未上传改动，就静默拉取并刷新当前页面——实现「平板输入、电脑约 20 秒内自动变好」。② 已连设备重新打开页面也会自动开始后台同步。③ 安全兜底：当本机和云端都有各自改动（撞车）时，自动同步会暂停并提示手动「下载同步」处理，绝不偷偷覆盖任一方数据；你正在输入框打字时也会跳过本周期，避免重渲染清空输入。④「自动同步」开关现同时控制上传与自动下载，取消勾选即停止后台轮询。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.8.10</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li><b>云同步引导修复</b>：① 修正设置页误导文案——此前提示「多设备填同一个自定义 ID（如 20260802）即可同步」，但 GitHub 的同步空间 ID 由服务器自动分配、不支持自定义名，导致三端各自新建空间无法同步；现改为「留空自动创建，多端共用请复制一端生成的真实空间 ID」。② 连接成功后醒目显示完整真实空间 ID 并提供「复制此 ID」按钮，已连接设备进入设置页也会显示。③ 在 <code>Sync.ensureGist</code> 增加格式校验：手动填写的 ID 若不符合 GitHub(20位hex)/Gitee(32位hex) 格式，直接当无效自动新建，从根上避免再踩坑。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.8.9</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li><b>全流程体检修复</b>：补做跨模块符号审计时发现并修复一个真 bug——<code>Todo.importTemplates</code> / <code>Todo.editTpl</code> 两个方法此前未挂到 <code>Todo</code> 导出对象，导致 dashboard「模板库」的「导入 / 编辑 / 使用模板」按钮点击即崩溃（渲染不报错，仅点击触发）。已补入导出，跨模块审计清零。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.8.8</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li><b>可视化课表小课块标签优化 + 日历「今天」按钮对齐</b>：① 重叠课块空间不足时自动省略时间/金额/抽成，仅显示课程名字，避免文字被截断；② 电脑/平板端日历头部「今天」按钮统一为 30px 高度并垂直居中，与左右 ‹ › 按钮对齐（手机端样式不变）。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.8.7</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li><b>可视化课表重叠课的配色自定义</b>：① 编辑单节课弹窗里新增「课程颜色 + 透明度」滑块，每节课独立可调（不再依赖全局模板）；② 重叠区域新增第 3 种颜色与透明度（「重叠区颜色 / 重叠区透明度」），与上面那节、下面那节各自独立，3 种颜色全部由你自己选；③ 满宽整列渲染保留，重叠课块不被缩窄；④ 课块补回「上课时间 + 到手抽成」信息，普通课与重叠课透明度分别独立控制。⑤ 日历「今天」按钮移到最右侧（日期与 › 不再被分开）；⑥ 日历周视图标题省略年份（如 08.03 — 08.09），一行完整显示。⑦ 自动云同步默认服务商确认为 GitHub（Gist 加密备份）。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.8.6</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li><b>根治可视化课表「空白」+ 全站稳定性体检</b>：① 修掉 v1.8.5 引入的两个真 bug——safeT2m 函数写成自己调用自己导致栈溢出崩溃、WEEK_MUTED 周视图淡色映射忘记从 U 导出导致每节普通课渲染即崩溃；② 修掉 v1.8.5 更新日志里的反引号导致 extra.js 语法错误、更新日志页打不开；③ 用 Node 把全部 13 个视图逐一真实渲染跑了一遍，确认无异常；④ 全校验跨模块符号引用，确认无「引用未导出」类隐患。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.8.5</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li><b>真正修复可视化课表「空白」</b>：电脑/平板端周视图只显示头部、整个 grid 不渲染，根因是部分课程数据异常（如上课时间 start 字段缺失/格式错误），导致 U.t2m 抛异常、renderWeek 整体失败。已加多层防御：① includeLesson 过滤掉 start 无效的课程；② 新增 safeT2m/safeEndMin 遇到异常时间不再抛错；③ 排序/冲突分组时把 id 强转字符串，避免 undefined.localeCompare 崩溃；④ renderWeek/renderWeekMobile 外层包 try-catch，再出错会在页面显示具体错误信息而不是空白。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.8.4</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li><b>修复可视化课表周视图课块「隐身」</b>：课块背景由 #RRGGBBAA 8 位十六进制透明度改为 rgba() 写法，兼容 iPad / 旧版 Safari 及各类浏览器；同时把周视图课块不透明度从 25% 提升到 32%、重叠区 55%、月视图/手机端课卡 12%，让课程在桌面 / 平板端清晰可见，不再和白色背景融为一体。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.8.3</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li><b>用户反馈 3 项修复</b>：① 手机端课表 / 日历头部——标签独占一行，日期标题与「今天 / 回到今天」按钮严格同一行完整显示，不再截断、不再折行；② 手机端「今日待办」复选框由 22px 缩至 17px 并加左内边距，不再过大、不再贴卡片边缘被裁切；③ 主页 / 财务的柱状走势图补上「暂无数据」兜底（此前无数据时退化为看不见的小桩，桌面 / 平板端看着像空白）。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.8.2</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li><b>手机端布局整改（用户反馈 8 项）</b>：① 主页彻底删除模板库，模板库改放到导航第 3 个「待办」页「今日待办」下方；② 手机端老师名册改为一行 2 个卡片、卡片内部去空白更紧凑；③ 三端日历 / 课表「今天」按钮强制单行完整显示、不截断不换行；④ 手机端「我的」页「导入数据 / 云同步」由上下两块改为左右并排；⑤ 财务顶部「含未上课程」复选框与按钮保持同一行且不超出屏幕；⑥ 财务账单列表去除横向滑动、去除居中布局；⑦ 手机端明细统计卡片中间空白收紧；⑧ 三端周视图重叠课程恢复横条占满整列，重叠区域改用半透明渐变叠加过渡，课程名显示在各自非重叠区域。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.8.1</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li><b>v1.8.0 遗留项补全整改</b>：① 三端日历 / 课表「今天」按钮与日期标题严格同一行；② 手机端月视图课程右下角金额不再与课程重叠（改为正常文档流 + 移动端单格最多 2 条课程）；③ 财务列表无批注的项不再显示「批注：导入抽成」，且去除头像列；④ 三端周视图重叠课程改为并列错开、互不压字；⑤ 手机端周视图按 iOS 风格重做为按天议程清单。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.8.0</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li><b>手机端主页精简美化</b>：2×2 快捷入口缩小、卡片间距收紧，确保 iPhone 14 Pro Max 一屏可见无需滚动；「今日待办」上移到「今日课程」之上，「每日模板库」紧跟待办。</li>
-        <li><b>三端主页统一</b>：删除「近半年抽成走势 / 本月年级贡献 / 高频话术 / 本月财务」四块，主页更聚焦；同时删去模板库下方的小字说明。</li>
-        <li><b>学员状态筛选美化</b>：顶部状态标签简化、不拥挤，「试课中」与计数数字强制同一行不折行。</li>
-        <li><b>周视图 iOS 风格重排</b>：星期与日期上下分层、今日日期用粉色实心圆高亮；两节课重叠时列仍占满，改用「重叠」色块角标标识，不再横向压窄。</li>
-        <li><b>日历「今天」按钮与日期同一行</b>，不再另起一行留空。</li>
-        <li><b>财务改版</b>：「实际到手」列改为「我的收入」；删除「谁带的最多」副标题；「老师课时排行」整体移到「老师名册」板块最上方；删除「学员抽成贡献」板块。</li>
-        <li><b>导入抽成表预览可编辑</b>：预览弹窗的日期 / 学员匹配 / 抽成金额 / 备注均改为可输入框，可手动修正识别错的行再确认导入。</li>
-        <li><b>导入账单清爽化</b>：直接显示「名字 + 实际收入」，去掉「家教 - 抽成（导入）」标题与「抽」图标；无批注时不显示「有批注」。</li>
-        <li><b>删除「安装到桌面」模块</b>（应用图标、外观设置保留）。</li>
-        <li><b>底部「更多」图标</b>由 3×3 点阵改为更简洁的三点样式；年视图不再显示「排课」按钮；编辑模块在 iPhone 上不再超出界面边界。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.7.12</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li>手机端主页：底部「学员 / 老师 / 课表 / 财务」快捷入口由一行 4 个小图标改为 <b>2×2 大图标网格</b>，图标放大至 50px 并加圆角粉色底，新增「快捷入口」标题，主页不再空旷。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.7.11</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li>收入模型重定义：实际到手 = 我的抽成 − 报销支出；报销支出 = 从「批注」里自动提取的数字之和（如批注写「买资料50、交通30」即报销 80）。排课/编辑弹窗不再手填「实际到手」，只保留「批注（报销支出）」。</li>
-        <li>Excel 抽成表导入：单元格数值视为「实际到手收入」，Excel 批注同步导入为课节批注（incomeNote），点开账单即可查看；批注中的数字自动提取为「报销支出」；系统按「到手 + 报销」反推出「我的抽成」，保证三本账自洽并同步到财务统计。</li>
-        <li>主页财务速览：桌面端 KPI 卡片改为「本月我的抽成 / 报销支出 / 实际到手 / 到手趋势（环比）」；手机端主页新增「本月财务」三列卡片，抽成、报销、到手一目了然。</li>
-        <li>一键备份与丢失预警：数据管理页新增显眼的「立即备份」按钮；启动时若超过 7 天未备份会自动尝试静默备份，超过 7 天 toast 提醒、超过 14 天弹窗强提醒，降低 iPad 清缓存导致数据丢失的风险。</li>
-        <li>财务统计 · 新增「导出 PDF」按钮，可生成带汇总 + 明细的月度 / 年度对账单（调用浏览器打印 → 另存为 PDF）。</li>
-        <li>平板端财务页可操作化：财务卡片增加横向滚动避免表格被压扁；「含导入数据」「含未上课程」复选框加大点击区域；账单「编辑」按钮触控区域放大，iPad 上可正常编辑账单。</li>
-        <li>Service Worker：新增 network-first 策略的 SW，优先拉取最新资源、失败则回退缓存，解决 PWA 主屏幕图标缓存旧版问题，同时支持离线打开。</li>
-        <li>手机端主页：底部「学员 / 老师 / 课表 / 财务」快捷入口图标进一步放大，解决页面偏空。</li>
-        <li>全站口径统一：财务概览、明细统计、老师课时排行、学员档案、课表年视图，均改为突出「我的抽成 / 报销支出 / 实际到手」，弱化家长流水与老师课酬；原「其余支出」统一更名为「报销支出」。</li>
-        <li>老师课时排行：列改为「课酬（=Σ(课时费−我的抽成)）」与「实际到手」，不再显示含义含糊的「其余支出」。</li>
-        <li>账单明细：新增「含导入数据」开关；勾选后导入抽成纳入账单，且明细统计不再显示抽成率。点账单任意一行可展开查看「批注」（钱花哪了）。</li>
-        <li>修复 bug：财务账单「编辑」按钮此前因全局变量判定方式（window.Schedule 在浏览器顶层 const 下并不挂到 window）而点击无反应，已修复，现可正常打开编辑弹窗。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.7.10</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li>缓存破坏：给所有 JS / CSS 资源加 <code>?v</code> 版本号，强制 iPad / 手机端主屏幕 PWA 与浏览器放弃旧缓存，避免设备间版本不一致、加载到旧版界面。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.7.9</div><div class="log-date">2026-08-04</div>
-      <ul class="log-list">
-        <li>待办事项升级为三态：「未完成 / 已完成 / 今日无法完成」。旧版「完成/未完成」数据自动迁移；列表点击状态图标可循环切换，编辑弹窗也可直接选择。</li>
-        <li>课节「批注」文案简化：排课/编辑弹窗的标签从「批注（其余钱去哪了）」改为仅「批注」，placeholder 示例保留。</li>
-        <li>手机端可视化课表 iOS 风格重排：工具栏分两行不拥挤，周视图日期头放大、今日为圆点高亮，重叠课程自动纵向堆叠不再挤成一坨；月/年视图格子更圆更克制。</li>
-        <li>手机端待办页简化：隐藏顶部常驻输入区，点右下角 + 弹出极简新建弹窗（事项 + 可选时间），页面更清爽。</li>
-        <li>手机端主页：底部「学员 / 老师 / 课表 / 财务」快捷入口图标放大，解决页面偏空。</li>
-        <li>手机端我的页：移除「老师名册」入口，剩余 8 个入口正好排成两行 4 列。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.7.8</div><div class="log-date">2026-08-03</div>
-      <ul class="log-list">
-        <li>课节新增「实际到手收入」独立字段：排课/编辑弹窗都可填写，未填写时自动回退到「我的抽成」（兼容旧数据）。后续所有收入统计、财务、课表、学员档案、主页全部以「实际到手」为口径。</li>
-        <li>课节新增「批注」：可填写老师课酬、资料费等说明；可视化课表周视图内联显示、月视图悬浮提示；财务日账单每一条同步显示。</li>
-        <li>财务统计 · 日账单标题随「周/月/年/自定义」动态切换，不再固定显示「日账单」；每笔记录右侧新增「编辑」按钮，可直接修改该课节的实际到手与批注。</li>
-        <li>统一口径复盘：store.statIn / finance.effectiveRate / finance.group / schedule 各视图 / dashboard / students.js 全部改为从 DB.lessonBreakdown 读取 takeHome，避免 67/70 这类不一致。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.7.7</div><div class="log-date">2026-08-03</div>
-      <ul class="log-list">
-        <li>可视化课表 · 每节课新增「实际到手收入（抽成）」与「批注：其余＝老师课酬」，周视图内联显示、月视图悬浮提示，导入抽成卡片也标注实际到手。</li>
-        <li>财务统计 · 日账单每一条同步显示「实际到手收入」与「批注（其余＝老师课酬）」，与课表两端一致。</li>
-        <li>排课 · 默认开始时间改为按该学员上一次上课的开始时间自动带出（无历史则回落 19:00），切换学员即时更新。</li>
-        <li>更新日志 · 修正版本顺序（1.7.3 置于 1.7.2 之上）与最早版本日期标注。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.7.6</div><div class="log-date">2026-08-03</div>
-      <ul class="log-list">
-        <li>财务统计 · 抽成率改为按「真实课时」且自 8 月 1 日起计算，导入的抽成表数据不再参与抽成率（仍计入收入流水与按学员/年级统计）。</li>
-        <li>可视化课表 · 导入的抽成表记录现在会同步显示在课表年/月/周视图中（默认显示），并提供工具栏复选框「显示导入抽成」随时开关；导入记录不写具体时间，以灰色卡片/条目展示。</li>
-        <li>财务统计 · 新增「日账单」模块（默认显示在底部）：按日期倒序列出每天的收入明细，提供「周账单 / 月账单 / 年账单 / 自定义」切换，参考记账 App 的账单样式，收入以绿色显示。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.7.5</div><div class="log-date">2026-08-03</div>
-      <ul class="log-list">
-        <li>手机端专项美化（不影响电脑/平板）：主页改为<b>一屏精简仪表</b>，只保留今日问候、3 个关键数字、今日课程/待办各前 3 条和 4 个快捷入口，删减走势/年级/话术/模板等纯展示模块。</li>
-        <li>手机端待办页：移除「全部/紧急重要/重要不紧急…」筛选芯片和右侧的「四象限说明」/「每日模板库」，标题与日期计数保持单行，列表更紧凑。</li>
-        <li>手机端我的页：云同步卡片移到页面最底部；模块入口改为 4 列紧凑网格，隐藏描述文字，8 个入口一屏可见。</li>
-        <li>手机端日历：月视图改为<b>彩色圆点</b>表示有课（参考 iOS 日历，不显示完整文字），周视图改为纵向日程列表，去掉 7 列拥挤排版；整体更紧凑、一屏看完。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.7.4</div><div class="log-date">2026-08-03</div>
-      <ul class="log-list">
-        <li>财务统计 · 新增「导入抽成表」：选 .xlsx 后，先弹出<b>预览</b>（日期 / 学员 / 匹配或新建 / 抽成 / 备注），确认后才写入。表头自动取纯名字（忽略前缀数字与时薪、「X/Y」括号后缀），日期去星期，批注原文搬入备注（自动去 iPad: 前缀、过滤 Excel 系统批注）。</li>
-        <li>财务统计 · 导入的抽成按「每天每家长」生成课时记录（抽成 = 单元格金额，状态已完成），并自动按姓名归入现有学员、缺失则新建；抽成计入财务月度走势与按学员统计，但为不打扰课表，这些记录不在日历周视图/月历中渲染，也不计入老师「累计课时」。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.7.3</div><div class="log-date">2026-08-03</div>
-      <ul class="log-list">
-        <li>老师名册 · 修复「累计课时」显示为 0 的问题：课节缺失老师时，加载/导入时自动按所属学员当前老师补上 teacherId（历史排课、Excel 导入的课也可能没带老师），老师名册与财务「按老师课时排行」现在都能正确统计已完成课时。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.7.2</div><div class="log-date">2026-08-03</div>
-      <ul class="log-list">
-        <li>可视化课表 · 课程卡片标题简化为只显示<b>孩子姓名</b>，不再显示年级 + 学科前缀，解决名字被截断、显示不全的问题。</li>
-        <li>可视化课表 · 课程卡片颜色/学科信息改为跟随学员档案中的最新课程设置同步，避免档案改了「新概念」后课表仍显示旧学科。</li>
-        <li>可视化课表 · 取消时间重叠的红色圆点标注（保留自动并排和编辑时的文字提示，仅去掉红点）。</li>
-        <li>待办 · 编辑任务弹窗新增「标记为完成 / 标记为未完成」按钮，误勾后可一键恢复未完成状态。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.7.1</div><div class="log-date">2026-08-03</div>
-      <ul class="log-list">
-        <li>财务统计 · 历史收入改为「按月总额」填写：不再需要按学员逐个拆分——已经不在你这上课的学员不用再管，直接在「历史收入」弹窗里填 <b>每个月的总抽成</b> 即可，每个月一行，月度走势图照样各自画成一根柱子。</li>
-        <li>财务统计 · 历史收入弹窗新增「删除月份」权限：每行末尾的 🗑 可删除不想要的月份；并用「月份选择器 + 添加月份」替代原来的「+ 更早月份」按钮，避免误加重复月份（修复之前编辑时多冒出一个月的问题）。</li>
-        <li>财务统计 · 明细表与 CSV 导出不再按学员拆分「历史收入」列（因历史收入已改为全局按月总额、与当前课程区间无关），历史收入总额仍在「区间总览」卡片与月度走势中体现。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.6.0</div><div class="log-date">2026-08-03</div>
-      <ul class="log-list">
-        <li>学员档案：编辑档案时移除「家长称呼」字段，仅保留「学生姓名」并作为档案主名称（更简洁，契合只用学生姓名的习惯）。</li>
-        <li>学员档案：新增「手动排序」——每位学员卡片可 ↑/↓ 移动顺序（桌面端支持拖拽），并可一键「按频率重排」恢复自动序，顺序自动保存。</li>
-        <li>财务统计：新增「历史收入（按月）」编辑（财务页「历史收入」按钮）——按 <b>月份 × 学员</b> 表格填写开始用本工作台之前的每月抽成（元），每个月单独一列；月度走势图会把 8 月前的每个月各自画成一根柱子，总抽成与明细表 / CSV 导出均含「历史收入」列（非累计 lump sum）。</li>
-        <li>学员档案：新增「从 Excel / CSV 导入课时」——粘贴或选择 CSV（列含 上课时间 / 孩子姓名 / 每次抽成，课时费 / 年级 / 学科 / 时长 可选），自动识别列、按姓名归入已有学员、自动新建缺失学员、跳过完全重复的课程。</li>
-        <li>重复校验：新建学员时若同名（忽略大小写 / 空格）已存在会提示确认；导入课时时按姓名匹配已有学员而非重复建，并跳过同一人同日期同抽成的重复课程。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.5.0</div><div class="log-date">2026-08-03</div>
-      <ul class="log-list">
-        <li>数据管理：移除「档案编码格式」自定义模块与「中间人三本账说明」模块（编码恢复为系统默认格式，三本账逻辑保持不变）。</li>
-        <li>数据管理：移除「应用锁」与「分享链接」功能，相关数据改为仅通过「云同步」加密传输，登录不再需要密码。</li>
-        <li>云同步：明确「同步空间 ID」格式——留空自动创建，手动填写需为纯数字或数字 + 连字符（如 20260802 或 sakura-2026），手机 / 平板 / 电脑填同一个即可同步同一份数据。</li>
-        <li>学员档案：新增「上课频率」字段（每周 1 次 ~ 每天 / 不固定），学员列表按频率自动排序，高频学员排前面，便于优先跟进。</li>
-        <li>手机端：主页支持模块删除权限（编辑模式下可隐藏不需要的模块）。</li>
-        <li>手机端：待办页「今日待办」模块精简排版，去掉拥挤内容、更清爽。</li>
-        <li>手机端：我的页图标换为小人图标，并新增「导入数据」功能（选电脑端导出的 JSON 备份即可导入）。</li>
-        <li>三端统一：删除四象限说明底部「试课学员」一行小字提示。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.4.0</div><div class="log-date">2026-08-03</div>
-      <ul class="log-list">
-        <li>学员档案：固定字段（家长称呼、学生姓名等）可直接编辑 / 修改 / 删除；「学科与课时」的年级、学科改为可自填（预设项 + 自定义输入）。</li>
-        <li>学员档案：授课老师可自定义填写，保存后自动归入「老师名册」，并按姓名去重——同名老师只建一条，可对应多个学生。</li>
-        <li>学员档案：新增「自定义信息」字段，可自由添加、改名、删除（如家长微信、试课备注等），并在档案卡上展示。</li>
-        <li>待办：新增事项可设置具体时间（例如晚上 7 点）；日历中显示时间，没填时间则忽略，填了按时间先后排序。</li>
-        <li>离线版：修复「生成离线版」无论含不含数据都提示「打包失败」的问题——改为不依赖网络请求，稳定生成单文件离线网页。</li>
-        <li>主题：整体更柔和可爱（糖果色柔光背景、更圆润的卡片、渐变标题），PC / 平板布局不变，手机端保持简洁。</li>
-        <li>手机端：底部固定 4 个入口（主页 / 日历 / 待办 / 我的），学员档案等入口收进「我的」；手机端不提供导入 / 导出，统一用「云同步」传输数据，并完善了同步状态提示。</li>
-        <li>所有页面统一移除标题下的小字副标题行。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.3.0</div><div class="log-date">2026-08-03</div>
-      <ul class="log-list">
-        <li>档案编码格式可自定义：在「数据管理 → 档案编码格式」里用 [日期][年级学科][家长][抽成][课时费][课时长] 占位、自定分隔符与顺序，支持实时试解析预览。</li>
-        <li>已存档案不受影响——年级/课时费/抽成等结构化字段独立保存，仅新建/编辑时按新格式解析。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.2.0</div><div class="log-date">2026-08-02</div>
-      <ul class="log-list">
-        <li>财务统计：板块支持拖动排序 / 隐藏 / 改名（编辑模块），并支持「恢复默认布局」。</li>
-        <li>新增「自定义统计块」：可自主添加 区间总览 / 按老师 / 按年级 / 按学员 / 按月走势 等图表块，随时改名、隐藏或删除。</li>
-        <li>财务页新增「导出图片（PNG）」与「导出 CSV」，方便留存与对账（CSV 含合计，适配 Excel）。</li>
-        <li>安全加固：云同步采用端到端加密（AES-GCM），数据只存你自己的私密 Gist，明文绝不出本机；Token 仅存本机浏览器。</li>
-        <li>三端统一：手机 / 平板 / 电脑共用同一 GitHub Token + 同步空间 ID 即可自动同步数据，并在任意 WiFi / 手机流量下通过公网地址打开。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.1.0</div><div class="log-date">2026-08-02</div>
-      <ul class="log-list">
-        <li>焕新命名为「逸云阁」，仪表盘更名为「主页」。</li>
-        <li>主页新增可编辑/可删除的「每日模板库」模块。</li>
-        <li>新增 iOS 风格个人日历（日/周/月/年），事项挂在日期下，可勾选完成。</li>
-        <li>老师名册拆为独立模块，放在「学员档案」下方；设置精简为「数据管理」。</li>
-        <li>可视化课表支持 年/月/周 三种视图自由切换；财务统计恢复中间人三本账展示。</li>
-        <li>全面适配手机端：底部 5 等分导航、单列重排、表格转列表、触控≥44px、无横向滚动。</li>
-        <li>「我的」只保留搜索、AI 助手、帮助、更新日志四个工具入口。</li>
-      </ul>
-      <div class="divider"></div>
-      <div class="log-ver">v1.0.0</div><div class="log-date">2026-08-02</div>
-      <ul class="log-list">
-        <li>初始版本：待办（模板/四象限/归档）、学员档案（标准编码解析）、可视化课表（周/月/年）、财务三本账、常用话术库、设置与备份。</li>
-      </ul>
-    </div>`;
+    const block = e => {
+      const held = e.held
+        ? '<div style="margin:2px 0 10px;font-size:12px;color:#b06;font-weight:600">⏳ 待发布 · 待你确认无误后上线</div>'
+        : '';
+      return '<div class="log-head"><span class="log-ver">' + e.ver + '</span><span class="log-date">' + e.date + '</span></div>' + held +
+        '<ul class="log-list">' + e.items.join('') + '</ul>';
+    };
+    const parts = [];
+    CHANGELOG.forEach((e, i) => { if (i > 0 && e.divider) parts.push('<div class="divider"></div>'); parts.push(block(e)); });
+    root.innerHTML = '<div class="card"><div class="card-h"><h3>更新日志</h3></div>' + parts.join('') + '</div>';
   }
+
   Views.changelog = { title: '更新日志', sub: '版本记录', render() { render(); } };
   return { render };
 })();
@@ -8285,8 +8506,13 @@ window.PWA = (function () {
 
   function promptInstall() {
     if (deferred) {
-      deferred.prompt();
-      deferred.userChoice.then(function () { deferred = null; dismiss(); }).catch(function () { deferred = null; });
+      try {
+        deferred.prompt();
+        deferred.userChoice.then(function () { deferred = null; dismiss(); }).catch(function () { deferred = null; });
+      } catch (e) {
+        deferred = null;   // 非用户手势 / 已被其它页消费时同步抛错，捕获避免白屏
+        return false;
+      }
       return true;
     }
     return false;
@@ -8364,7 +8590,10 @@ const App = (() => {
   const Brand = {
     logoHTML() {
       const logo = DB.data.settings.brandLogo;
-      if (logo) return `<img src="${logo}" alt="逸云阁" style="width:100%;height:100%;border-radius:10px;object-fit:cover;display:block">`;
+      // 仅信任本工作台生成的 data:image/ 图标；恶意备份写入的任意 URL/script 一律忽略，防止存储型 XSS
+      if (logo && typeof logo === 'string' && logo.startsWith('data:image/')) {
+        return `<img src="${U.esc(logo)}" alt="逸云阁" style="width:100%;height:100%;border-radius:10px;object-fit:cover;display:block">`;
+      }
       return `<svg viewBox="0 0 40 40"><g fill="currentColor">
         <ellipse cx="20" cy="9" rx="5" ry="7.5"/><ellipse cx="30.4" cy="16.6" rx="5" ry="7.5" transform="rotate(72 30.4 16.6)"/>
         <ellipse cx="26.5" cy="28.8" rx="5" ry="7.5" transform="rotate(144 26.5 28.8)"/><ellipse cx="13.5" cy="28.8" rx="5" ry="7.5" transform="rotate(216 13.5 28.8)"/>
@@ -8381,7 +8610,7 @@ const App = (() => {
   function go(r) {
     if (!Views[r]) r = 'dashboard';
     route = r;
-    DB.data.settings.route = r; DB.save();
+    DB.data.settings.route = r; DB.save({ silent: true });   // 仅记录路由，不触发云同步上传（否则每次切页都被误标「有改动」而覆盖云端）
     U.$$('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.route === r));
     U.$$('.bn-item').forEach(n => n.classList.toggle('active', n.dataset.route === r));
     U.$('#pageTitle').textContent = Views[r].title;
@@ -8497,7 +8726,7 @@ const App = (() => {
 
   function backupGuard() {
     const last = DB.data.settings.lastBackupAt || 0;
-    const days = (Date.now() - last) / 86400000;
+    const days = (Date.now() - last) / U.MS_PER_DAY;
     // 每周自动静默备份一次（浏览器可能拦截自动下载，失败不打扰）
     if (days >= 7) {
       try {

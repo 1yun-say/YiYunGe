@@ -228,6 +228,8 @@ const DB = (() => {
       teachers: [], students: [], lessons: [], todos: [], events: [],
       deleted: blankDeleted(),       // 墓碑：各集合已删除记录的 id→删除时间戳（跨端删除同步用）
       histIncome: {},                // 历史收入：按月总额 { 'YYYY-MM': 金额 }
+      histIncomeMt: {},              // 历史收入按月「最后写入时间」(LWW 合并用，避免改小的值被云端旧大值顶掉)
+      histIncomeDel: {},             // 历史收入按月「删除墓碑」(删除也能跨端传播)
       templates: defaultTemplates(), phrases: defaultPhrases(),
       meta: { lastLessonEdit: null, lastStudentEdit: null }
     };
@@ -428,6 +430,14 @@ const DB = (() => {
     } else if (typeof d.histIncome === 'number') {
       d.histIncome = {};
     }
+    // 回填写入时间戳：老数据没有 histIncomeMt，给每个已填月份打一个「足够新」的时间戳，
+    // 使升级后第一轮同步时本机当前值被视为权威（不会被云端旧副本覆盖）。
+    if (d.histIncome && typeof d.histIncome === 'object' && !d.histIncomeMt) {
+      const seed = d.__savedAt || Date.now();
+      d.histIncomeMt = {};
+      Object.keys(d.histIncome).forEach(m => { if (d.histIncome[m]) d.histIncomeMt[m] = seed; });
+    }
+    if (!d.histIncomeDel) d.histIncomeDel = {};
     return d;
   }
 
@@ -541,6 +551,7 @@ const DB = (() => {
       data[col] = [];                 // 清空数组，但墓碑已登记，删除会随上传传播
     }
     data.histIncome = {};             // 聚合统计一并清空（非按记录、无墓碑；三端都清空则合并后自然为空）
+    data.histIncomeMt = {}; data.histIncomeDel = {};   // 时间戳/删除墓碑一同清空
     data.meta = { lastLessonEdit: null, lastStudentEdit: null };
     save();
   }
