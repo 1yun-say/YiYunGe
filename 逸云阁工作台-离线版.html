@@ -223,6 +223,12 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .bill-amt{font-size:14px;font-weight:700;white-space:nowrap;text-align:right}
 .bill-amt .bill-edit{margin-top:6px;font-size:12px;padding:6px 12px;height:auto;line-height:1.4;min-height:34px;min-width:56px}
 .bill-item .bill-note-toggle{font-size:11.5px;padding:2px 0}
+/* 账单顶部「总收入总和」横幅 + 「仅看有报销」标签 */
+.bill-total{display:flex;gap:14px;flex-wrap:wrap;padding:12px 14px;background:linear-gradient(90deg,var(--pink-100),var(--pink-50));border-bottom:1px solid var(--pink-100)}
+.bill-total .bt-item{display:flex;flex-direction:column;gap:3px}
+.bill-total .bt-item span{font-size:11px;color:var(--ink-2)}
+.bill-total .bt-item b{font-size:19px;font-weight:800}
+.bill-reimb-tag{display:inline-block;font-size:10px;color:#fff;background:#f9709d;border-radius:6px;padding:1px 6px;margin-left:4px;font-style:normal}
 
 /* ---------- 待办 ---------- */
 .todo-list{display:flex;flex-direction:column;gap:8px}
@@ -813,14 +819,14 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   /* 课表月视图：格子更圆、信息更克制 */
   .month-grid{gap:1px;border-radius:14px}
   .mg-head{padding:9px 4px;font-size:11px}
-  .mg-cell{min-height:70px;padding:5px;border-radius:0}
+  .mg-cell{min-height:56px;padding:4px 5px;border-radius:0}
   .mg-cell:first-child{border-radius:14px 0 0 0}
   .mg-cell:nth-child(7){border-radius:0 14px 0 0}
   .mg-cell:nth-last-child(7){border-radius:0 0 0 14px}
   .mg-cell:last-child{border-radius:0 0 14px 0}
   .mg-date{font-size:12px;margin-bottom:4px}
-  .mg-item{font-size:9.5px;padding:2px 5px;border-radius:4px;margin-bottom:2px}
-  .mg-sum{font-size:10px}
+  .mg-item{font-size:9px;padding:1px 5px;border-radius:4px;margin-bottom:2px}
+  .mg-sum{font-size:9.5px}
 
   /* 课表年视图：卡片更大、更 iOS */
   .year-grid{grid-template-columns:repeat(2,1fr)!important;gap:10px}
@@ -1244,7 +1250,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-05T14:20:00.353Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-23T09:41:04.953Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -2189,6 +2195,15 @@ const DB = (() => {
         if (arr && dm) {
           for (const it of arr) { if (it && it.id != null && dm[String(it.id)] != null) delete dm[String(it.id)]; }
         }
+      }
+    }
+    // 防御：确保每条同步记录都带 _mt（新建/导入时可能漏打时间戳），
+    // 否则合并时 _mt 缺失会退化成「按方向硬判」，导致一端的正确修改被另一端旧副本整体覆盖。
+    // 仅补「缺失」的，已有 _mt 的绝不改动（保留真实修改时间，LWW 才能正确胜出）。
+    for (const col of TOMB_COLS) {
+      if (!Array.isArray(data[col])) continue;
+      for (const it of data[col]) {
+        if (it && it.id != null && !(it._mt > 0)) it._mt = (data.__savedAt || Date.now());
       }
     }
     try {
@@ -4781,7 +4796,7 @@ const Schedule = (() => {
         e.preventDefault(); sl.classList.remove('drop');
         const id = dragId || e.dataTransfer.getData('text/plain');
         const l = DB.data.lessons.find(x => x.id === id); if (!l) return;
-        l.date = sl.dataset.date; l.start = U.m2t(+sl.dataset.min); l.seriesId = null;
+        l.date = sl.dataset.date; l.start = U.m2t(+sl.dataset.min); l.seriesId = null; l._mt = Date.now();
         DB.save(); render();
         const c = overlaps(l);
         U.toast(c.length ? `已移动到 ${U.cnDate(l.date)} ${l.start}，与 ${c.length} 节课时间重叠` : `已移动到 ${U.cnDate(l.date)} ${l.start}`, c.length ? 'warn' : 'ok');
@@ -4821,8 +4836,9 @@ const Schedule = (() => {
         const c = isImp ? '#b0b0b0' : lessonColorHex(l);
         const bd = DB.lessonBreakdown(l);
         const tip = `实际到手 ${U.money(bd.takeHome)} · ${U.esc(bd.note)}`;
+        const timeLabel = isImp ? '· ' : (U.isMobile() ? '' : l.start + ' ');
         return `<div class="mg-item ${isImp ? 'imported' : ''}" data-lid="${l.id}" title="${tip}" style="border-left-color:${c};background:${isImp ? '#f5f5f5' : rgba(c, .12)}">
-            ${isImp ? '· ' : l.start + ' '}${U.esc(s.parentName)}</div>`;
+            ${timeLabel}${U.esc(s.parentName)}</div>`;
       }).join('')}
           ${ls.length > (U.isMobile() ? 2 : 3) ? `<div class="mg-item" style="border-left-color:#ccc;background:#f6f2f4">+${ls.length - (U.isMobile() ? 2 : 3)} 节</div>` : ''}
           ${ls.length ? `<div class="mg-sum ${pub ? '' : 'secret'}">${pub ? U.money(gross) : U.money(profit)}</div>` : ''}
@@ -4933,7 +4949,7 @@ const Schedule = (() => {
     const bcolor = U.$('#f_color', b).value, balpha = +U.$('#f_alpha', b).value || LESSON_ALPHA_DEFAULT;
     dates.forEach(date => {
       const l = {
-        id: U.uid('les'), studentId: stu.id, subjectId: sub.id,
+        id: U.uid('les'), _mt: Date.now(), studentId: stu.id, subjectId: sub.id,
         grade: sub.grade, subject: sub.subject,
         date, start: t0, duration: len,
         tuition: sub.tuition, commission: sub.commission, teacherId: stu.teacherId,
@@ -4988,7 +5004,7 @@ const Schedule = (() => {
     const color = U.$('#f_color', b).value, alpha = +U.$('#f_alpha', b).value;
     set.forEach(x => {
       x.start = start; x.duration = dur; x.tuition = fee; x.commission = com; x.status = st; x.teacherId = tid; x.note = note;
-      x.incomeNote = incomeNote; x.color = color; x.alpha = alpha;
+      x.incomeNote = incomeNote; x.color = color; x.alpha = alpha; x._mt = Date.now();
       if (scope === 'once') { x.date = date; x.seriesId = null; }  // 仅此一次：日期也改，并脱离系列
     });
     const ocEl = U.$('#f_oc', b), oaEl = U.$('#f_oa', b);
@@ -5115,7 +5131,7 @@ const Schedule = (() => {
       onOk: b => commitEditLesson(b, l, future),
     });
     modal.body.addEventListener('click', e => {
-      if (e.target.id === 'btnDone') { l.status = 'done'; DB.save(); DB.touch('lesson'); render(); U.toast('已标记完成'); e.target.closest('.mask').remove(); }
+      if (e.target.id === 'btnDone') { l.status = 'done'; l._mt = Date.now(); DB.save(); DB.touch('lesson'); render(); U.toast('已标记完成'); e.target.closest('.mask').remove(); }
       if (e.target.id === 'btnDel') {
         U.confirm('确定删除这一节课吗？此操作不可撤销。', () => {
           DB.markDeleted('lessons', l.id);
@@ -5164,6 +5180,7 @@ const Finance = (() => {
   let billRange = 'month';
   let billFrom = U.monthFirst(U.today()), billTo = U.monthLast(U.today());
   let includeImported = false;   // 账单/明细是否纳入导入抽成；勾选时不显示抽成率
+  let billOnlyReimb = false;     // 账单：仅看「有报销」的订单
   function applyBillRange(r) {
     billRange = r; const t = U.today();
     if (r === 'week') { const d = U.weekDays(t); billFrom = d[0]; billTo = d[6]; }
@@ -5370,9 +5387,13 @@ const Finance = (() => {
 
   function cardDailyBill(ctx, title) {
     const billTitle = { week: '周账单', month: '月账单', year: '年账单', custom: '自定义账单' }[billRange] || '账单';
-    const ls = DB.statIn(billFrom, billTo, { includeScheduled }).lessons
+    let ls = DB.statIn(billFrom, billTo, { includeScheduled }).lessons
       .filter(l => l.status === 'done' && (!l.importedCommission || includeImported) && DB.lessonBreakdown(l).takeHome > 0)
       .sort((a, b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start));
+    // 仅看有报销的订单：批注非空 或 报销支出 > 0
+    if (billOnlyReimb) ls = ls.filter(l => (l.incomeNote || '').trim() || DB.lessonBreakdown(l).reimb > 0);
+    const grandTotal = ls.reduce((s, l) => s + DB.lessonBreakdown(l).takeHome, 0);
+    const grandReimb = ls.reduce((s, l) => s + DB.lessonBreakdown(l).reimb, 0);
     const groups = {};
     ls.forEach(l => { (groups[l.date] ||= []).push(l); });
     const dates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
@@ -5400,8 +5421,8 @@ const Finance = (() => {
         return `<tr class="bill-item" data-lid="${l.id}">
           <td>
             <div class="bill-main">${U.esc(label)}</div>
-            <div class="bill-sub">${isImp ? '<span class="bill-imp-tag">导入</span>' : U.esc(sublabel)}${hasNote ? ' · <span class="bill-note-toggle">有批注 ▾</span>' : ''}</div>
-            <div class="bill-note">实际到手 ${U.money(bd.takeHome)}${realNote ? ' ｜ 批注：' + U.esc(realNote) : ''}</div>
+            <div class="bill-sub">${isImp ? '<span class="bill-imp-tag">导入</span>' : U.esc(sublabel)}${hasNote ? ' <span class="bill-reimb-tag">有报销</span>' : ''}</div>
+            ${hasNote ? `<div class="bill-note" style="display:block">报销备注：${U.esc(realNote)}</div>` : ''}
           </td>
           <td class="bill-amt money in">
             <div>${U.money(bd.takeHome)}</div>
@@ -5418,12 +5439,19 @@ const Finance = (() => {
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);cursor:pointer;padding:6px 8px;border-radius:8px;background:var(--pink-50)">
             <input type="checkbox" id="bill_inc" ${includeImported ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--pink-600)"> 含导入数据</label>
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);cursor:pointer;padding:6px 8px;border-radius:8px;background:var(--pink-50)">
+            <input type="checkbox" id="bill_reimb_only" ${billOnlyReimb ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--pink-600)"> 仅看有报销</label>
           <div class="tabs">
             ${[['week', '周账单'], ['month', '月账单'], ['year', '年账单'], ['custom', '自定义']]
               .map(([k, n]) => `<button class="tab ${billRange === k ? 'active' : ''}" data-br="${k}">${n}</button>`).join('')}
           </div>
           ${billRange === 'custom' ? `<input type="date" class="input" id="bf_from" value="${billFrom}" style="width:132px;padding:5px 8px"><span class="muted">至</span><input type="date" class="input" id="bf_to" value="${billTo}" style="width:132px;padding:5px 8px">` : ''}
         </div>
+      </div>
+      <div class="bill-total">
+        <div class="bt-item"><span>总收入总和</span><b class="money in">${U.money(grandTotal)}</b></div>
+        <div class="bt-item"><span>报销支出合计</span><b class="money out">${U.money(grandReimb)}</b></div>
+        ${billOnlyReimb ? '<div class="bt-item"><span>筛选</span><b>仅看有报销</b></div>' : ''}
       </div>
       <table class="tbl bill-table">
         <thead><tr><th>来源</th><th class="num">实际到手</th></tr></thead>
@@ -5684,6 +5712,8 @@ const Finance = (() => {
     /* 含导入数据开关 */
     const billInc = U.$('#bill_inc', root);
     if (billInc) billInc.onchange = e => { includeImported = e.target.checked; render(); };
+    const billReimbOnly = U.$('#bill_reimb_only', root);
+    if (billReimbOnly) billReimbOnly.onchange = e => { billOnlyReimb = e.target.checked; render(); };
 
     /* 日账单每一行：点开/收起批注；点「编辑」按钮打开编辑弹窗 */
     root.querySelectorAll('.bill-item').forEach(tr => tr.onclick = e => {
@@ -8265,6 +8295,11 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.4.0`, date: `2026-08-05`, held: false, divider: false,
+      items: [`<b>修复：手机标记「已完成」的课程，上传云端、电脑下载后部分仍显示「未完成」</b>：根因是课节的「修改时间戳 _mt」从未在本地改动时刷新——v2.3.1 只给老数据补了种子 _mt，但「标记完成 / 编辑 / 新建 / 拖拽换位」这些本机改动路径都不写 _mt，于是手机标记完成后 _mt 仍是创建时的种子值，与电脑本地副本的 _mt 相等；合并时 LWW 平局按方向硬判（pull 取本地），电脑就保留了自己的「未完成」，手机端的「已完成」被丢弃，导致手机/电脑财务统计对不上。现所有课节改动点都写 <code>l._mt = Date.now()</code>，<code>DB.save()</code> 也兜底给漏打 _mt 的记录补时间戳（不覆盖已有），冲突一律走「谁后改谁赢」，完成状态跨端不再丢。`,
+        `<b>修复：手机端可视化课表月视图 8 月（六行周）底部日期显示不完整</b>：月视图格子在手机端之前塞了「上课时间 + 学员名」，竖向空间吃紧、月末格子被挤。现手机端月视图<b>省略上课时间</b>、只显学员名，并进一步压缩格子内字号与内边距，让整月（含 8/31 等月末日期）都能一眼看全，无需反复滚动。`,
+        `<b>新功能：财务「账单明细」增强</b>：① 账单顶部新增<b>「总收入总和」横幅</b>（先显示总收入，再逐条列开）；② 新增<b>「仅看有报销」筛选开关</b>，一键只看有报销支出的订单；③ 有报销的订单卡片<b>直接显示报销备注</b>（如「资料5元」），不再需要点开才看。`,
+        `<b>回归锁定</b>：新增 <code>sync-done-test.js</code>（6/0，含「复现旧 bug：未 bump _mt 时 pull 取本地未完成」证明修复前确实会丢完成状态）、<code>finance-bill-test.js</code>（4/0，渲染断言账单含总收入横幅/报销筛选/直接显示备注）、<code>schedule-smoke-test.js</code>（4/0，手机端月视图渲染且省略上课时间）；连同 9 套既有同步套件（129 条）零回归，三处版本常量同步 bump 至 v2.4.0。`] },
     { ver: `v2.3.1`, date: `2026-08-05`, held: false, divider: false,
       items: [`<b>修复：老学员数据「从未打过修改时间戳」导致同步被旧副本整体覆盖</b>：v2.3.0 只修了「写入侧」（新建/编辑才打 _mt），但那些<b>从没被改动过的老记录</b> _mt 仍是空，冲突时 mergeDocs 只能退化成「按上传/下载方向硬判」——于是你这次撞上：电脑上传后，平板旧数据又经某步回灌云端、电脑再拉回来，结果电脑变成了平板的旧数据。<b>现新增 store.migrateMT()</b>：在「本机启动 / 导入备份 / 跨标签页同步 / 云端合并」全链路，给所有同步集合（学员/老师/课节/提醒/日程/模板/话术）的每条记录补种子 _mt（优先保留已有值，否则用 createdAt > 本机基线 __savedAt > 当前时间）。补完后所有记录都有时间戳，冲突一律走「谁后改谁赢(LWW)」，旧数据再也无法靠方向偷袭正确数据。`,
         `<b>防翻车操作纪律（重要）</b>：三端都升到 v2.3.1 后，<b>只让一台当「权威端」上传一次，其他端只下载</b>，且任意端在「还没升到 2.3.1」前<b>不要</b>去新建/编辑/拖排序（旧版不写 _mt 且不补时间戳，仍可能污染云端）。自动同步开关建议在你正手动操作时临时关掉，避免后台把旧数据推上去。`] },

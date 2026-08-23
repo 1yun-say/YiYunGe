@@ -12,6 +12,7 @@ const Finance = (() => {
   let billRange = 'month';
   let billFrom = U.monthFirst(U.today()), billTo = U.monthLast(U.today());
   let includeImported = false;   // 账单/明细是否纳入导入抽成；勾选时不显示抽成率
+  let billOnlyReimb = false;     // 账单：仅看「有报销」的订单
   function applyBillRange(r) {
     billRange = r; const t = U.today();
     if (r === 'week') { const d = U.weekDays(t); billFrom = d[0]; billTo = d[6]; }
@@ -218,9 +219,13 @@ const Finance = (() => {
 
   function cardDailyBill(ctx, title) {
     const billTitle = { week: '周账单', month: '月账单', year: '年账单', custom: '自定义账单' }[billRange] || '账单';
-    const ls = DB.statIn(billFrom, billTo, { includeScheduled }).lessons
+    let ls = DB.statIn(billFrom, billTo, { includeScheduled }).lessons
       .filter(l => l.status === 'done' && (!l.importedCommission || includeImported) && DB.lessonBreakdown(l).takeHome > 0)
       .sort((a, b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start));
+    // 仅看有报销的订单：批注非空 或 报销支出 > 0
+    if (billOnlyReimb) ls = ls.filter(l => (l.incomeNote || '').trim() || DB.lessonBreakdown(l).reimb > 0);
+    const grandTotal = ls.reduce((s, l) => s + DB.lessonBreakdown(l).takeHome, 0);
+    const grandReimb = ls.reduce((s, l) => s + DB.lessonBreakdown(l).reimb, 0);
     const groups = {};
     ls.forEach(l => { (groups[l.date] ||= []).push(l); });
     const dates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
@@ -248,8 +253,8 @@ const Finance = (() => {
         return `<tr class="bill-item" data-lid="${l.id}">
           <td>
             <div class="bill-main">${U.esc(label)}</div>
-            <div class="bill-sub">${isImp ? '<span class="bill-imp-tag">导入</span>' : U.esc(sublabel)}${hasNote ? ' · <span class="bill-note-toggle">有批注 ▾</span>' : ''}</div>
-            <div class="bill-note">实际到手 ${U.money(bd.takeHome)}${realNote ? ' ｜ 批注：' + U.esc(realNote) : ''}</div>
+            <div class="bill-sub">${isImp ? '<span class="bill-imp-tag">导入</span>' : U.esc(sublabel)}${hasNote ? ' <span class="bill-reimb-tag">有报销</span>' : ''}</div>
+            ${hasNote ? `<div class="bill-note" style="display:block">报销备注：${U.esc(realNote)}</div>` : ''}
           </td>
           <td class="bill-amt money in">
             <div>${U.money(bd.takeHome)}</div>
@@ -266,12 +271,19 @@ const Finance = (() => {
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);cursor:pointer;padding:6px 8px;border-radius:8px;background:var(--pink-50)">
             <input type="checkbox" id="bill_inc" ${includeImported ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--pink-600)"> 含导入数据</label>
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);cursor:pointer;padding:6px 8px;border-radius:8px;background:var(--pink-50)">
+            <input type="checkbox" id="bill_reimb_only" ${billOnlyReimb ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--pink-600)"> 仅看有报销</label>
           <div class="tabs">
             ${[['week', '周账单'], ['month', '月账单'], ['year', '年账单'], ['custom', '自定义']]
               .map(([k, n]) => `<button class="tab ${billRange === k ? 'active' : ''}" data-br="${k}">${n}</button>`).join('')}
           </div>
           ${billRange === 'custom' ? `<input type="date" class="input" id="bf_from" value="${billFrom}" style="width:132px;padding:5px 8px"><span class="muted">至</span><input type="date" class="input" id="bf_to" value="${billTo}" style="width:132px;padding:5px 8px">` : ''}
         </div>
+      </div>
+      <div class="bill-total">
+        <div class="bt-item"><span>总收入总和</span><b class="money in">${U.money(grandTotal)}</b></div>
+        <div class="bt-item"><span>报销支出合计</span><b class="money out">${U.money(grandReimb)}</b></div>
+        ${billOnlyReimb ? '<div class="bt-item"><span>筛选</span><b>仅看有报销</b></div>' : ''}
       </div>
       <table class="tbl bill-table">
         <thead><tr><th>来源</th><th class="num">实际到手</th></tr></thead>
@@ -532,6 +544,8 @@ const Finance = (() => {
     /* 含导入数据开关 */
     const billInc = U.$('#bill_inc', root);
     if (billInc) billInc.onchange = e => { includeImported = e.target.checked; render(); };
+    const billReimbOnly = U.$('#bill_reimb_only', root);
+    if (billReimbOnly) billReimbOnly.onchange = e => { billOnlyReimb = e.target.checked; render(); };
 
     /* 日账单每一行：点开/收起批注；点「编辑」按钮打开编辑弹窗 */
     root.querySelectorAll('.bill-item').forEach(tr => tr.onclick = e => {

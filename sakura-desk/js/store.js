@@ -320,6 +320,15 @@ const DB = (() => {
         }
       }
     }
+    // 防御：确保每条同步记录都带 _mt（新建/导入时可能漏打时间戳），
+    // 否则合并时 _mt 缺失会退化成「按方向硬判」，导致一端的正确修改被另一端旧副本整体覆盖。
+    // 仅补「缺失」的，已有 _mt 的绝不改动（保留真实修改时间，LWW 才能正确胜出）。
+    for (const col of TOMB_COLS) {
+      if (!Array.isArray(data[col])) continue;
+      for (const it of data[col]) {
+        if (it && it.id != null && !(it._mt > 0)) it._mt = (data.__savedAt || Date.now());
+      }
+    }
     try {
       if (!opts.preserveSavedAt) data.__savedAt = Date.now();
       localStorage.setItem(KEY, JSON.stringify(data));

@@ -215,6 +215,12 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .bill-amt{font-size:14px;font-weight:700;white-space:nowrap;text-align:right}
 .bill-amt .bill-edit{margin-top:6px;font-size:12px;padding:6px 12px;height:auto;line-height:1.4;min-height:34px;min-width:56px}
 .bill-item .bill-note-toggle{font-size:11.5px;padding:2px 0}
+/* 账单顶部「总收入总和」横幅 + 「仅看有报销」标签 */
+.bill-total{display:flex;gap:14px;flex-wrap:wrap;padding:12px 14px;background:linear-gradient(90deg,var(--pink-100),var(--pink-50));border-bottom:1px solid var(--pink-100)}
+.bill-total .bt-item{display:flex;flex-direction:column;gap:3px}
+.bill-total .bt-item span{font-size:11px;color:var(--ink-2)}
+.bill-total .bt-item b{font-size:19px;font-weight:800}
+.bill-reimb-tag{display:inline-block;font-size:10px;color:#fff;background:#f9709d;border-radius:6px;padding:1px 6px;margin-left:4px;font-style:normal}
 
 /* ---------- 待办 ---------- */
 .todo-list{display:flex;flex-direction:column;gap:8px}
@@ -805,14 +811,14 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   /* 课表月视图：格子更圆、信息更克制 */
   .month-grid{gap:1px;border-radius:14px}
   .mg-head{padding:9px 4px;font-size:11px}
-  .mg-cell{min-height:70px;padding:5px;border-radius:0}
+  .mg-cell{min-height:56px;padding:4px 5px;border-radius:0}
   .mg-cell:first-child{border-radius:14px 0 0 0}
   .mg-cell:nth-child(7){border-radius:0 14px 0 0}
   .mg-cell:nth-last-child(7){border-radius:0 0 0 14px}
   .mg-cell:last-child{border-radius:0 0 14px 0}
   .mg-date{font-size:12px;margin-bottom:4px}
-  .mg-item{font-size:9.5px;padding:2px 5px;border-radius:4px;margin-bottom:2px}
-  .mg-sum{font-size:10px}
+  .mg-item{font-size:9px;padding:1px 5px;border-radius:4px;margin-bottom:2px}
+  .mg-sum{font-size:9.5px}
 
   /* 课表年视图：卡片更大、更 iOS */
   .year-grid{grid-template-columns:repeat(2,1fr)!important;gap:10px}

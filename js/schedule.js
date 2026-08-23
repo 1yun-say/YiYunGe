@@ -379,7 +379,7 @@ const Schedule = (() => {
         e.preventDefault(); sl.classList.remove('drop');
         const id = dragId || e.dataTransfer.getData('text/plain');
         const l = DB.data.lessons.find(x => x.id === id); if (!l) return;
-        l.date = sl.dataset.date; l.start = U.m2t(+sl.dataset.min); l.seriesId = null;
+        l.date = sl.dataset.date; l.start = U.m2t(+sl.dataset.min); l.seriesId = null; l._mt = Date.now();
         DB.save(); render();
         const c = overlaps(l);
         U.toast(c.length ? `已移动到 ${U.cnDate(l.date)} ${l.start}，与 ${c.length} 节课时间重叠` : `已移动到 ${U.cnDate(l.date)} ${l.start}`, c.length ? 'warn' : 'ok');
@@ -419,8 +419,9 @@ const Schedule = (() => {
         const c = isImp ? '#b0b0b0' : lessonColorHex(l);
         const bd = DB.lessonBreakdown(l);
         const tip = `实际到手 ${U.money(bd.takeHome)} · ${U.esc(bd.note)}`;
+        const timeLabel = isImp ? '· ' : (U.isMobile() ? '' : l.start + ' ');
         return `<div class="mg-item ${isImp ? 'imported' : ''}" data-lid="${l.id}" title="${tip}" style="border-left-color:${c};background:${isImp ? '#f5f5f5' : rgba(c, .12)}">
-            ${isImp ? '· ' : l.start + ' '}${U.esc(s.parentName)}</div>`;
+            ${timeLabel}${U.esc(s.parentName)}</div>`;
       }).join('')}
           ${ls.length > (U.isMobile() ? 2 : 3) ? `<div class="mg-item" style="border-left-color:#ccc;background:#f6f2f4">+${ls.length - (U.isMobile() ? 2 : 3)} 节</div>` : ''}
           ${ls.length ? `<div class="mg-sum ${pub ? '' : 'secret'}">${pub ? U.money(gross) : U.money(profit)}</div>` : ''}
@@ -531,7 +532,7 @@ const Schedule = (() => {
     const bcolor = U.$('#f_color', b).value, balpha = +U.$('#f_alpha', b).value || LESSON_ALPHA_DEFAULT;
     dates.forEach(date => {
       const l = {
-        id: U.uid('les'), studentId: stu.id, subjectId: sub.id,
+        id: U.uid('les'), _mt: Date.now(), studentId: stu.id, subjectId: sub.id,
         grade: sub.grade, subject: sub.subject,
         date, start: t0, duration: len,
         tuition: sub.tuition, commission: sub.commission, teacherId: stu.teacherId,
@@ -586,7 +587,7 @@ const Schedule = (() => {
     const color = U.$('#f_color', b).value, alpha = +U.$('#f_alpha', b).value;
     set.forEach(x => {
       x.start = start; x.duration = dur; x.tuition = fee; x.commission = com; x.status = st; x.teacherId = tid; x.note = note;
-      x.incomeNote = incomeNote; x.color = color; x.alpha = alpha;
+      x.incomeNote = incomeNote; x.color = color; x.alpha = alpha; x._mt = Date.now();
       if (scope === 'once') { x.date = date; x.seriesId = null; }  // 仅此一次：日期也改，并脱离系列
     });
     const ocEl = U.$('#f_oc', b), oaEl = U.$('#f_oa', b);
@@ -713,7 +714,7 @@ const Schedule = (() => {
       onOk: b => commitEditLesson(b, l, future),
     });
     modal.body.addEventListener('click', e => {
-      if (e.target.id === 'btnDone') { l.status = 'done'; DB.save(); DB.touch('lesson'); render(); U.toast('已标记完成'); e.target.closest('.mask').remove(); }
+      if (e.target.id === 'btnDone') { l.status = 'done'; l._mt = Date.now(); DB.save(); DB.touch('lesson'); render(); U.toast('已标记完成'); e.target.closest('.mask').remove(); }
       if (e.target.id === 'btnDel') {
         U.confirm('确定删除这一节课吗？此操作不可撤销。', () => {
           DB.markDeleted('lessons', l.id);
