@@ -538,7 +538,8 @@ const Dashboard = (() => {
     const todayLessons = DB.data.lessons.filter(l => l.date === t && l.status !== 'cancelled')
       .sort((a, b) => U.safeT2m(a) - U.safeT2m(b));
     const todosAll = Todo.ofDate(t);
-    const undone = todosAll.filter(x => x.status !== 'done').sort((a, b) => a.priority - b.priority);
+    const undone = todosAll.filter(x => x.status !== 'done')
+      .sort((a, b) => (a.order || 0) - (b.order || 0) || a.priority - b.priority);
     // 遗留未完成：真正「过期」的任务——基准日早于今天，且今天不再发生（重复任务若今天仍要发生，
     // 已计入今日 undone，不能再算遗留）。重复任务今天已勾掉（completedDates 含今天）也不算遗留。
     const overdue = DB.data.todos.filter(x => {

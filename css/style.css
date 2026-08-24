@@ -865,10 +865,12 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 
   /* ---- 手机端四页一屏优化 ---- */
   /* 待办页：标题单行、移除筛选芯片、列表更紧凑 */
-  .todo-view .card-h{flex-wrap:nowrap;gap:6px;margin-bottom:8px}
-  .todo-view .card-h h3{font-size:14px;gap:5px;white-space:nowrap}
-  .todo-view .card-h .tag{font-size:10px;padding:2px 7px;white-space:nowrap}
-  .todo-view .card-h input[type="date"]{width:110px;font-size:12px;padding:4px 6px;min-height:34px}
+  .todo-view .card-h{flex-wrap:nowrap;gap:6px;margin-bottom:8px;overflow:hidden}
+  .todo-view .card-h h3{font-size:14px;gap:5px;white-space:nowrap;min-width:0;overflow:hidden}
+  .todo-view .card-h h3 .tag{flex:0 0 auto}
+  .todo-view .card-h > div:last-child{flex:none;display:flex;gap:6px;align-items:center}
+  .todo-view .card-h .tag{font-size:10px;padding:2px 7px;white-space:nowrap;flex:0 0 auto}
+  .todo-view .card-h input[type="date"]{flex:0 0 110px;min-width:0;width:110px;font-size:12px;padding:4px 6px;min-height:34px}
   .todo-view .todo-item{padding:8px 10px;gap:8px;min-height:40px}
   .todo-view .todo-item .t-title{font-size:13px}
   .todo-view .todo-item .t-meta{gap:4px;margin-top:3px}
@@ -876,6 +878,9 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   .todo-view .todo-list{gap:6px}
   .todo-view .empty{padding:18px 12px}
   .todo-view .archive-head{font-size:12px;padding:8px 0}
+  .todo-view .todo-item .t-actions{opacity:1;gap:1px}
+  .todo-view .todo-item .t-actions .btn-icon[data-act="up"],
+  .todo-view .todo-item .t-actions .btn-icon[data-act="down"]{min-width:26px;width:26px;min-height:26px;height:26px;font-size:13px}
 
   /* 我的页：brand 更小 */
   .more-view .brand-card{padding:10px 12px!important;margin-bottom:10px!important}

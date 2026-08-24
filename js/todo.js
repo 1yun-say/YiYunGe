@@ -17,16 +17,20 @@ const Todo = (() => {
   const sInfo = s => STATUS[s] || STATUS.pending;
   const cycle = s => STATUS[s]?.next || 'done';
   let curDate = U.today();
-  let filter = -1;
+  let lastUndone = [];             // 当前渲染的未完成列表，用于上下排序
   let tplSelMode = false;          // 每日模板库「批量删除」选择模式
   const tplSel = new Set();        // 已选中的模板 id 集合
 
-  /* --- 数据迁移：旧版 done 布尔值 → 三态 status --- */
+  /* --- 数据迁移：旧版 done 布尔值 → 三态 status；补齐 order 字段用于手动排序 --- */
   function migrate() {
     DB.data.todos.forEach(t => {
       if (t.status === 'pending' || t.status === 'done' || t.status === 'blocked') return;
       t.status = t.done ? 'done' : 'pending';
       if (!t.doneAt && t.status === 'done') t.doneAt = Date.now();
+    });
+    DB.data.todos.forEach((t, idx) => {
+      if (typeof t.order === 'number') return;
+      t.order = (t.createdAt || Date.now()) + idx;
     });
   }
 
@@ -69,17 +73,18 @@ const Todo = (() => {
   function add(t) {
     DB.data.todos.push(Object.assign({
       id: U.uid('td'), title: '', note: '', priority: 1, tag: '', date: curDate,
-      time: '', status: 'pending', doneAt: null, createdAt: Date.now()
+      time: '', status: 'pending', doneAt: null, createdAt: Date.now(), order: Date.now()
     }, t));
     DB.save();
   }
 
   function importTemplates(ids) {
     let n = 0;
-    DB.data.templates.forEach(tpl => {
+    const base = Date.now();
+    DB.data.templates.forEach((tpl, i) => {
       if (ids && !ids.includes(tpl.id)) return;
       if (DB.data.todos.some(t => t.date === curDate && t.tplId === tpl.id)) return; // 当天已导入
-      add({ title: tpl.title, priority: tpl.priority, tag: tpl.tag, tplId: tpl.id, date: curDate });
+      add({ title: tpl.title, priority: tpl.priority, tag: tpl.tag, tplId: tpl.id, date: curDate, order: base + i });
       n++;
     });
     U.toast(n ? `已导入 ${n} 条模板任务` : '今天已经导入过了', n ? 'ok' : 'warn');
@@ -95,15 +100,6 @@ const Todo = (() => {
       if (r && r.type !== 'never') return false;   // 重复任务不进遗留
       return t.date < today;
     });
-  }
-  function buildSegHTML(isM, undone) {
-    if (isM) return '';
-    return `<div class="seg" style="margin-bottom:12px">
-            <div class="opt ${filter < 0 ? 'on' : ''}" data-f="-1">全部</div>
-            ${P.map(p => `<div class="opt ${filter === p.v ? 'on' : ''}" data-f="${p.v}">
-              <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${p.color};margin-right:5px"></span>${p.name}
-              <b style="margin-left:4px;color:inherit;opacity:.6">${undone.filter(t => t.priority === p.v).length}</b></div>`).join('')}
-          </div>`;
   }
   /* 每日模板库：单条模板 chip（支持批量删除选择模式） */
   function tplChipHTML(tpl, selMode, selected) {
@@ -158,16 +154,6 @@ const Todo = (() => {
           </div>
           ${tplSelMode ? tplBatchBarHTML() : ''}
         </div>
-
-        <div class="card">
-          <div class="card-h"><h3>四象限说明</h3></div>
-          ${P.map(p => `<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px">
-            <span class="pdot" style="width:9px;height:9px;border-radius:50%;background:${p.color};margin-top:6px;flex:none"></span>
-            <div><b style="font-size:12.5px">${p.name}</b>
-              <div class="muted" style="font-size:11px">${p.short}</div></div>
-          </div>`).join('')}
-          <div class="divider"></div>
-        </div>
       </div>`;
   }
   function buildMobileTplHTML(isM) {
@@ -190,15 +176,15 @@ const Todo = (() => {
     if (!root || App.route !== 'todo') return;
     const list = ofDate(curDate);
     const sortFn = (a, b) => (b.flag ? 1 : 0) - (a.flag ? 1 : 0)   // 旗标置顶
-      || a.priority - b.priority
+      || (a.order || 0) - (b.order || 0)                           // 手动排序
       || (a.time || '99:59').localeCompare(b.time || '99:59')
       || a.createdAt - b.createdAt;
     const undone = list.filter(t => t.status !== 'done').sort(sortFn);
     const done = list.filter(t => t.status === 'done').sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
-    const shown = filter < 0 ? undone : undone.filter(t => t.priority === filter);
+    lastUndone = undone;                                           // 给上下排序用
     const overdue = computeOverdue();
     const isM = U.isMobile();
-    const segHTML = buildSegHTML(isM, undone);
+    const isToday = curDate === U.today();
     const rightColHTML = buildRightColHTML(isM);
 
     const mobileTplHTML = buildMobileTplHTML(isM);
@@ -207,7 +193,7 @@ const Todo = (() => {
     <div class="grid todo-view" style="grid-template-columns:minmax(0,1fr) 320px">
       <div style="display:flex;flex-direction:column;gap:16px">
 
-        ${overdue.length ? `<div class="card" style="border-color:#ffd0d0;background:#fff8f8">
+        ${isToday && overdue.length ? `<div class="card" style="border-color:#ffd0d0;background:#fff8f8">
           <div class="card-h"><h3 style="color:#cf5252">遗留未完成 ${overdue.length} 条</h3>
             <button class="btn btn-sm btn-ghost" data-act="pullOverdue">全部拉到今天</button></div>
           <div class="todo-list">${overdue.slice(0, 5).map(t => rowHTML(t, true)).join('')}</div>
@@ -215,7 +201,7 @@ const Todo = (() => {
 
         <div class="card">
           <div class="card-h">
-            <h3>${curDate === U.today() ? '今日提醒事项' : U.cnDate(curDate) + ' 提醒事项'}
+            <h3>${isToday ? '今日提醒事项' : U.cnDate(curDate) + ' 提醒事项'}
               <span class="tag">${undone.length} 提醒 / ${done.length} 完成</span></h3>
             <div style="display:flex;gap:6px;align-items:center">
               <button class="btn btn-icon" data-act="prevDay" title="前一天">&#8249;</button>
@@ -233,10 +219,8 @@ const Todo = (() => {
             <button class="btn btn-primary" data-act="quickAdd">添加</button>
           </div>`}
 
-          ${segHTML}
-
           <div class="todo-list">
-            ${shown.length ? shown.map(t => rowHTML(t)).join('')
+            ${undone.length ? undone.map(t => rowHTML(t)).join('')
         : `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-flower"/></svg>
                  <p>${isM ? '这一天很清爽，点右下角 + 新建一件吧' : '这一天很清爽，从右侧模板一键导入日常提醒吧'}</p></div>`}
           </div>
@@ -296,6 +280,8 @@ const Todo = (() => {
         </div>
       </div>
       <div class="t-actions">
+        <button class="btn btn-icon" data-act="up" title="上移">↑</button>
+        <button class="btn btn-icon" data-act="down" title="下移">↓</button>
         <button class="btn btn-icon" data-act="edit" title="编辑"><svg class="ico"><use href="#i-edit"/></svg></button>
         <button class="btn btn-icon" data-act="del" title="删除"><svg class="ico"><use href="#i-trash"/></svg></button>
       </div>
@@ -304,7 +290,6 @@ const Todo = (() => {
 
   function bind(root) {
     U.$('#tdDate', root).onchange = e => { curDate = e.target.value; render(); };
-    root.querySelectorAll('.seg .opt').forEach(o => o.onclick = () => { filter = +o.dataset.f; render(); });
 
     U.rebind(root, 'todo', e => {
       const btn = e.target.closest('[data-act]'); if (!btn) return;
@@ -340,6 +325,21 @@ const Todo = (() => {
         }
         case 'edit': editTodo(t); break;
         case 'del': DB.removeRecord('todos', tid); DB.save(); render(); App.refreshBadge(); break;
+        case 'up':
+        case 'down': {
+          const ids = lastUndone.map(x => x.id);
+          const idx = ids.indexOf(tid);
+          if (idx < 0) break;
+          const swap = act === 'up' ? idx - 1 : idx + 1;
+          if (swap < 0 || swap >= ids.length) break;
+          [ids[idx], ids[swap]] = [ids[swap], ids[idx]];
+          ids.forEach((id, i) => {
+            const x = DB.data.todos.find(z => z.id === id);
+            if (x) x.order = (i + 1) * 1000;
+          });
+          DB.save(); render(); App.refreshBadge();
+          break;
+        }
         case 'pullOverdue':
           // 仅把「非重复」的过期未完成任务拉到今天；重复任务以 repeat 为锚点，
           // 改 date 会悄悄偏移发生日，故跳过（重复任务本就会在今天发生）。
@@ -529,7 +529,7 @@ const Todo = (() => {
   Views.todo = {
     title: '提醒事项',
     sub: '模板化管理每日重复提醒，别再手打第二遍',
-    render(root) { curDate = U.today(); filter = -1; render(); }
+    render(root) { curDate = U.today(); render(); }
   };
 
   return { checkAuto, pendingCount, P, pInfo, STATUS, sInfo, cycle, add, addNew, ofDate, render, editTodo, importTemplates, editTpl };
