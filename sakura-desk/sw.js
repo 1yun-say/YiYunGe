@@ -1,5 +1,5 @@
 /* 逸云阁工作台 Service Worker — network-first，离线可用 */
-const CACHE_NAME = 'yiyunge-v2.5.0';
+const CACHE_NAME = 'yiyunge-v2.5.1';
 const PRECACHE = [
   './',
   './index.html',

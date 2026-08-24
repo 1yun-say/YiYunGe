@@ -1255,7 +1255,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-24T09:40:17.774Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-24T09:49:57.503Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -3324,14 +3324,16 @@ const Todo = (() => {
 
         ${isToday && overdue.length ? `<div class="card" style="border-color:#ffd0d0;background:#fff8f8">
           <div class="card-h"><h3 style="color:#cf5252">遗留未完成 ${overdue.length} 条</h3>
-            <button class="btn btn-sm btn-ghost" data-act="pullOverdue">全部拉到今天</button></div>
-          <div class="todo-list">${overdue.slice(0, 5).map(t => rowHTML(t, true)).join('')}</div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-sm btn-ghost" data-act="ignoreOverdue">忽略全部</button>
+              <button class="btn btn-sm btn-ghost" data-act="pullOverdue">全部拉到今天</button>
+            </div></div>
+          <div class="todo-list">${overdue.map(t => overdueRowHTML(t)).join('')}</div>
         </div>` : ''}
 
         <div class="card">
           <div class="card-h">
-            <h3>${isToday ? '今日提醒事项' : U.cnDate(curDate) + ' 提醒事项'}
-              <span class="tag">${undone.length} 提醒 / ${done.length} 完成</span></h3>
+            <h3>${isToday ? '今日提醒事项' : U.cnDate(curDate) + ' 提醒事项'}</h3>
             <div style="display:flex;gap:6px;align-items:center">
               <button class="btn btn-icon" data-act="prevDay" title="前一天">&#8249;</button>
               <input type="date" class="input" style="width:150px;padding:5px 8px" id="tdDate" value="${curDate}">
@@ -3417,6 +3419,28 @@ const Todo = (() => {
     </div>`;
   }
 
+  /* 遗留卡片专用行：每条可单独「拉到今天 / 忽略 / 删除」，不再强制批量拉到今天 */
+  function overdueRowHTML(t) {
+    const p = pInfo(t.priority);
+    const stu = t.studentId ? DB.student(t.studentId) : null;
+    return `<div class="todo-item overdue" data-id="${t.id}">
+      <div class="t-body">
+        <div class="t-title">${U.esc(t.title)}</div>
+        <div class="t-meta">
+          <span class="tag" style="background:${p.color}1f;color:${p.color}">${p.name}</span>
+          ${t.tag ? `<span class="tag gray">${U.esc(t.tag)}</span>` : ''}
+          ${stu ? `<span class="tag sky">${U.esc(DB.studentLabel(stu))}</span>` : ''}
+          <span class="tag alert">${U.cnDate(t.date)}</span>
+        </div>
+      </div>
+      <div class="t-actions">
+        <button class="btn btn-sm btn-ghost" data-act="pullOne" title="拉到今天">拉到今天</button>
+        <button class="btn btn-sm btn-ghost" data-act="ignoreOne" title="忽略">忽略</button>
+        <button class="btn btn-icon" data-act="del" title="删除"><svg class="ico"><use href="#i-trash"/></svg></button>
+      </div>
+    </div>`;
+  }
+
   function bind(root) {
     U.$('#tdDate', root).onchange = e => { curDate = e.target.value; render(); };
 
@@ -3469,6 +3493,17 @@ const Todo = (() => {
           DB.save(); render(); App.refreshBadge();
           break;
         }
+        case 'pullOne':
+          // 单条遗留：「拉到今天」——仅非重复任务可移日期（重复任务以 repeat 为锚点，不挪）
+          if (t && t.status !== 'done') {
+            const r = U.recurRuleOf(t.repeat, t.date);
+            if (!(r && r.type !== 'never')) { t.date = U.today(); DB.save(); render(); App.refreshBadge(); U.toast('已拉到今天'); }
+          }
+          break;
+        case 'ignoreOne':
+          // 单条遗留：「忽略」——标记为已完成并收尾，不再出现于待办/遗留
+          if (t && t.status !== 'done') { t.status = 'done'; t.doneAt = Date.now(); DB.save(); render(); App.refreshBadge(); U.toast('已忽略'); }
+          break;
         case 'pullOverdue':
           // 仅把「非重复」的过期未完成任务拉到今天；重复任务以 repeat 为锚点，
           // 改 date 会悄悄偏移发生日，故跳过（重复任务本就会在今天发生）。
@@ -3480,6 +3515,21 @@ const Todo = (() => {
           });
           DB.save(); curDate = U.today(); render(); U.toast('已全部拉到今天');
           break;
+        case 'ignoreOverdue': {
+          // 一键忽略全部遗留：批量标记已完成（带确认，防止误点）
+          const before = computeOverdue().length;
+          if (!before) break;
+          U.confirm(`忽略全部 ${before} 条遗留未完成？它们会被标记为已完成`, () => {
+            DB.data.todos.forEach(x => {
+              if (x.status === 'done') return;
+              const r = U.recurRuleOf(x.repeat, x.date);
+              if (r && r.type !== 'never') return;
+              if (x.date < U.today()) { x.status = 'done'; x.doneAt = Date.now(); }
+            });
+            DB.save(); render(); App.refreshBadge(); U.toast(`已忽略 ${before} 条`, 'ok');
+          }, '忽略');
+          break;
+        }
         case 'toggleArch': {
           const box = U.$('#archBox', root); const open = box.style.display === 'none';
           box.style.display = open ? 'flex' : 'none'; btn.classList.toggle('open', open); break;
@@ -8301,6 +8351,9 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.5.1`, date: `2026-08-24`, held: false, divider: false,
+      items: [`<b>优化：遗留未完成卡片增加「忽略」选择权</b>：之前顶部遗留卡片只有「全部拉到今天」一个动作，你要么全拉、要么干瞪眼。现每条遗留单独提供 <b>「拉到今天 / 忽略 / 删除」</b> 三选一，卡片顶部也新增 <b>「忽略全部」</b> 按钮（带确认）。「忽略」= 标记为已完成并收尾，不再骚扰待办与遗留列表，且会跨端同步。`,
+        `<b>优化：删除提醒事项标题栏那行「X 提醒 / Y 完成」标签</b>：上一版改日期头部防换行时，这个标签在窄屏被挤缩成一团。既然它信息价值不大，直接删掉，标题栏更干净、也彻底消除被挤缩的观感。`] },
     { ver: `v2.5.0`, date: `2026-08-24`, held: false, divider: false,
       items: [`<b>优化：非当天日期不再显示「遗留未完成」卡片</b>：之前查看明天或未来日期时，顶部仍会冒出「遗留未完成 N 条」和「全部拉到今天」按钮，把当天的提醒往下顶、造成误操作。现该卡片只在「查看今天」时出现；切换到其他日期时页面更清爽，也不再误把遗留任务拉到今天。`,
         `<b>优化：提醒事项日期头部不再换行/被顶出去</b>：手机端标题栏（如「8月25日 提醒事项」+日期选择器+前后天按钮）在窄屏下偶尔被日期输入框撑开或换行。现给标题区加 <code>min-width:0</code>、日期输入框固定 <code>flex:0 0 110px</code>、整体强制 <code>flex-wrap:nowrap</code>，确保一行显示完整。`,

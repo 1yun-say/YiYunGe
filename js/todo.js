@@ -195,14 +195,16 @@ const Todo = (() => {
 
         ${isToday && overdue.length ? `<div class="card" style="border-color:#ffd0d0;background:#fff8f8">
           <div class="card-h"><h3 style="color:#cf5252">遗留未完成 ${overdue.length} 条</h3>
-            <button class="btn btn-sm btn-ghost" data-act="pullOverdue">全部拉到今天</button></div>
-          <div class="todo-list">${overdue.slice(0, 5).map(t => rowHTML(t, true)).join('')}</div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-sm btn-ghost" data-act="ignoreOverdue">忽略全部</button>
+              <button class="btn btn-sm btn-ghost" data-act="pullOverdue">全部拉到今天</button>
+            </div></div>
+          <div class="todo-list">${overdue.map(t => overdueRowHTML(t)).join('')}</div>
         </div>` : ''}
 
         <div class="card">
           <div class="card-h">
-            <h3>${isToday ? '今日提醒事项' : U.cnDate(curDate) + ' 提醒事项'}
-              <span class="tag">${undone.length} 提醒 / ${done.length} 完成</span></h3>
+            <h3>${isToday ? '今日提醒事项' : U.cnDate(curDate) + ' 提醒事项'}</h3>
             <div style="display:flex;gap:6px;align-items:center">
               <button class="btn btn-icon" data-act="prevDay" title="前一天">&#8249;</button>
               <input type="date" class="input" style="width:150px;padding:5px 8px" id="tdDate" value="${curDate}">
@@ -288,6 +290,28 @@ const Todo = (() => {
     </div>`;
   }
 
+  /* 遗留卡片专用行：每条可单独「拉到今天 / 忽略 / 删除」，不再强制批量拉到今天 */
+  function overdueRowHTML(t) {
+    const p = pInfo(t.priority);
+    const stu = t.studentId ? DB.student(t.studentId) : null;
+    return `<div class="todo-item overdue" data-id="${t.id}">
+      <div class="t-body">
+        <div class="t-title">${U.esc(t.title)}</div>
+        <div class="t-meta">
+          <span class="tag" style="background:${p.color}1f;color:${p.color}">${p.name}</span>
+          ${t.tag ? `<span class="tag gray">${U.esc(t.tag)}</span>` : ''}
+          ${stu ? `<span class="tag sky">${U.esc(DB.studentLabel(stu))}</span>` : ''}
+          <span class="tag alert">${U.cnDate(t.date)}</span>
+        </div>
+      </div>
+      <div class="t-actions">
+        <button class="btn btn-sm btn-ghost" data-act="pullOne" title="拉到今天">拉到今天</button>
+        <button class="btn btn-sm btn-ghost" data-act="ignoreOne" title="忽略">忽略</button>
+        <button class="btn btn-icon" data-act="del" title="删除"><svg class="ico"><use href="#i-trash"/></svg></button>
+      </div>
+    </div>`;
+  }
+
   function bind(root) {
     U.$('#tdDate', root).onchange = e => { curDate = e.target.value; render(); };
 
@@ -340,6 +364,17 @@ const Todo = (() => {
           DB.save(); render(); App.refreshBadge();
           break;
         }
+        case 'pullOne':
+          // 单条遗留：「拉到今天」——仅非重复任务可移日期（重复任务以 repeat 为锚点，不挪）
+          if (t && t.status !== 'done') {
+            const r = U.recurRuleOf(t.repeat, t.date);
+            if (!(r && r.type !== 'never')) { t.date = U.today(); DB.save(); render(); App.refreshBadge(); U.toast('已拉到今天'); }
+          }
+          break;
+        case 'ignoreOne':
+          // 单条遗留：「忽略」——标记为已完成并收尾，不再出现于待办/遗留
+          if (t && t.status !== 'done') { t.status = 'done'; t.doneAt = Date.now(); DB.save(); render(); App.refreshBadge(); U.toast('已忽略'); }
+          break;
         case 'pullOverdue':
           // 仅把「非重复」的过期未完成任务拉到今天；重复任务以 repeat 为锚点，
           // 改 date 会悄悄偏移发生日，故跳过（重复任务本就会在今天发生）。
@@ -351,6 +386,21 @@ const Todo = (() => {
           });
           DB.save(); curDate = U.today(); render(); U.toast('已全部拉到今天');
           break;
+        case 'ignoreOverdue': {
+          // 一键忽略全部遗留：批量标记已完成（带确认，防止误点）
+          const before = computeOverdue().length;
+          if (!before) break;
+          U.confirm(`忽略全部 ${before} 条遗留未完成？它们会被标记为已完成`, () => {
+            DB.data.todos.forEach(x => {
+              if (x.status === 'done') return;
+              const r = U.recurRuleOf(x.repeat, x.date);
+              if (r && r.type !== 'never') return;
+              if (x.date < U.today()) { x.status = 'done'; x.doneAt = Date.now(); }
+            });
+            DB.save(); render(); App.refreshBadge(); U.toast(`已忽略 ${before} 条`, 'ok');
+          }, '忽略');
+          break;
+        }
         case 'toggleArch': {
           const box = U.$('#archBox', root); const open = box.style.display === 'none';
           box.style.display = open ? 'flex' : 'none'; btn.classList.toggle('open', open); break;
