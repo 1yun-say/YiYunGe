@@ -18,6 +18,7 @@ const Todo = (() => {
   const cycle = s => STATUS[s]?.next || 'done';
   let curDate = U.today();
   let lastUndone = [];             // 当前渲染的未完成列表，用于上下排序
+  let lastTemplates = [];          // 当前渲染的模板顺序，用于模板上下排序
   let tplSelMode = false;          // 每日模板库「批量删除」选择模式
   const tplSel = new Set();        // 已选中的模板 id 集合
 
@@ -31,6 +32,10 @@ const Todo = (() => {
     DB.data.todos.forEach((t, idx) => {
       if (typeof t.order === 'number') return;
       t.order = (t.createdAt || Date.now()) + idx;
+    });
+    (DB.data.templates || []).forEach((tpl, idx) => {
+      if (typeof tpl.order === 'number') return;
+      tpl.order = idx;
     });
   }
 
@@ -81,7 +86,7 @@ const Todo = (() => {
   function importTemplates(ids) {
     let n = 0;
     const base = Date.now();
-    DB.data.templates.forEach((tpl, i) => {
+    sortTemplates().forEach((tpl, i) => {
       if (ids && !ids.includes(tpl.id)) return;
       if (DB.data.todos.some(t => t.date === curDate && t.tplId === tpl.id)) return; // 当天已导入
       add({ title: tpl.title, priority: tpl.priority, tag: tpl.tag, tplId: tpl.id, date: curDate, order: base + i });
@@ -95,9 +100,9 @@ const Todo = (() => {
   function computeOverdue() {
     const today = U.today();
     return DB.data.todos.filter(t => {
-      if (t.status === 'done') return false;
+      if (t.status !== 'pending') return false;     // 仅待处理才算遗留；blocked/done 不再显示
       const r = U.recurRuleOf(t.repeat, t.date);
-      if (r && r.type !== 'never') return false;   // 重复任务不进遗留
+      if (r && r.type !== 'never') return false;    // 重复任务不进遗留
       return t.date < today;
     });
   }
@@ -120,11 +125,19 @@ const Todo = (() => {
         <div style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(tpl.title)}</div>
         ${tpl.tag ? `<span class="tag gray" style="margin-top:3px">${U.esc(tpl.tag)}</span>` : ''}
       </div>
+      <button class="btn btn-icon" data-act="tplUp" title="上移">↑</button>
+      <button class="btn btn-icon" data-act="tplDown" title="下移">↓</button>
       <button class="btn btn-icon" data-act="useTpl" title="导入这条"><svg class="ico"><use href="#i-plus"/></svg></button>
       <button class="btn btn-icon" data-act="editTpl" title="编辑"><svg class="ico"><use href="#i-edit"/></svg></button>
       <button class="btn btn-icon" data-act="delTpl" title="删除"><svg class="ico"><use href="#i-trash"/></svg></button>
     </div>`;
   }
+
+  const sortTemplates = () => {
+    const arr = (DB.data.templates || []).slice();
+    arr.sort((a, b) => (a.order || 0) - (b.order || 0));
+    return arr;
+  };
 
   /* 每日模板库：批量删除操作条 */
   function tplBatchBarHTML() {
@@ -140,6 +153,7 @@ const Todo = (() => {
 
   function buildRightColHTML(isM) {
     if (isM) return '';
+    lastTemplates = sortTemplates();
     return `<div style="display:flex;flex-direction:column;gap:16px">
         <div class="card">
           <div class="card-h"><h3>每日模板库</h3>
@@ -150,7 +164,7 @@ const Todo = (() => {
             一键导入全部到${curDate === U.today() ? '今天' : U.cnDate(curDate)}
           </button>
           <div style="display:flex;flex-direction:column;gap:7px">
-            ${DB.data.templates.length ? DB.data.templates.map(tpl => tplChipHTML(tpl, tplSelMode, tplSel.has(tpl.id))).join('') : `<p class="muted" style="font-size:12px">还没有模板，点右上角 + 添加</p>`}
+            ${lastTemplates.length ? lastTemplates.map(tpl => tplChipHTML(tpl, tplSelMode, tplSel.has(tpl.id))).join('') : `<p class="muted" style="font-size:12px">还没有模板，点右上角 + 添加</p>`}
           </div>
           ${tplSelMode ? tplBatchBarHTML() : ''}
         </div>
@@ -158,13 +172,14 @@ const Todo = (() => {
   }
   function buildMobileTplHTML(isM) {
     if (!isM) return '';
+    lastTemplates = sortTemplates();
     return `      <div class="card">
         <div class="card-h"><h3>每日模板库</h3>
           <button class="btn btn-icon ${tplSelMode ? 'on' : ''}" data-act="tplBatch" title="${tplSelMode ? '退出批量删除' : '批量删除'}"><svg class="ico"><use href="#i-check"/></svg></button>
           <button class="btn btn-icon" data-act="addTpl" title="新增模板"><svg class="ico"><use href="#i-plus"/></svg></button>
         </div>
         <div style="display:flex;flex-direction:column;gap:7px">
-          ${DB.data.templates.length ? DB.data.templates.map(tpl => tplChipHTML(tpl, tplSelMode, tplSel.has(tpl.id))).join('') : `<p class="muted" style="font-size:12px">还没有模板，点右上角 + 添加</p>`}
+          ${lastTemplates.length ? lastTemplates.map(tpl => tplChipHTML(tpl, tplSelMode, tplSel.has(tpl.id))).join('') : `<p class="muted" style="font-size:12px">还没有模板，点右上角 + 添加</p>`}
         </div>
         ${tplSelMode ? tplBatchBarHTML() : ''}
         <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:11px" data-act="importAll">一键导入全部到今天</button>
@@ -364,40 +379,68 @@ const Todo = (() => {
           DB.save(); render(); App.refreshBadge();
           break;
         }
-        case 'pullOne':
-          // 单条遗留：「拉到今天」——仅非重复任务可移日期（重复任务以 repeat 为锚点，不挪）
-          if (t && t.status !== 'done') {
-            const r = U.recurRuleOf(t.repeat, t.date);
-            if (!(r && r.type !== 'never')) { t.date = U.today(); DB.save(); render(); App.refreshBadge(); U.toast('已拉到今天'); }
-          }
+        case 'pullOne': {
+          // 单条遗留：「拉到今天」——保留原任务（标为今日无法完成），克隆一条新的到今天
+          if (!t || t.status !== 'pending') break;
+          const r = U.recurRuleOf(t.repeat, t.date);
+          if (r && r.type !== 'never') break;          // 重复任务以 repeat 为锚点，不拉
+          const today = U.today();
+          if (t.date >= today) break;
+          // 克隆新任务到今天
+          const clone = Object.assign({}, t, {
+            id: U.uid('td'),
+            date: today,
+            status: 'pending',
+            order: Date.now(),
+            createdAt: Date.now(),
+            doneAt: null,
+            completedDates: []
+          });
+          t.status = 'blocked';                         // 原任务保留在原日期，标记为已处理
+          DB.data.todos.push(clone);
+          DB.save(); render(); App.refreshBadge(); U.toast('已拉到今天');
           break;
+        }
         case 'ignoreOne':
-          // 单条遗留：「忽略」——标记为已完成并收尾，不再出现于待办/遗留
-          if (t && t.status !== 'done') { t.status = 'done'; t.doneAt = Date.now(); DB.save(); render(); App.refreshBadge(); U.toast('已忽略'); }
+          // 单条遗留：「忽略」——标记为今日无法完成，不再出现于遗留卡片
+          if (t && t.status !== 'done') { t.status = 'blocked'; DB.save(); render(); App.refreshBadge(); U.toast('已标记今日无法完成'); }
           break;
-        case 'pullOverdue':
-          // 仅把「非重复」的过期未完成任务拉到今天；重复任务以 repeat 为锚点，
-          // 改 date 会悄悄偏移发生日，故跳过（重复任务本就会在今天发生）。
+        case 'pullOverdue': {
+          // 批量拉到今天：保留原任务（标 blocked），为每条非重复遗留克隆一条今天的新任务
+          const today = U.today();
+          let n = 0;
           DB.data.todos.forEach(x => {
-            if (x.status === 'done') return;
+            if (x.status !== 'pending') return;
             const r = U.recurRuleOf(x.repeat, x.date);
             if (r && r.type !== 'never') return;
-            if (x.date < U.today()) x.date = U.today();
+            if (x.date >= today) return;
+            DB.data.todos.push(Object.assign({}, x, {
+              id: U.uid('td'),
+              date: today,
+              status: 'pending',
+              order: Date.now() + n,
+              createdAt: Date.now(),
+              doneAt: null,
+              completedDates: []
+            }));
+            x.status = 'blocked';
+            n++;
           });
-          DB.save(); curDate = U.today(); render(); U.toast('已全部拉到今天');
+          DB.save(); curDate = today; render(); U.toast(`已拉 ${n} 条到今天`);
           break;
+        }
         case 'ignoreOverdue': {
-          // 一键忽略全部遗留：批量标记已完成（带确认，防止误点）
+          // 一键忽略全部遗留：批量标记为今日无法完成（带确认，防止误点）
           const before = computeOverdue().length;
           if (!before) break;
-          U.confirm(`忽略全部 ${before} 条遗留未完成？它们会被标记为已完成`, () => {
+          U.confirm(`忽略全部 ${before} 条遗留未完成？它们会被标记为今日无法完成`, () => {
             DB.data.todos.forEach(x => {
-              if (x.status === 'done') return;
+              if (x.status !== 'pending') return;
               const r = U.recurRuleOf(x.repeat, x.date);
               if (r && r.type !== 'never') return;
-              if (x.date < U.today()) { x.status = 'done'; x.doneAt = Date.now(); }
+              if (x.date < U.today()) x.status = 'blocked';
             });
-            DB.save(); render(); App.refreshBadge(); U.toast(`已忽略 ${before} 条`, 'ok');
+            DB.save(); render(); App.refreshBadge(); U.toast(`已标记 ${before} 条今日无法完成`, 'ok');
           }, '忽略');
           break;
         }
@@ -437,6 +480,21 @@ const Todo = (() => {
             render();
             U.toast(`已删除 ${ids.length} 个模板`, 'ok');
           }, '删除');
+          break;
+        }
+        case 'tplUp':
+        case 'tplDown': {
+          const ids = lastTemplates.map(x => x.id);
+          const idx = ids.indexOf(tpl.id);
+          if (idx < 0) break;
+          const swap = act === 'tplUp' ? idx - 1 : idx + 1;
+          if (swap < 0 || swap >= ids.length) break;
+          [ids[idx], ids[swap]] = [ids[swap], ids[idx]];
+          ids.forEach((id, i) => {
+            const x = DB.data.templates.find(z => z.id === id);
+            if (x) x.order = (i + 1) * 1000;
+          });
+          DB.save(); render();
           break;
         }
       }
@@ -568,8 +626,10 @@ const Todo = (() => {
         const title = U.$('#f_t', b).value.trim();
         if (!title) { U.toast('请填写模板内容', 'warn'); return false; }
         const o = { title, priority: +U.$('#f_p', b).value, tag: U.$('#f_g', b).value.trim() };
-        if (isNew) DB.data.templates.push(Object.assign({ id: U.uid('tpl') }, o));
-        else Object.assign(tpl, o);
+        if (isNew) {
+          const maxOrder = (DB.data.templates || []).reduce((m, x) => Math.max(m, x.order || 0), -1);
+          DB.data.templates.push(Object.assign({ id: U.uid('tpl'), order: maxOrder + 1 }, o));
+        } else Object.assign(tpl, o);
         DB.save();
         if (after) after(); else render();
       }
