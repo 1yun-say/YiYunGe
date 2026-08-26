@@ -368,6 +368,9 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.5.4`, date: `2026-08-26`, held: false, divider: false,
+      items: [`<b>修复：手机端财务页柱状图数字被截成「3…」残影</b>：v2.5.3 用 <code>overflow:hidden;text-overflow:ellipsis</code> 截断溢出的金额，结果窄屏下每根柱的数字都被切掉、看不清具体数值。现改为「压短而非截断」——手机端（≤820px）：① 金额 ≥1 万显示成 <code>1.2万</code>（去 ¥、去千位逗号）；② &lt;1 万显示纯整数；③ 月份标签只留数字（<code>12月</code>→<code>12</code>）；④ 字号 9px、列间距 3px，文字本身塞得下，不再用省略号。数字看得全，也不会压到邻柱；桌面端保持原样（完整 <code>¥12,000</code> + 月份带「月」字）。`,
+        `<b>回归锁定</b>：重写 <code>finance-cols-test.js</code>（11/0，新增「移动端无省略号残影」「月份只留数字」「桌面端不被误压缩」等校验），三处版本常量同步 bump 至 v2.5.4。`] },
     { ver: `v2.5.3`, date: `2026-08-26`, held: false, divider: false,
       items: [`<b>修复：手机端财务页柱状图不同月份数字重合</b>：财务统计页「逐月趋势」是 12 根竖柱，手机窄屏下柱顶金额（如 <code>¥12,345</code>）用 <code>white-space:nowrap</code> 不换行，超出柱宽后压到相邻月份的数字上、糊成一团。现手机端（≤820px）自适应：① 金额 ≥1 万自动压缩为 <code>¥1.2万</code> 这类短串；② 数值与月份字号收紧到 9px、列间距收到 3px、柱宽上限收到 22px；③ 仍可能溢出的文字用省略号截断（<code>overflow:hidden;text-overflow:ellipsis</code>）而非压到邻柱；④ 容器占满 100% 宽度。桌面端保持原样（10px / 完整金额 / 不截断）。`,
         `<b>回归锁定</b>：新增 <code>finance-cols-test.js</code>（10/0，验证 12 根柱结构完整、≥1 万压缩为 ¥X.X万、不足 1 万不强行压缩、移动端数值/月份带 overflow:hidden 截断、空数据与全 0 走「暂无数据」占位），三处版本常量同步 bump 至 v2.5.3。`] },

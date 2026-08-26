@@ -186,28 +186,31 @@ const U = (() => {
       return `<div class="empty" style="padding:26px"><p>暂无数据</p></div>`;
     const max = Math.max(...data.map(d => d.value)) || 1;
     const H = 138;
-    // 移动端（窄屏）下，12 根柱子挤在一起，柱顶金额（如 ¥12,345）nowrap 会溢出压到邻柱；
-    // 这里压缩金额（≥1万显示 ¥1.2万）、收紧字号与间距、溢出处用省略号截断，避免数字重合。
+    // 移动端（窄屏）下 12 根柱子挤在一起，柱顶金额（如 ¥12,345）与月份标签（如 12月）会溢出压到邻柱。
+    // 处理思路：把文字「压短」本身塞得下，而不是截断成残影——
+    //   金额 ≥1万 → "1.2万"（去掉 ¥ 与千位逗号）；<1万 → 纯整数；月份 → 只留数字（"12月"→"12"）。
+    //   字号收紧、列间距收紧；不再用 overflow:hidden/ellipsis，避免数字被截成 "3…"。
     const mob = isMobile();
-    const vFs = mob ? 9 : 10, lFs = mob ? 9 : 10, gap = mob ? 3 : 6, maxW = mob ? 22 : 34;
+    const vFs = mob ? 9 : 10, lFs = mob ? 9 : 10, gap = mob ? 3 : 6, maxW = mob ? 26 : 34;
     const fmtVal = v => {
       if (!v) return '';
       if (mob && Math.abs(v) >= 10000) {
         const w = Math.round(v / 1000) / 10;              // 万，保留 1 位小数
-        return '¥' + (w % 1 === 0 ? w : w.toFixed(1)) + '万';
+        return (w % 1 === 0 ? w : w.toFixed(1)) + '万';
       }
+      if (mob) return String(Math.round(v));
       return opt.money ? money(v) : v;
     };
-    const clip = mob ? ';overflow:hidden;text-overflow:ellipsis;max-width:100%' : '';
-    const valStyle = `font-size:${vFs}px;color:var(--pink-600);font-weight:700;white-space:nowrap${clip}`;
-    const labStyle = `font-size:${lFs}px;color:#a8899a;white-space:nowrap${clip}`;
+    const fmtLabel = d => mob ? d.label.replace('月', '') : d.label;
+    const valStyle = `font-size:${vFs}px;color:var(--pink-600);font-weight:700;white-space:nowrap`;
+    const labStyle = `font-size:${lFs}px;color:#a8899a;white-space:nowrap`;
     return `<div style="display:flex;align-items:flex-end;gap:${gap}px;height:${H + 34}px;padding-top:6px;width:100%">
       ${data.map(d => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0">
         <div style="${valStyle}">${d.value ? fmtVal(d.value) : ''}</div>
         <div title="${esc(d.label)}: ${opt.money ? money(d.value) : d.value}"
           style="width:100%;max-width:${maxW}px;height:${Math.max(2, d.value / max * H)}px;border-radius:6px 6px 3px 3px;
           background:${d.hl ? 'linear-gradient(180deg,var(--pink-400),var(--pink-600))' : 'linear-gradient(180deg,var(--pink-200),var(--pink-300))'};transition:height .5s"></div>
-        <div style="${labStyle}">${esc(d.label)}</div>
+        <div style="${labStyle}">${esc(fmtLabel(d))}</div>
       </div>`).join('')}
     </div>`;
   }
