@@ -186,13 +186,28 @@ const U = (() => {
       return `<div class="empty" style="padding:26px"><p>暂无数据</p></div>`;
     const max = Math.max(...data.map(d => d.value)) || 1;
     const H = 138;
-    return `<div style="display:flex;align-items:flex-end;gap:6px;height:${H + 34}px;padding-top:6px">
+    // 移动端（窄屏）下，12 根柱子挤在一起，柱顶金额（如 ¥12,345）nowrap 会溢出压到邻柱；
+    // 这里压缩金额（≥1万显示 ¥1.2万）、收紧字号与间距、溢出处用省略号截断，避免数字重合。
+    const mob = isMobile();
+    const vFs = mob ? 9 : 10, lFs = mob ? 9 : 10, gap = mob ? 3 : 6, maxW = mob ? 22 : 34;
+    const fmtVal = v => {
+      if (!v) return '';
+      if (mob && Math.abs(v) >= 10000) {
+        const w = Math.round(v / 1000) / 10;              // 万，保留 1 位小数
+        return '¥' + (w % 1 === 0 ? w : w.toFixed(1)) + '万';
+      }
+      return opt.money ? money(v) : v;
+    };
+    const clip = mob ? ';overflow:hidden;text-overflow:ellipsis;max-width:100%' : '';
+    const valStyle = `font-size:${vFs}px;color:var(--pink-600);font-weight:700;white-space:nowrap${clip}`;
+    const labStyle = `font-size:${lFs}px;color:#a8899a;white-space:nowrap${clip}`;
+    return `<div style="display:flex;align-items:flex-end;gap:${gap}px;height:${H + 34}px;padding-top:6px;width:100%">
       ${data.map(d => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0">
-        <div style="font-size:10px;color:var(--pink-600);font-weight:700;white-space:nowrap">${d.value ? (opt.money ? money(d.value) : d.value) : ''}</div>
+        <div style="${valStyle}">${d.value ? fmtVal(d.value) : ''}</div>
         <div title="${esc(d.label)}: ${opt.money ? money(d.value) : d.value}"
-          style="width:100%;max-width:34px;height:${Math.max(2, d.value / max * H)}px;border-radius:6px 6px 3px 3px;
+          style="width:100%;max-width:${maxW}px;height:${Math.max(2, d.value / max * H)}px;border-radius:6px 6px 3px 3px;
           background:${d.hl ? 'linear-gradient(180deg,var(--pink-400),var(--pink-600))' : 'linear-gradient(180deg,var(--pink-200),var(--pink-300))'};transition:height .5s"></div>
-        <div style="font-size:10px;color:#a8899a;white-space:nowrap">${esc(d.label)}</div>
+        <div style="${labStyle}">${esc(d.label)}</div>
       </div>`).join('')}
     </div>`;
   }
