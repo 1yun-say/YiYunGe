@@ -244,7 +244,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .chk-done{background:var(--leaf)!important;border-color:var(--leaf)!important}
 .chk-blocked{background:#a8899a!important;border-color:#a8899a!important}
 .t-body{flex:1;min-width:0}
-.t-title{font-size:13.5px;line-height:1.32}
+.t-title{font-size:14px;line-height:1.35}
 .t-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:3px}
 .t-actions{display:flex;gap:2px;opacity:0;transition:.18s}
 .todo-item:hover .t-actions{opacity:1}
@@ -889,7 +889,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   .todo-view .card-h .tag{font-size:10px;padding:2px 7px;white-space:nowrap;flex:0 0 auto}
   .todo-view .card-h input[type="date"]{flex:0 0 110px;min-width:0;width:110px;font-size:12px;padding:4px 6px;min-height:34px}
   .todo-view .todo-item, .todo-mobile .todo-item{padding:4px 10px;gap:7px;align-items:center}
-  .todo-view .todo-item .t-title, .todo-mobile .todo-item .t-title{font-size:13px;line-height:1.3}
+  .todo-view .todo-item .t-title, .todo-mobile .todo-item .t-title{font-size:14px;line-height:1.32}
   .todo-view .todo-item .t-meta, .todo-mobile .todo-item .t-meta{gap:4px;margin-top:2px}
   .todo-view .todo-item .tag, .todo-mobile .todo-item .tag{font-size:10px;padding:2px 6px}
   .todo-view .todo-list, .todo-mobile .todo-list{gap:4px}

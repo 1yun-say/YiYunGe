@@ -407,7 +407,7 @@ const Todo = (() => {
       const done = dayTodos.filter(t => isDoneOnDay(t, d)).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
       const itemsHTML = (undone.length || done.length)
         ? undone.map(t => rowHTML(t, d, false)).join('') + done.map(t => rowHTML(t, d, false)).join('')
-        : `<div class="empty sm"><p>暂无事项，下面输入即可添加</p></div>`;
+        : '';
       const header = `${U.cnDate(d)} <span class="wd">${U.wdName(d)}</span>${isDayToday ? '<span class="tag today-pill">今天</span>' : ''}`;
       return `<section class="day-group${isDayToday ? ' today' : ''}">
         <div class="day-h">${header}</div>
