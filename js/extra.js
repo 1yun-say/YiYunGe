@@ -368,6 +368,10 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.6.4`, date: `2026-08-31`, held: false, divider: false,
+      items: [`<b>新功能：提醒事项每条可加备注，显示在标题同一行后面、小字</b>：例如「秋招投递 投递2家」——标题「秋招投递」正常字号，备注「投递2家」以浅灰小字（约 11.5px）紧跟其后同一行。备注存在待办对象的 <code>note</code> 字段，随待办一起云同步到其他设备。`,
+        `<b>行内一步添加备注</b>：手机端每天分组底部的输入框、桌面端「快速添加」输入框，现在支持 <code>标题｜备注</code> 语法——输入「秋招投递｜投递2家」回车，自动拆成标题 + 备注一步建好（竖线可用半角 <code>|</code> 或全角 <code>｜</code>，取首个分隔符）。「编辑」弹窗里原有的备注框继续可用；「新建提醒事项」弹窗按你的选择不加备注框，备注统一走行内语法或编辑补填。`,
+        `<b>回归锁定</b>：行内语法正确拆分为标题/备注两段、标题为空时不建、仅标题无线条时按普通标题处理；遗留卡片也同步显示内联备注。三处版本常量同步 bump 至 v2.6.4。`] },
     { ver: `v2.6.3`, date: `2026-08-31`, held: false, divider: false,
       items: [`<b>修复：重复模板自动生成的每日提醒「删了又回来」</b>：v2.6.1 曾声称修过此问题，但其判定条件 <code>t.tplId &amp;&amp; t.repeat &amp;&amp; t.repeat!=='never'</code> 要求被删实例自身携带 <code>repeat</code> 字段，而 <code>ensureTemplateInstances</code> 生成的实例<b>并不携带 repeat</b>（只有 <code>tplId</code> 和 <code>date</code>），于是该分支永远不成立、删除仍走「整条物理删除」、没把这一天登记进 <code>skippedTemplateDays</code>——下一帧渲染又按模板重新生成一条<b>新 id</b>的实例，于是「前面删的又回来了」。本版改为<b>回查所属模板的 repeat</b> 来识别重复模板实例：命中则把 <code>{tplId,date}</code> 记入 <code>skippedTemplateDays</code>（仅跳过那一天，其他天照常生成），并在 <code>ensureTemplateInstances</code> 生成前先清理已跳过的实例。同时把 <code>skippedTemplateDays</code> 纳入云同步合并（按 tplId+date 取并集），使「删某天模板实例」在手机/电脑多端都彻底消失。`,
         `<b>回归锁定</b>：用最小复现脚本验证——旧逻辑下跳过记录为空、实例被重生（BUG 复现）；新逻辑下跳过记录正确写入、实例彻底消失且其他天保留；跨端场景（他端独立生成的同模板实例）经 sync 合并 skip 后也被清理。三处版本常量同步 bump 至 v2.6.3。`] },

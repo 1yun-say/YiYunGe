@@ -16,6 +16,13 @@ const Todo = (() => {
   };
   const sInfo = s => STATUS[s] || STATUS.pending;
   const cycle = s => STATUS[s]?.next || 'done';
+  /* 行内输入「标题｜备注」语法：拆出标题与备注（支持半角/全角竖线，取首个分隔符） */
+  function splitTitleNote(raw) {
+    const v = (raw || '').trim();
+    if (!v) return { title: '', note: '' };
+    const m = v.split(/[|｜]/);
+    return { title: m[0].trim(), note: m.length > 1 ? m.slice(1).join('|').trim() : '' };
+  }
   let curDate = U.today();
   let lastUndone = [];             // 当前渲染的未完成列表，用于上下排序
   let lastTemplates = [];          // 当前渲染的模板顺序，用于模板上下排序
@@ -139,8 +146,9 @@ const Todo = (() => {
 
   /* 移动端：在指定日期的行内输入框回车，生成一条待办（备忘录式，无弹窗） */
   function quickAddDay(d, value) {
-    const v = (value || '').trim(); if (!v) return;
-    add({ title: v, priority: 1, date: d, status: 'pending' });
+    const { title, note } = splitTitleNote(value);
+    if (!title) return;
+    add({ title, note, priority: 1, date: d, status: 'pending' });
     render(); App.refreshBadge();
   }
 
@@ -277,7 +285,7 @@ const Todo = (() => {
           </div>
 
           ${isM ? '' : `<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-            <input class="input" id="quickTitle" style="flex:1;min-width:140px" placeholder="输入任务后回车，例如：给王妈妈发本周课表">
+            <input class="input" id="quickTitle" style="flex:1;min-width:140px" placeholder="输入任务后回车，例如：给王妈妈发本周课表（标题｜备注 可带备注）">
             <input type="time" class="input" id="quickTime" style="width:120px" title="可选的具体时间，如 19:00">
             <select class="input" id="quickP" style="width:132px">
               ${P.map(p => `<option value="${p.v}" ${p.v === 1 ? 'selected' : ''}>${p.name}</option>`).join('')}
@@ -331,9 +339,8 @@ const Todo = (() => {
       <div class="chk chk-${chkCls}" data-act="toggle" title="${doneOnCur ? '已完成' : (blockedOnCur ? '今日无法完成' : '未完成')}" style="color:#fff;border-color:${chkColor};${doneOnCur || blockedOnCur ? 'background:' + chkColor : ''}">${chkIcon}</div>
       <div class="t-body">
         <div class="t-title">
-          ${t.time ? `<span class="t-time">${U.esc(t.time)}</span>` : ''}${U.esc(t.title)}
+          ${t.time ? `<span class="t-time">${U.esc(t.time)}</span>` : ''}${U.esc(t.title)}${t.note ? `<span class="t-note"> ${U.esc(t.note)}</span>` : ''}
         </div>
-        ${t.note ? `<div class="muted" style="font-size:11.5px;margin-top:2px">${U.esc(t.note)}</div>` : ''}
         <div class="t-meta">
           <span class="tag" style="background:${p.color}1f;color:${p.color}">${p.name}</span>
           ${t.status !== 'pending' ? `<span class="tag" style="background:${st.color}1f;color:${st.color}">${st.name}</span>` : ''}
@@ -361,7 +368,7 @@ const Todo = (() => {
     const stu = t.studentId ? DB.student(t.studentId) : null;
     return `<div class="todo-item overdue" data-id="${t.id}">
       <div class="t-body">
-        <div class="t-title">${U.esc(t.title)}</div>
+        <div class="t-title">${U.esc(t.title)}${t.note ? `<span class="t-note"> ${U.esc(t.note)}</span>` : ''}</div>
         <div class="t-meta">
           <span class="tag" style="background:${p.color}1f;color:${p.color}">${p.name}</span>
           ${t.tag ? `<span class="tag gray">${U.esc(t.tag)}</span>` : ''}
@@ -408,7 +415,7 @@ const Todo = (() => {
       return `<section class="day-group${isDayToday ? ' today' : ''}">
         <div class="day-h">${header}</div>
         <div class="todo-list">${itemsHTML}</div>
-        <input class="input day-quick" data-date="${d}" placeholder="添加事项，回车确认">
+        <input class="input day-quick" data-date="${d}" placeholder="添加事项，回车确认（标题｜备注）">
       </section>`;
     }).join('');
 
@@ -651,10 +658,11 @@ const Todo = (() => {
   function doQuickAdd(root) {
     const i = U.$('#quickTitle', root);
     if (!i) return;
-    const v = i.value.trim(); if (!v) return;
+    const { title, note } = splitTitleNote(i.value);
+    if (!title) return;
     const tIn = U.$('#quickTime', root);
     const time = tIn ? (tIn.value || '') : '';
-    add({ title: v, priority: +U.$('#quickP', root).value, date: curDate, time });
+    add({ title, note, priority: +U.$('#quickP', root).value, date: curDate, time });
     i.value = ''; if (tIn) tIn.value = ''; render(); App.refreshBadge();
     setTimeout(() => { const el = U.$('#quickTitle'); if (el) el.focus(); }, 30);
   }
