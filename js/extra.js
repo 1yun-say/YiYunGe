@@ -368,6 +368,9 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.6.3`, date: `2026-08-31`, held: false, divider: false,
+      items: [`<b>修复：重复模板自动生成的每日提醒「删了又回来」</b>：v2.6.1 曾声称修过此问题，但其判定条件 <code>t.tplId &amp;&amp; t.repeat &amp;&amp; t.repeat!=='never'</code> 要求被删实例自身携带 <code>repeat</code> 字段，而 <code>ensureTemplateInstances</code> 生成的实例<b>并不携带 repeat</b>（只有 <code>tplId</code> 和 <code>date</code>），于是该分支永远不成立、删除仍走「整条物理删除」、没把这一天登记进 <code>skippedTemplateDays</code>——下一帧渲染又按模板重新生成一条<b>新 id</b>的实例，于是「前面删的又回来了」。本版改为<b>回查所属模板的 repeat</b> 来识别重复模板实例：命中则把 <code>{tplId,date}</code> 记入 <code>skippedTemplateDays</code>（仅跳过那一天，其他天照常生成），并在 <code>ensureTemplateInstances</code> 生成前先清理已跳过的实例。同时把 <code>skippedTemplateDays</code> 纳入云同步合并（按 tplId+date 取并集），使「删某天模板实例」在手机/电脑多端都彻底消失。`,
+        `<b>回归锁定</b>：用最小复现脚本验证——旧逻辑下跳过记录为空、实例被重生（BUG 复现）；新逻辑下跳过记录正确写入、实例彻底消失且其他天保留；跨端场景（他端独立生成的同模板实例）经 sync 合并 skip 后也被清理。三处版本常量同步 bump 至 v2.6.3。`] },
     { ver: `v2.6.2`, date: `2026-08-26`, held: false, divider: false,
       items: [`<b>手机桌面打开更快（首屏瘦身 + 缓存优先）</b>：此前线上版在 <code>index.html</code> 里<b>无条件预加载全部 19 个脚本</b>，其中 <code>xlsx.full.min.js</code>（≈861KB）与 <code>html2canvas.min.js</code>（≈194KB）两个大库占冷启动 JS 流量约三分之二，却只在「导入抽成表 / 从 Excel 导入课时 / 导出图片」这几个低频功能用到——你每次打开首页都要白下载这约 1MB。本版改为<b>按需懒加载</b>：平时不下载，点对应按钮时才动态注入并缓存（按 URL 去重、只下一次），首页冷启动流量从约 1.6MB 降到约 0.6MB（约 −63%）。`,
         `<b>Service Worker 改为 app-shell 缓存优先（cache-first）</b>：此前是 network-first（每次优先联网），现对 html/css/js 改为<b>命中缓存立即返回、后台静默刷新</b>——装到主屏后重复打开，静态资源直接读本地缓存<b>秒开</b>，不再等联网握手。缓存键带 <code>?v=</code> 版本号，部署新版本不会因缓存错配白屏（最坏情况只是多跑一次旧版，直到页面后台刷新）。GitHub Gist 云同步等跨域请求仍走原网络，不受影响。`,

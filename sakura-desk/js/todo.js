@@ -108,6 +108,15 @@ const Todo = (() => {
    * 每天只生成一次（tplId+date 去重），不重复堆积。 */
   function ensureTemplateInstances(days) {
     let changed = false;
+    // 先清理：被「跳过某天」的模板实例（含跨端同步过来的 skip），确保删除某天模板实例在本机/他端都彻底消失
+    if (Array.isArray(DB.data.skippedTemplateDays) && DB.data.skippedTemplateDays.length) {
+      const before = DB.data.todos.length;
+      DB.data.todos = DB.data.todos.filter(t => {
+        if (!t || !t.tplId) return true;
+        return !DB.data.skippedTemplateDays.some(s => s.tplId === t.tplId && s.date === t.date);
+      });
+      if (DB.data.todos.length !== before) changed = true;
+    }
     (DB.data.templates || []).forEach(tpl => {
       if (!tpl.repeat || tpl.repeat === 'never') return;
       const start = tpl.startDate || U.today();
@@ -480,17 +489,23 @@ const Todo = (() => {
         }
         case 'edit': editTodo(t); break;
         case 'del': {
-          if (t && t.tplId && t.repeat && t.repeat !== 'never') {
-            // 重复模板自动生成的实例：删除=仅跳过这一天，不影响其他天（记到模板排除日）
-            DB.data.skippedTemplateDays = Array.isArray(DB.data.skippedTemplateDays) ? DB.data.skippedTemplateDays : [];
-            if (!DB.data.skippedTemplateDays.some(s => s.tplId === t.tplId && s.date === t.date)) {
-              DB.data.skippedTemplateDays.push({ tplId: t.tplId, date: t.date });
+          if (t && t.tplId) {
+            // 实例本身不携带 repeat 字段，需回查所属模板是否带重复规则，才能正确识别「重复模板实例」
+            const tplDef = DB.data.templates.find(x => x.id === t.tplId);
+            const tplRepeat = tplDef && tplDef.repeat;
+            const isRecurringTpl = !!(tplRepeat && tplRepeat !== 'never');
+            if (isRecurringTpl) {
+              // 重复模板自动生成的实例：删除=仅跳过这一天，不影响其他天（记到模板排除日，避免下次渲染重生）
+              DB.data.skippedTemplateDays = Array.isArray(DB.data.skippedTemplateDays) ? DB.data.skippedTemplateDays : [];
+              if (!DB.data.skippedTemplateDays.some(s => s.tplId === t.tplId && s.date === t.date)) {
+                DB.data.skippedTemplateDays.push({ tplId: t.tplId, date: t.date });
+              }
+              DB.removeRecord('todos', tid);
+              DB.save(); render(); App.refreshBadge(); U.toast('已删除该天，不影响其他天');
+              break;
             }
-            DB.removeRecord('todos', tid);
-            DB.save(); render(); App.refreshBadge(); U.toast('已删除该天，不影响其他天');
-          } else {
-            DB.removeRecord('todos', tid); DB.save(); render(); App.refreshBadge();
           }
+          DB.removeRecord('todos', tid); DB.save(); render(); App.refreshBadge();
           break;
         }
         case 'up':

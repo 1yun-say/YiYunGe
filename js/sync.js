@@ -253,6 +253,12 @@ window.Sync = (() => {
     const mt = Object.assign({}, lm);
     for (const k in rm) mt[k] = Math.max(mt[k] || 0, rm[k] || 0);
     merged.meta = mt;
+    // 模板实例排除日（skippedTemplateDays）按 tplId+date 取并集，使「删某天模板实例」跨端也生效
+    const lsSkip = Array.isArray(local && local.skippedTemplateDays) ? local.skippedTemplateDays : [];
+    const rsSkip = Array.isArray(remote && remote.skippedTemplateDays) ? remote.skippedTemplateDays : [];
+    const skipMap = {};
+    [...lsSkip, ...rsSkip].forEach(s => { if (s && s.tplId && s.date) skipMap[s.tplId + ' ' + s.date] = s; });
+    merged.skippedTemplateDays = Object.keys(skipMap).map(k => skipMap[k]);
     merged.__savedAt = Math.max((local && local.__savedAt) || 0, (r && r.__savedAt) || 0);
     return merged;
   }

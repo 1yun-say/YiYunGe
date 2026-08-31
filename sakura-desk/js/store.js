@@ -227,6 +227,7 @@ const DB = (() => {
       settings: { route: 'dashboard', ownerName: '我', night: false, financeSections: defaultFinanceSections(), dashboardLayout: defaultDashboardLayout(), customSub: {}, brandLogo: '' },
       teachers: [], students: [], lessons: [], todos: [], events: [],
       deleted: blankDeleted(),       // 墓碑：各集合已删除记录的 id→删除时间戳（跨端删除同步用）
+      skippedTemplateDays: [],        // 模板实例「跳过某天」记录（删除某天模板实例用，随云同步跨端生效）
       histIncome: {},                // 历史收入：按月总额 { 'YYYY-MM': 金额 }
       histIncomeMt: {},              // 历史收入按月「最后写入时间」(LWW 合并用，避免改小的值被云端旧大值顶掉)
       histIncomeDel: {},             // 历史收入按月「删除墓碑」(删除也能跨端传播)
