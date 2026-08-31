@@ -342,18 +342,18 @@ const Finance = (() => {
   }
   async function exportPNG() {
     const target = U.$('#finGrid') || U.$('#view');
-    U.toast('正在生成图片…');
     try {
-      if (typeof html2canvas === 'function') {
-        const canvas = await html2canvas(target, { backgroundColor: '#fff7fa', scale: 2, useCORS: true, logging: false });
-        const a = document.createElement('a');
-        a.href = canvas.toDataURL('image/png');
-        a.download = `逸云阁财务_${U.today()}.png`;
-        a.click();
-        U.toast('已导出图片', 'ok');
-      } else {
-        U.toast('图片组件未加载，请刷新后重试', 'warn');
+      if (typeof html2canvas !== 'function') {
+        try { await U.loadScript('js/html2canvas.min.js?v=2.6.2', '图片导出组件'); }
+        catch (e) { throw new Error('图片导出组件加载失败，请检查网络'); }
       }
+      U.toast('正在生成图片…');
+      const canvas = await html2canvas(target, { backgroundColor: '#fff7fa', scale: 2, useCORS: true, logging: false });
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = `逸云阁财务_${U.today()}.png`;
+      a.click();
+      U.toast('已导出图片', 'ok');
     } catch (e) {
       U.toast('导出图片失败：' + (e && e.message ? e.message : e), 'warn');
     }

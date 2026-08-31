@@ -565,7 +565,10 @@ const Students = (() => {
     const name = (f.name || '').toLowerCase();
     const isExcel = name.endsWith('.xlsx') || name.endsWith('.xls');
     if (isExcel) {
-      if (typeof XLSX === 'undefined') throw new Error('Excel 解析库未加载，请刷新页面');
+      if (typeof XLSX === 'undefined') {
+        try { await U.loadScript('js/xlsx.full.min.js?v=2.6.2', 'Excel 解析库'); }
+        catch (e) { throw new Error('Excel 解析库加载失败，请检查网络'); }
+      }
       const buf = await f.arrayBuffer();
       const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
       if (!wb.SheetNames.length) throw new Error('Excel 文件为空');

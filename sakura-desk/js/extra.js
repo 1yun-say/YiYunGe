@@ -368,6 +368,10 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.6.2`, date: `2026-08-26`, held: false, divider: false,
+      items: [`<b>手机桌面打开更快（首屏瘦身 + 缓存优先）</b>：此前线上版在 <code>index.html</code> 里<b>无条件预加载全部 19 个脚本</b>，其中 <code>xlsx.full.min.js</code>（≈861KB）与 <code>html2canvas.min.js</code>（≈194KB）两个大库占冷启动 JS 流量约三分之二，却只在「导入抽成表 / 从 Excel 导入课时 / 导出图片」这几个低频功能用到——你每次打开首页都要白下载这约 1MB。本版改为<b>按需懒加载</b>：平时不下载，点对应按钮时才动态注入并缓存（按 URL 去重、只下一次），首页冷启动流量从约 1.6MB 降到约 0.6MB（约 −63%）。`,
+        `<b>Service Worker 改为 app-shell 缓存优先（cache-first）</b>：此前是 network-first（每次优先联网），现对 html/css/js 改为<b>命中缓存立即返回、后台静默刷新</b>——装到主屏后重复打开，静态资源直接读本地缓存<b>秒开</b>，不再等联网握手。缓存键带 <code>?v=</code> 版本号，部署新版本不会因缓存错配白屏（最坏情况只是多跑一次旧版，直到页面后台刷新）。GitHub Gist 云同步等跨域请求仍走原网络，不受影响。`,
+        `<b>离线单文件不受影响</b>：离线版用 <code>build-offline.js</code> 内联全部代码，两个大库仍完整内联进单文件，导入 / 导出图片在离线（file://）下照常可用；只是线上版不再为它们预加载。`] },
     { ver: `v2.6.1`, date: `2026-08-31`, held: false, divider: false,
       items: [`<b>修复：模板设「紧急重要」每天自动生成后变成「重要不紧急」</b>：重复实例展开时优先级写成 <code>tpl.priority || 1</code>，而「紧急重要」的 priority 值是 <code>0</code>，<code>0||1</code> 被错误回退成 <code>1</code>。现改为 <code>tpl.priority == null ? 1 : tpl.priority</code>，priority=0 正确保留。`,
         `<b>修复：模板编辑弹窗「重复」选「自定义」点了没反应</b>：<code>editTpl</code> 里 <code>U.modal({...})</code> 漏写 <code>const mm =</code>，导致 <code>U.wireRepeatControl(mm.body, ...)</code> 中 <code>mm</code> 未定义、整段绑定崩溃，自定义面板永远无法展开。补上 <code>const mm =</code> 后，可正常选「每周哪几天 + 重复几周 / 到某天 / 共几次」。`,

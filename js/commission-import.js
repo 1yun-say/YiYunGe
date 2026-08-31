@@ -6,8 +6,11 @@
  */
 (function () {
   const C = {
-    pick() {
-      if (typeof XLSX === 'undefined') { U.toast('解析库未加载，请刷新页面', 'err'); return; }
+    async pick() {
+      if (typeof XLSX === 'undefined') {
+        try { await U.loadScript('js/xlsx.full.min.js?v=2.6.2', 'Excel 解析库'); }
+        catch (e) { U.toast('Excel 解析库加载失败，请检查网络后重试', 'err'); return; }
+      }
       const inp = document.createElement('input');
       inp.type = 'file'; inp.accept = '.xlsx,.xls';
       inp.onchange = e => {

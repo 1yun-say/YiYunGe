@@ -45,6 +45,27 @@ const U = (() => {
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
+  /* 动态加载脚本（懒加载大库：xlsx / html2canvas）。
+   * - 按 src 缓存 Promise，保证同一库只下载一次；
+   * - 首次加载时弹「正在加载…」提示，加载完自动消失；
+   * - 返回 Promise，调用方 await 后即可使用全局变量（XLSX / html2canvas）。
+   * 离线单文件（file://）已内联这两个库，调用方会先用 typeof 判断，已存在则跳过本函数。 */
+  const _scriptCache = {};
+  function loadScript(src, label) {
+    if (_scriptCache[src]) return _scriptCache[src];
+    const loading = label ? toast('正在加载' + label + '…', 'ok', 999999) : null;
+    const p = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src; s.async = true;
+      s.onload = () => { if (loading) loading.remove(); resolve(); };
+      s.onerror = () => { if (loading) loading.remove(); reject(new Error('脚本加载失败：' + src)); };
+      document.head.appendChild(s);
+    });
+    // 失败时清除缓存，允许下次重试
+    _scriptCache[src] = p.catch(err => { delete _scriptCache[src]; throw err; });
+    return _scriptCache[src];
+  }
+
   /* 学科配色 */
   const SUBJECT_COLORS = {
     '数学': '#f9709d', '语文': '#7fc8a9', '英语': '#8fb8f0', '物理': '#f2b544',
@@ -535,7 +556,7 @@ function editableSub(node, viewKey, fallback) {
   return {
     pad, today, fmt, parse, addDays, addMonths, dow, mondayOf, weekDays, monthFirst, monthLast,
     yearFirst, yearLast, wdName, cnDate, between, daysDiff, t2m, m2t, safeT2m, uid, money, esc, el, $, $$,
-    toast, modal, confirm, copy, pie, bars, columns, subColor, SUBJECT_COLORS, WEEK_MUTED, WD, rebind, unbindNode, pct, fmtTime, isMobile,
+    toast, modal, confirm, copy, pie, bars, columns, subColor, SUBJECT_COLORS, WEEK_MUTED, WD, rebind, unbindNode, pct, fmtTime, isMobile, loadScript,
     editableSub, draggableSortable,
     monthDay, recurRuleOf, recurOccurrencesBetween, recurOccursOn, recurDescribe,
     buildRepeatControl, wireRepeatControl, readRepeatControl,
