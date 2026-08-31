@@ -368,6 +368,8 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.6.8`, date: `2026-09-01`, held: false, divider: false,
+      items: [`<b>继续压缩手机端待办行高（方案 A）</b>：v2.6.7 把勾选框强制高度去了，但每行右侧的 ↑↓ / 编辑 / 删除 操作按钮仍是 26×26px、比「收拾行李」这类单行标题（约 18px）高，于是字下面仍空出一截。本版把手机端（≤820px）<code>.todo-item</code> 内边距从 6px 收到 4px、上下箭头与编辑/删除按钮统一压到 <b>20×20px</b>（图标 13px、箭头字号 11px），并把 <code>.todo-item</code> 改为 <code>align-items:center</code> 让字与按钮垂直居中——每行高度从约 38px 压到约 28px，字下面基本不再有空白，按钮仍好点。每日分组列表内边距 7px→6px、项间距 5px→4px。三处版本常量同步 bump 至 v2.6.8。`] },
     { ver: `v2.6.7`, date: `2026-09-01`, held: false, divider: false,
       items: [`<b>消除每行「留空」真凶：手机端勾选框的 44px 强制高度</b>：用户反馈 v2.6.5/2.6.6 删掉「紧急重要」后每行仍有一大段空白。经查真凶并非优先级文字，而是移动端（≤820px）一条「触控目标≥44px」规范把每个勾选框 <code>.chk</code> 强制撑到 <code>min-height:44px</code>，导致单行标题也被顶到约 56px、标题下方大片留白。本版在移动端媒体查询给 <code>.todo-item .chk</code> 覆盖 <code>min-height:0</code>（可视勾选框回到 17px，行高随标题收缩到约 30–40px），并用透明 <code>::after{inset:-10px}</code> 把点击热区撑回约 37px（视觉小、照样好点，且不撑高行）。紧急重要文字维持已移除。三处版本常量同步 bump 至 v2.6.7。`] },
     { ver: `v2.6.6`, date: `2026-09-01`, held: false, divider: false,
