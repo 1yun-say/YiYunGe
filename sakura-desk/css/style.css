@@ -898,6 +898,9 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   .todo-view .todo-item .t-actions{opacity:1;gap:1px}
   .todo-view .todo-item .t-actions .btn-icon[data-act="up"],
   .todo-view .todo-item .t-actions .btn-icon[data-act="down"]{min-width:26px;width:26px;min-height:26px;height:26px;font-size:13px}
+  /* 取消勾选框的 44px 强制高度：行高随标题收缩，用透明 ::after 把可点热区撑回约 37px（不影响行高） */
+  .todo-item .chk{min-height:0;width:17px;height:17px;position:relative}
+  .todo-item .chk::after{content:"";position:absolute;inset:-10px}
 
   /* 我的页：brand 更小 */
   .more-view .brand-card{padding:10px 12px!important;margin-bottom:10px!important}

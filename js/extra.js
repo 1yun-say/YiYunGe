@@ -368,6 +368,8 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.6.7`, date: `2026-09-01`, held: false, divider: false,
+      items: [`<b>消除每行「留空」真凶：手机端勾选框的 44px 强制高度</b>：用户反馈 v2.6.5/2.6.6 删掉「紧急重要」后每行仍有一大段空白。经查真凶并非优先级文字，而是移动端（≤820px）一条「触控目标≥44px」规范把每个勾选框 <code>.chk</code> 强制撑到 <code>min-height:44px</code>，导致单行标题也被顶到约 56px、标题下方大片留白。本版在移动端媒体查询给 <code>.todo-item .chk</code> 覆盖 <code>min-height:0</code>（可视勾选框回到 17px，行高随标题收缩到约 30–40px），并用透明 <code>::after{inset:-10px}</code> 把点击热区撑回约 37px（视觉小、照样好点，且不撑高行）。紧急重要文字维持已移除。三处版本常量同步 bump 至 v2.6.7。`] },
     { ver: `v2.6.6`, date: `2026-09-01`, held: false, divider: false,
       items: [`<b>真正压缩待办行高（上一版缩得太保守）</b>：v2.6.5 只把内边距从 11px 降到 8px，且移动端 <code>.todo-view .todo-item</code> 还残留一条 <code>min-height:40px</code> 把压缩吃掉了，所以肉眼几乎看不出变化。本版：① 删除移动端 <code>min-height:40px</code>，行高不再被强制撑住；② 标题行高收紧（line-height 1.5→1.32，移动端 1.3）；③ 勾选圆圈 19px→17px；④ 每日分组列表内边距 9px→7px、项间距 6px→5px、勾选框与标题间距同步收。实测每行高度从约 42px 降到约 31px（约 −26%），每天能多排约 1/4 的条目，空当消失。三处版本常量同步 bump 至 v2.6.6。`] },
     { ver: `v2.6.5`, date: `2026-09-01`, held: false, divider: false,
