@@ -349,7 +349,12 @@ function editableSub(node, viewKey, fallback) {
     const LIMIT = 4000;
     let idx = 0;                 // 从 start 起算的发生序号（含被 from 裁掉的）
     const pushIf = d => {
-      if (r.end === 'count' && idx >= r.count) return false;   // 已达次数上限
+      if (r.end === 'count') {
+        if (r.unit === 'week' && r.weekdays && r.weekdays.length) {
+          const wk = Math.floor(daysDiff(S, d) / 7);
+          if (wk >= r.count) return false;   // 选了「星期多选 + 共N周」时，count 解释为周数而非发生次数
+        } else if (idx >= r.count) return false;   // 其他情形（无星期多选/按天）仍按发生次数裁剪
+      }
       if (r.end === 'until' && r.until && d > r.until) return false; // 已超过截止日
       if (d >= from && d <= to) out.push(d);
       idx++;
@@ -373,7 +378,7 @@ function editableSub(node, viewKey, fallback) {
         // 每 N 周、且只在该周指定的星期几发生（可多选，如周一/周四/周五）
         let d = S, i = 0;
         while (d <= to && i < LIMIT) {
-          const wk = Math.round(daysDiff(S, d) / 7);
+          const wk = Math.floor(daysDiff(S, d) / 7);
           if (wk >= 0 && wk % r.every === 0 && r.weekdays.includes(dow(d))) { if (!pushIf(d)) break; }
           d = addDays(d, 1); i++;
         }
@@ -437,7 +442,7 @@ function editableSub(node, viewKey, fallback) {
         else if (r.unit === 'month') s = `每 ${r.every} 个月`;
         else if (r.unit === 'year') s = `每 ${r.every} 年`;
         if (r.end === 'until' && r.until) s += `，至 ${r.until}`;
-        if (r.end === 'count') s += `，共 ${r.count} 次`;
+        if (r.end === 'count') s += (r.unit === 'week' && r.weekdays && r.weekdays.length) ? `，共 ${r.count} 周` : `，共 ${r.count} 次`;
         return s;
       }
       default: return '不重复';

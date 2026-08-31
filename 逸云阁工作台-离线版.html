@@ -1272,7 +1272,7 @@ body.night .pwa-banner-txt{ color:#ffc2d6; }
 
 <script>
 /* ===== 离线单文件版标识（由 build-offline.js 注入）===== */
-window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-31T03:34:45.347Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
+window.__OFFLINE_BUILD__ = {"builtAt":"2026-08-31T04:41:27.472Z","note":"本文件自包含全部代码，可脱离服务器直接双击运行"};
 (function () {
   if (location.protocol === 'file:' && !window.isSecureContext) {
     window.addEventListener('load', function () {
@@ -1724,7 +1724,12 @@ function editableSub(node, viewKey, fallback) {
     const LIMIT = 4000;
     let idx = 0;                 // 从 start 起算的发生序号（含被 from 裁掉的）
     const pushIf = d => {
-      if (r.end === 'count' && idx >= r.count) return false;   // 已达次数上限
+      if (r.end === 'count') {
+        if (r.unit === 'week' && r.weekdays && r.weekdays.length) {
+          const wk = Math.floor(daysDiff(S, d) / 7);
+          if (wk >= r.count) return false;   // 选了「星期多选 + 共N周」时，count 解释为周数而非发生次数
+        } else if (idx >= r.count) return false;   // 其他情形（无星期多选/按天）仍按发生次数裁剪
+      }
       if (r.end === 'until' && r.until && d > r.until) return false; // 已超过截止日
       if (d >= from && d <= to) out.push(d);
       idx++;
@@ -1748,7 +1753,7 @@ function editableSub(node, viewKey, fallback) {
         // 每 N 周、且只在该周指定的星期几发生（可多选，如周一/周四/周五）
         let d = S, i = 0;
         while (d <= to && i < LIMIT) {
-          const wk = Math.round(daysDiff(S, d) / 7);
+          const wk = Math.floor(daysDiff(S, d) / 7);
           if (wk >= 0 && wk % r.every === 0 && r.weekdays.includes(dow(d))) { if (!pushIf(d)) break; }
           d = addDays(d, 1); i++;
         }
@@ -1812,7 +1817,7 @@ function editableSub(node, viewKey, fallback) {
         else if (r.unit === 'month') s = `每 ${r.every} 个月`;
         else if (r.unit === 'year') s = `每 ${r.every} 年`;
         if (r.end === 'until' && r.until) s += `，至 ${r.until}`;
-        if (r.end === 'count') s += `，共 ${r.count} 次`;
+        if (r.end === 'count') s += (r.unit === 'week' && r.weekdays && r.weekdays.length) ? `，共 ${r.count} 周` : `，共 ${r.count} 次`;
         return s;
       }
       default: return '不重复';
@@ -3279,9 +3284,10 @@ const Todo = (() => {
       if (rule.type === 'never') return;
       days.forEach(d => {
         if (!U.recurOccursOn(d, rule)) return;
+        if (DB.data.skippedTemplateDays && DB.data.skippedTemplateDays.some(s => s.tplId === tpl.id && s.date === d)) return; // 用户删除过的某天不再生成
         if (DB.data.todos.some(t => t.tplId === tpl.id && t.date === d)) return;
         DB.data.todos.push({
-          id: U.uid('td'), title: tpl.title, note: '', priority: tpl.priority || 1,
+          id: U.uid('td'), title: tpl.title, note: '', priority: (tpl.priority == null ? 1 : tpl.priority),
           tag: tpl.tag || '', date: d, time: '', status: 'pending', doneAt: null,
           tplId: tpl.id, createdAt: Date.now(), order: Date.now()
         });
@@ -3642,7 +3648,20 @@ const Todo = (() => {
           break;
         }
         case 'edit': editTodo(t); break;
-        case 'del': DB.removeRecord('todos', tid); DB.save(); render(); App.refreshBadge(); break;
+        case 'del': {
+          if (t && t.tplId && t.repeat && t.repeat !== 'never') {
+            // 重复模板自动生成的实例：删除=仅跳过这一天，不影响其他天（记到模板排除日）
+            DB.data.skippedTemplateDays = Array.isArray(DB.data.skippedTemplateDays) ? DB.data.skippedTemplateDays : [];
+            if (!DB.data.skippedTemplateDays.some(s => s.tplId === t.tplId && s.date === t.date)) {
+              DB.data.skippedTemplateDays.push({ tplId: t.tplId, date: t.date });
+            }
+            DB.removeRecord('todos', tid);
+            DB.save(); render(); App.refreshBadge(); U.toast('已删除该天，不影响其他天');
+          } else {
+            DB.removeRecord('todos', tid); DB.save(); render(); App.refreshBadge();
+          }
+          break;
+        }
         case 'up':
         case 'down': {
           const ids = lastUndone.map(x => x.id);
@@ -3891,7 +3910,7 @@ const Todo = (() => {
   function editTpl(tpl, after) {
     const isNew = !tpl;
     tpl = tpl || { title: '', priority: 1, tag: '' };
-    U.modal({
+    const mm = U.modal({
       title: isNew ? '新增每日模板' : '编辑模板',
       body: `<div class="field"><label>模板内容</label>
           <input class="input" id="f_t" value="${U.esc(tpl.title)}" placeholder="例如：给今天上课的家长发提醒"></div>
@@ -8568,6 +8587,12 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.6.1`, date: `2026-08-31`, held: false, divider: false,
+      items: [`<b>修复：模板设「紧急重要」每天自动生成后变成「重要不紧急」</b>：重复实例展开时优先级写成 <code>tpl.priority || 1</code>，而「紧急重要」的 priority 值是 <code>0</code>，<code>0||1</code> 被错误回退成 <code>1</code>。现改为 <code>tpl.priority == null ? 1 : tpl.priority</code>，priority=0 正确保留。`,
+        `<b>修复：模板编辑弹窗「重复」选「自定义」点了没反应</b>：<code>editTpl</code> 里 <code>U.modal({...})</code> 漏写 <code>const mm =</code>，导致 <code>U.wireRepeatControl(mm.body, ...)</code> 中 <code>mm</code> 未定义、整段绑定崩溃，自定义面板永远无法展开。补上 <code>const mm =</code> 后，可正常选「每周哪几天 + 重复几周 / 到某天 / 共几次」。`,
+        `<b>重复规则支持「共N周」</b>：模板重复选「自定义 → 每N周 + 周一/三/五 + 结束：共N周」时，<code>count</code> 现在按<b>周数</b>裁剪（此前按「发生次数」算会少生成）；周序号改用 <code>Math.floor</code> 修正跨周边界，描述文案同步显示「共 N 周」。`,
+        `<b>修复：每天自动生成的待办删不掉</b>：此前点删除后 <code>ensureTemplateInstances</code> 下次渲染又把这条重新生成回来。现改为「在某天删除 = 仅跳过那一天」——把 <code>{tplId,date}</code> 记入 <code>skippedTemplateDays</code>，其他天照常自动生成；普通（非重复）待办仍直接删除。`,
+        `<b>回归锁定</b>：<code>todo-mobile-test.js</code> 扩到 21/0，新增「共N周」「跳过删除」「优先级0不被回退」校验，三处版本常量同步 bump 至 v2.6.1。`] },
     { ver: `v2.6.0`, date: `2026-08-31`, held: false, divider: false,
       items: [`<b>手机端提醒事项重做：以「今天」为起点的连续 7 天视图</b>：每天一个分组头（<code>M月D日 周X</code>，今天带「今天」标），下面列该天未完成/已完成事项；当天结束自动顺延——进入新的一天，窗口整体后移一天。顶部新增 <b>「📅 跳到某天」</b> 日期选择（可跳到很久以后去预排），非今天时显示 <b>「回到今天」</b> 一键复位。`,
         `<b>备忘录式快速新增</b>：每个日期分组底部都有一个行内输入框，输入后回车即生成一条带小圆圈的待办，无需弹窗；点事项左侧圆圈即可勾选完成（置灰+删除线）。`,

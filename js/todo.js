@@ -115,9 +115,10 @@ const Todo = (() => {
       if (rule.type === 'never') return;
       days.forEach(d => {
         if (!U.recurOccursOn(d, rule)) return;
+        if (DB.data.skippedTemplateDays && DB.data.skippedTemplateDays.some(s => s.tplId === tpl.id && s.date === d)) return; // 用户删除过的某天不再生成
         if (DB.data.todos.some(t => t.tplId === tpl.id && t.date === d)) return;
         DB.data.todos.push({
-          id: U.uid('td'), title: tpl.title, note: '', priority: tpl.priority || 1,
+          id: U.uid('td'), title: tpl.title, note: '', priority: (tpl.priority == null ? 1 : tpl.priority),
           tag: tpl.tag || '', date: d, time: '', status: 'pending', doneAt: null,
           tplId: tpl.id, createdAt: Date.now(), order: Date.now()
         });
@@ -478,7 +479,20 @@ const Todo = (() => {
           break;
         }
         case 'edit': editTodo(t); break;
-        case 'del': DB.removeRecord('todos', tid); DB.save(); render(); App.refreshBadge(); break;
+        case 'del': {
+          if (t && t.tplId && t.repeat && t.repeat !== 'never') {
+            // 重复模板自动生成的实例：删除=仅跳过这一天，不影响其他天（记到模板排除日）
+            DB.data.skippedTemplateDays = Array.isArray(DB.data.skippedTemplateDays) ? DB.data.skippedTemplateDays : [];
+            if (!DB.data.skippedTemplateDays.some(s => s.tplId === t.tplId && s.date === t.date)) {
+              DB.data.skippedTemplateDays.push({ tplId: t.tplId, date: t.date });
+            }
+            DB.removeRecord('todos', tid);
+            DB.save(); render(); App.refreshBadge(); U.toast('已删除该天，不影响其他天');
+          } else {
+            DB.removeRecord('todos', tid); DB.save(); render(); App.refreshBadge();
+          }
+          break;
+        }
         case 'up':
         case 'down': {
           const ids = lastUndone.map(x => x.id);
@@ -727,7 +741,7 @@ const Todo = (() => {
   function editTpl(tpl, after) {
     const isNew = !tpl;
     tpl = tpl || { title: '', priority: 1, tag: '' };
-    U.modal({
+    const mm = U.modal({
       title: isNew ? '新增每日模板' : '编辑模板',
       body: `<div class="field"><label>模板内容</label>
           <input class="input" id="f_t" value="${U.esc(tpl.title)}" placeholder="例如：给今天上课的家长发提醒"></div>

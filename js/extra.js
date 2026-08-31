@@ -368,6 +368,12 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.6.1`, date: `2026-08-31`, held: false, divider: false,
+      items: [`<b>修复：模板设「紧急重要」每天自动生成后变成「重要不紧急」</b>：重复实例展开时优先级写成 <code>tpl.priority || 1</code>，而「紧急重要」的 priority 值是 <code>0</code>，<code>0||1</code> 被错误回退成 <code>1</code>。现改为 <code>tpl.priority == null ? 1 : tpl.priority</code>，priority=0 正确保留。`,
+        `<b>修复：模板编辑弹窗「重复」选「自定义」点了没反应</b>：<code>editTpl</code> 里 <code>U.modal({...})</code> 漏写 <code>const mm =</code>，导致 <code>U.wireRepeatControl(mm.body, ...)</code> 中 <code>mm</code> 未定义、整段绑定崩溃，自定义面板永远无法展开。补上 <code>const mm =</code> 后，可正常选「每周哪几天 + 重复几周 / 到某天 / 共几次」。`,
+        `<b>重复规则支持「共N周」</b>：模板重复选「自定义 → 每N周 + 周一/三/五 + 结束：共N周」时，<code>count</code> 现在按<b>周数</b>裁剪（此前按「发生次数」算会少生成）；周序号改用 <code>Math.floor</code> 修正跨周边界，描述文案同步显示「共 N 周」。`,
+        `<b>修复：每天自动生成的待办删不掉</b>：此前点删除后 <code>ensureTemplateInstances</code> 下次渲染又把这条重新生成回来。现改为「在某天删除 = 仅跳过那一天」——把 <code>{tplId,date}</code> 记入 <code>skippedTemplateDays</code>，其他天照常自动生成；普通（非重复）待办仍直接删除。`,
+        `<b>回归锁定</b>：<code>todo-mobile-test.js</code> 扩到 21/0，新增「共N周」「跳过删除」「优先级0不被回退」校验，三处版本常量同步 bump 至 v2.6.1。`] },
     { ver: `v2.6.0`, date: `2026-08-31`, held: false, divider: false,
       items: [`<b>手机端提醒事项重做：以「今天」为起点的连续 7 天视图</b>：每天一个分组头（<code>M月D日 周X</code>，今天带「今天」标），下面列该天未完成/已完成事项；当天结束自动顺延——进入新的一天，窗口整体后移一天。顶部新增 <b>「📅 跳到某天」</b> 日期选择（可跳到很久以后去预排），非今天时显示 <b>「回到今天」</b> 一键复位。`,
         `<b>备忘录式快速新增</b>：每个日期分组底部都有一个行内输入框，输入后回车即生成一条带小圆圈的待办，无需弹窗；点事项左侧圆圈即可勾选完成（置灰+删除线）。`,
