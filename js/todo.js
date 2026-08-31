@@ -88,12 +88,50 @@ const Todo = (() => {
     const base = Date.now();
     sortTemplates().forEach((tpl, i) => {
       if (ids && !ids.includes(tpl.id)) return;
+      if (tpl.repeat && tpl.repeat !== 'never') return;   // 已设重复规则的模板会自动生成，不再手动导入
       if (DB.data.todos.some(t => t.date === curDate && t.tplId === tpl.id)) return; // 当天已导入
       add({ title: tpl.title, priority: tpl.priority, tag: tpl.tag, tplId: tpl.id, date: curDate, order: base + i });
       n++;
     });
     U.toast(n ? `已导入 ${n} 条模板任务` : '今天已经导入过了', n ? 'ok' : 'warn');
     render();
+  }
+
+  /* 某条待办在某天是否已被标记为完成（重复任务按 completedDates 判定，普通任务按 status） */
+  function isDoneOnDay(t, d) {
+    const r = U.recurRuleOf(t.repeat, t.date);
+    if (r.type !== 'never') return Array.isArray(t.completedDates) && t.completedDates.includes(d);
+    return t.status === 'done';
+  }
+
+  /* 移动端：按可见的若干天，把「设置了重复规则的模板」幂等展开成具体待办实例。
+   * 每天只生成一次（tplId+date 去重），不重复堆积。 */
+  function ensureTemplateInstances(days) {
+    let changed = false;
+    (DB.data.templates || []).forEach(tpl => {
+      if (!tpl.repeat || tpl.repeat === 'never') return;
+      const start = tpl.startDate || U.today();
+      const rule = U.recurRuleOf(tpl.repeat, start);
+      if (rule.type === 'never') return;
+      days.forEach(d => {
+        if (!U.recurOccursOn(d, rule)) return;
+        if (DB.data.todos.some(t => t.tplId === tpl.id && t.date === d)) return;
+        DB.data.todos.push({
+          id: U.uid('td'), title: tpl.title, note: '', priority: tpl.priority || 1,
+          tag: tpl.tag || '', date: d, time: '', status: 'pending', doneAt: null,
+          tplId: tpl.id, createdAt: Date.now(), order: Date.now()
+        });
+        changed = true;
+      });
+    });
+    if (changed) DB.save();
+  }
+
+  /* 移动端：在指定日期的行内输入框回车，生成一条待办（备忘录式，无弹窗） */
+  function quickAddDay(d, value) {
+    const v = (value || '').trim(); if (!v) return;
+    add({ title: v, priority: 1, date: d, status: 'pending' });
+    render(); App.refreshBadge();
   }
 
   /* --- 渲染 --- */
@@ -182,11 +220,12 @@ const Todo = (() => {
           ${lastTemplates.length ? lastTemplates.map(tpl => tplChipHTML(tpl, tplSelMode, tplSel.has(tpl.id))).join('') : `<p class="muted" style="font-size:12px">还没有模板，点右上角 + 添加</p>`}
         </div>
         ${tplSelMode ? tplBatchBarHTML() : ''}
-        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:11px" data-act="importAll">一键导入全部到今天</button>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:11px" data-act="importAll">一键导入全部模板</button>
       </div>`;
   }
 
   function render() {
+    if (U.isMobile()) { renderMobile(); return; }
     const root = U.$('#view');
     if (!root || App.route !== 'todo') return;
     const list = ofDate(curDate);
@@ -258,13 +297,14 @@ const Todo = (() => {
     bind(root);
   }
 
-  function rowHTML(t, showDate) {
+  function rowHTML(t, viewDate, showDate) {
+    viewDate = viewDate || curDate;
     const p = pInfo(t.priority);
     const st = sInfo(t.status);
     const stu = t.studentId ? DB.student(t.studentId) : null;
     // 重复任务在「当前展示日」被勾掉时（写进 completedDates 而非改 status），也要显示为已勾选态
     const doneOnCur = (t.repeat && t.repeat !== 'never')
-      ? (Array.isArray(t.completedDates) && t.completedDates.includes(curDate))
+      ? (Array.isArray(t.completedDates) && t.completedDates.includes(viewDate))
       : (t.status === 'done');
     const blockedOnCur = (t.repeat && t.repeat !== 'never')
       ? false
@@ -277,7 +317,7 @@ const Todo = (() => {
     const chkCls = doneOnCur ? 'done' : (blockedOnCur ? 'blocked' : 'pending');
     // 重复任务勾掉（写进 completedDates）的完成态用绿色语义，而非「未完成」粉色。
     const chkColor = doneOnCur ? 'var(--leaf, #38a169)' : st.color;
-    return `<div class="todo-item ${doneOnCur ? 'done' : ''} ${blockedOnCur ? 'blocked' : ''}" data-p="${t.priority}" data-id="${t.id}">
+    return `<div class="todo-item ${doneOnCur ? 'done' : ''} ${blockedOnCur ? 'blocked' : ''}" data-p="${t.priority}" data-id="${t.id}" data-view="${viewDate}">
       <div class="chk chk-${chkCls}" data-act="toggle" title="${doneOnCur ? '已完成' : (blockedOnCur ? '今日无法完成' : '未完成')}" style="color:#fff;border-color:${chkColor};${doneOnCur || blockedOnCur ? 'background:' + chkColor : ''}">${chkIcon}</div>
       <div class="t-body">
         <div class="t-title">
@@ -327,6 +367,79 @@ const Todo = (() => {
     </div>`;
   }
 
+  /* 移动端（≤820px）：以 curDate 为起点展示连续 7 天，每天一个分组；行内回车新增；支持跳到任意一天 */
+  function renderMobile() {
+    const root = U.$('#view');
+    if (!root || App.route !== 'todo') return;
+    const today = U.today();
+    const isToday = curDate === today;
+    const days = Array.from({ length: 7 }, (_, i) => U.addDays(curDate, i));
+    ensureTemplateInstances(days);                 // 把可见 7 天里符合规则的模板自动展开成待办
+    const overdue = isToday ? computeOverdue() : [];
+
+    const groupsHTML = days.map(d => {
+      const isDayToday = d === today;
+      const dayTodos = DB.data.todos.filter(t => {
+        if (occursOnDate(t, d)) return true;
+        // 已完成（含重复任务当天被勾掉）也显示在该日下，便于回看
+        if (t.repeat && t.repeat !== 'never' && Array.isArray(t.completedDates) && t.completedDates.includes(d)) return true;
+        return false;
+      });
+      const sortFn = (a, b) => (b.flag ? 1 : 0) - (a.flag ? 1 : 0)
+        || (a.order || 0) - (b.order || 0)
+        || (a.time || '99:59').localeCompare(b.time || '99:59')
+        || a.createdAt - b.createdAt;
+      const undone = dayTodos.filter(t => !isDoneOnDay(t, d)).sort(sortFn);
+      const done = dayTodos.filter(t => isDoneOnDay(t, d)).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+      const itemsHTML = (undone.length || done.length)
+        ? undone.map(t => rowHTML(t, d, false)).join('') + done.map(t => rowHTML(t, d, false)).join('')
+        : `<div class="empty sm"><p>暂无事项，下面输入即可添加</p></div>`;
+      const header = `${U.cnDate(d)} <span class="wd">${U.wdName(d)}</span>${isDayToday ? '<span class="tag today-pill">今天</span>' : ''}`;
+      return `<section class="day-group${isDayToday ? ' today' : ''}">
+        <div class="day-h">${header}</div>
+        <div class="todo-list">${itemsHTML}</div>
+        <input class="input day-quick" data-date="${d}" placeholder="添加事项，回车确认">
+      </section>`;
+    }).join('');
+
+    root.innerHTML = `
+    <div class="todo-mobile">
+      <div class="todo-mbar">
+        <h3>${isToday ? '今日提醒事项' : U.cnDate(curDate) + ' 起'}</h3>
+        <div class="todo-mbar-actions">
+          <button class="btn btn-icon" data-act="prevDay" title="前一天">&#8249;</button>
+          <input type="date" class="input" id="tdDate" value="${curDate}">
+          <button class="btn btn-icon" data-act="nextDay" title="后一天">&#8250;</button>
+          ${isToday ? '' : '<button class="btn btn-sm btn-ghost" data-act="backToday">回到今天</button>'}
+        </div>
+      </div>
+
+      ${overdue.length ? `<div class="card" style="border-color:#ffd0d0;background:#fff8f8">
+        <div class="card-h"><h3 style="color:#cf5252">遗留未完成 ${overdue.length} 条</h3>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-sm btn-ghost" data-act="ignoreOverdue">忽略全部</button>
+            <button class="btn btn-sm btn-ghost" data-act="pullOverdue">全部拉到今天</button>
+          </div></div>
+        <div class="todo-list">${overdue.map(t => overdueRowHTML(t)).join('')}</div>
+      </div>` : ''}
+
+      ${groupsHTML}
+      ${buildMobileTplHTML(true)}
+    </div>`;
+
+    bind(root);   // 复用桌面端绑定（含 #tdDate、所有 data-act 的 switch）
+    // 行内回车新增：备忘录式，不弹窗
+    root.querySelectorAll('.day-quick').forEach(inp => {
+      inp.addEventListener('keydown', e => {
+        if (e.key !== 'Enter') return;
+        const d = inp.dataset.date, val = inp.value;
+        if (!val.trim()) return;
+        quickAddDay(d, val);
+        setTimeout(() => { const n = U.$('.day-quick[data-date="' + d + '"]', root); if (n) n.focus(); }, 30);
+      });
+    });
+  }
+
   function bind(root) {
     U.$('#tdDate', root).onchange = e => { curDate = e.target.value; render(); };
 
@@ -342,13 +455,15 @@ const Todo = (() => {
       switch (act) {
         case 'prevDay': curDate = U.addDays(curDate, -1); render(); break;
         case 'nextDay': curDate = U.addDays(curDate, 1); render(); break;
+        case 'backToday': curDate = U.today(); render(); break;
         case 'quickAdd': doQuickAdd(root); break;
         case 'toggle': {
+          const vd = item && item.dataset.view ? item.dataset.view : curDate; // 当前事项所属视图日期（移动端为所在天）
           const rule = U.recurRuleOf(t.repeat, t.date);
           // 仅「真正重复」的任务(type!=='never' 且当前展示日确为发生日)才走「按日期单独勾选」分支；
           // 非重复任务(never)必须改 status，否则在到期日当天点击时只写 completedDates、
           // 而渲染/未读数都按 status 判定，导致对勾不显示、未读数不减。
-          if (rule.type !== 'never' && U.recurOccursOn(curDate, rule)) {
+          if (rule.type !== 'never' && U.recurOccursOn(vd, rule)) {
             // 重复任务：按当前展示日单独勾选完成
             t.completedDates = Array.isArray(t.completedDates) ? t.completedDates : [];
             const i = t.completedDates.indexOf(curDate);
@@ -621,11 +736,16 @@ const Todo = (() => {
             ${P.map(p => `<option value="${p.v}" ${p.v === tpl.priority ? 'selected' : ''}>${p.name}</option>`).join('')}</select></div>
           <div class="field"><label>标签</label><input class="input" id="f_g" value="${U.esc(tpl.tag)}" placeholder="日常 / 家长沟通 / 财务"></div>
         </div>
-        <p class="muted" style="font-size:11.5px">模板不会自己产生任务，需要你在提醒事项页点「一键导入」，避免堆积。</p>`,
+        ${U.buildRepeatControl(tpl.repeat && typeof tpl.repeat === 'string' ? tpl.repeat : (tpl.repeat && tpl.repeat.type === 'custom' ? 'custom' : (tpl.repeat && tpl.repeat.type) || 'never'))}
+        <div class="field"><label>开始日期（可选，留空＝从今天起生效）</label><input type="date" class="input" id="f_from" value="${tpl.startDate || ''}"></div>
+        <p class="muted" style="font-size:11.5px">设了重复规则（每天 / 区间 / 周几）的模板会在匹配的日子自动出现待办，无需手动导入；没设规则的模板仍用「一键导入全部」手动添加。</p>`,
       onOk: b => {
         const title = U.$('#f_t', b).value.trim();
         if (!title) { U.toast('请填写模板内容', 'warn'); return false; }
-        const o = { title, priority: +U.$('#f_p', b).value, tag: U.$('#f_g', b).value.trim() };
+        const o = {
+          title, priority: +U.$('#f_p', b).value, tag: U.$('#f_g', b).value.trim(),
+          repeat: U.readRepeatControl(b), startDate: U.$('#f_from', b).value || ''
+        };
         if (isNew) {
           const maxOrder = (DB.data.templates || []).reduce((m, x) => Math.max(m, x.order || 0), -1);
           DB.data.templates.push(Object.assign({ id: U.uid('tpl'), order: maxOrder + 1 }, o));
@@ -634,6 +754,8 @@ const Todo = (() => {
         if (after) after(); else render();
       }
     });
+    U.wireRepeatControl(mm.body, (typeof tpl.repeat === 'string' || (tpl.repeat && tpl.repeat.type === 'custom'))
+      ? tpl.repeat : (tpl.repeat && tpl.repeat.type) || 'never');
   }
 
   Views.todo = {

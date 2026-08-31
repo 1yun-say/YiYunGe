@@ -272,6 +272,23 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .archive-head .caret{transition:.2s}
 .archive-head.open .caret{transform:rotate(90deg)}
 
+/* ---------- 移动端提醒事项：以当天为起点的 7 天连续分组 ---------- */
+.todo-mobile{display:flex;flex-direction:column;gap:16px;padding-bottom:8px}
+.todo-mbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.todo-mbar h3{font-size:16px;font-weight:800;margin:0;white-space:nowrap}
+.todo-mbar-actions{display:flex;gap:6px;align-items:center}
+.todo-mbar-actions input[type="date"]{width:138px;min-height:36px;padding:5px 8px}
+.day-group{border:1px solid var(--line);border-radius:var(--r-m);background:#fff;overflow:hidden}
+.day-group.today{border-color:var(--pink-300);box-shadow:0 0 0 2px var(--pink-75,#fff0f5)}
+.day-h{display:flex;align-items:center;gap:8px;padding:9px 13px;background:linear-gradient(var(--pink-75,#fff0f5),#fff);border-bottom:1px solid var(--line);font-weight:700;font-size:14px}
+.day-h .wd{font-size:12px;color:var(--ink-3,#9a8f95);font-weight:600}
+.day-h .today-pill{background:var(--pink-500,#f479a8);color:#fff;border:none;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.day-group .todo-list{padding:10px 12px;gap:7px}
+.day-quick{margin:0 12px 12px;width:calc(100% - 24px);border-style:dashed;border-color:var(--line-2,#e9e2e6)}
+.day-quick::placeholder{color:var(--ink-3,#9a8f95)}
+.empty.sm{padding:6px 2px;color:var(--ink-3,#9a8f95);font-size:12px}
+.empty.sm p{margin:0}
+
 /* ---------- 学员卡片 ---------- */
 .stu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(275px,1fr));gap:14px}
 .stu-card{background:#fff;border:1px solid var(--line);border-radius:var(--r-m);padding:0;box-shadow:var(--shadow-s);transition:.2s;overflow:hidden;position:relative}
