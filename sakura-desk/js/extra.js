@@ -368,6 +368,8 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.6.9`, date: `2026-09-01`, held: false, divider: false,
+      items: [`<b>真修：手机 7 天视图「收拾行李」那行的大片空白</b>：前几版（v2.6.5–2.6.8）所有行高压缩 CSS 都只写在了 <code>.todo-view</code> 作用域下，而手机 7 天视图的容器其实是 <code>.todo-mobile</code>（与 <code>.todo-view</code> 是两个类）——所以该视图一直退回基础样式：移动端「触控目标≥44px」规范把每行右侧看不见的 ↑↓ / 编辑 / 删除 按钮 <code>.btn-icon</code> 撑到 <code>min-height:44px</code>，而 <code>.t-actions</code> 又是 <code>opacity:0</code>（隐形但仍占高），于是单行标题被顶到约 60px、字下面空一大截，且我的压缩对它完全隐形。本版把行高相关的全部移动端覆盖规则的作用域从 <code>.todo-view</code> 扩展到 <code>.todo-view, .todo-mobile</code>：<code>.todo-item</code> 内边距 4px、操作按钮统一 20×20px 且 <code>opacity:1</code> 可见、<code>align-items:center</code> 垂直居中——手机 7 天视图每行从约 60px 压到约 28px，空白消失。三处版本常量同步 bump 至 v2.6.9。`] },
     { ver: `v2.6.8`, date: `2026-09-01`, held: false, divider: false,
       items: [`<b>继续压缩手机端待办行高（方案 A）</b>：v2.6.7 把勾选框强制高度去了，但每行右侧的 ↑↓ / 编辑 / 删除 操作按钮仍是 26×26px、比「收拾行李」这类单行标题（约 18px）高，于是字下面仍空出一截。本版把手机端（≤820px）<code>.todo-item</code> 内边距从 6px 收到 4px、上下箭头与编辑/删除按钮统一压到 <b>20×20px</b>（图标 13px、箭头字号 11px），并把 <code>.todo-item</code> 改为 <code>align-items:center</code> 让字与按钮垂直居中——每行高度从约 38px 压到约 28px，字下面基本不再有空白，按钮仍好点。每日分组列表内边距 7px→6px、项间距 5px→4px。三处版本常量同步 bump 至 v2.6.8。`] },
     { ver: `v2.6.7`, date: `2026-09-01`, held: false, divider: false,
