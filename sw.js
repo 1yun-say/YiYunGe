@@ -1,6 +1,6 @@
 /* 逸云阁工作台 Service Worker — app-shell 缓存优先（cache-first），离线可用、重复打开秒开 */
-const CACHE_NAME = 'yiyunge-v2.6.11';
-const VERSION = '2.6.11';
+const CACHE_NAME = 'yiyunge-v2.6.12';
+const VERSION = '2.6.12';
 /* 预缓存应用骨架。注意：html2canvas.min.js / xlsx.full.min.js 不再预缓存——
  * 这两个大库改为「按需懒加载」（方法一），仅首次用到时由 fetch 处理缓存，避免冷启动白下载约 1MB。 */
 const PRECACHE = [

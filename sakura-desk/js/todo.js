@@ -514,7 +514,18 @@ const Todo = (() => {
         }
         case 'up':
         case 'down': {
-          const ids = lastUndone.map(x => x.id);
+          // 按事项所在天（data-view）在「当天未完成列表」内调序。
+          // 桌面端 vd=curDate（与 ofDate 一致）；手机 7 天视图里每条事项挂在各自那天，
+          // 必须用所属日重新算列表，否则 lastUndone 为空会导致 idx<0 直接 break（之前手机端没反应的根源）。
+          const vd = (item && item.dataset.view) || curDate;
+          const dayTodos = DB.data.todos.filter(t => occursOnDate(t, vd)              // 当天应出现（含重复展开、剔除已单次完成）
+            || (t.repeat && t.repeat !== 'never' && Array.isArray(t.completedDates) && t.completedDates.includes(vd)));
+          const sortFn = (a, b) => (b.flag ? 1 : 0) - (a.flag ? 1 : 0)
+            || (a.order || 0) - (b.order || 0)
+            || (a.time || '99:59').localeCompare(b.time || '99:59')
+            || a.createdAt - b.createdAt;
+          const undone = dayTodos.filter(t => !isDoneOnDay(t, vd)).sort(sortFn);
+          const ids = undone.map(x => x.id);
           const idx = ids.indexOf(tid);
           if (idx < 0) break;
           const swap = act === 'up' ? idx - 1 : idx + 1;
