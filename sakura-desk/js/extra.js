@@ -368,8 +368,10 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.6.13`, date: `2026-09-01`, held: false, divider: false,
+      items: [`<b>修复：v2.6.12 更新日志误用反引号导致 extra.js 整体语法错误、「我的」等视图无法注册</b>：v2.6.12 的更新日志在模板字符串内用反引号包裹代码名（<code>up</code>/<code>down</code> 等），反引号会提前终止模板字符串，使整个 <code>extra.js</code> 解析失败，<code>Views.more</code> 等视图未注册；点击「我的」时 <code>go('more')</code> 找不到视图便 fallback 到主页（表现为「跳主页」）。本版重写该日志、改用 <code>&lt;code&gt;</code> 标签包裹代码名，<code>extra.js</code> 语法恢复正常，「我的 / 更多 / AI 助手 / 帮助 / 更新日志」全部恢复可用。版本号 bump 至 v2.6.13 以强制 SW 缓存失效。`] },
     { ver: `v2.6.12`, date: `2026-09-01`, held: false, divider: false,
-      items: [`<b>修复：手机 7 天视图里↑/↓（上移/下移）调序没反应</b>：根因是 `up`/`down` 调序逻辑依赖模块级 `lastUndone`，而该变量只在桌面单天视图 `render()` 里赋值；手机端 `render()` 开头 `if (U.isMobile()) { renderMobile(); return; }` 直接跳过赋值，`lastUndone` 始终是空/旧值，导致 `ids.indexOf(tid)` 返回 −1、整段 `break`、点按钮毫无反应。本版改为按每条事项的 `data-view`（所在天）即时重算「当天未完成列表」再交换 `order`，与 `renderMobile` 每天的分组排序逻辑完全一致——桌面端 `vd=curDate` 行为不变，手机端每条事项能正确在自身那天内上下换位。三处版本常量同步 bump 至 v2.6.12。`] },
+      items: [`<b>修复：手机 7 天视图里↑/↓（上移/下移）调序没反应</b>：根因是 <code>up</code>/<code>down</code> 调序逻辑依赖模块级 <code>lastUndone</code>，而该变量只在桌面单天视图 <code>render()</code> 里赋值；手机端 <code>render()</code> 开头 <code>if (U.isMobile()) { renderMobile(); return; }</code> 直接跳过赋值，<code>lastUndone</code> 始终是空/旧值，导致 <code>ids.indexOf(tid)</code> 返回 −1、整段 <code>break</code>、点按钮毫无反应。本版改为按每条事项的 <code>data-view</code>（所在天）即时重算「当天未完成列表」再交换 <code>order</code>，与 <code>renderMobile</code> 每天的分组排序逻辑完全一致——桌面端 <code>vd=curDate</code> 行为不变，手机端每条事项能正确在自身那天内上下换位。三处版本常量同步 bump 至 v2.6.12。`] },
     { ver: `v2.6.11`, date: `2026-09-01`, held: false, divider: false,
       items: [`<b>放大待办事项行（对标「添加事项」输入框）</b>：用户希望每条事项（如「收拾行李」）整体再大一点、勾选框也不要太小。本版把勾选框从 17px 放大到 <b>20px</b>（对勾同步放大到 11×6px），标题字号 14px→<b>15px</b>（桌面与手机 7 天视图同步），行内边距放大到 <code>8px</code> 上下——整行高从约 28px 提到约 36–38px，与底部「添加事项」输入框（约 37–39px）几乎齐平（略小一点点）。三处版本常量同步 bump 至 v2.6.11。`] },
     { ver: `v2.6.10`, date: `2026-09-01`, held: false, divider: false,
