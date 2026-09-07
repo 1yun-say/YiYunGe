@@ -368,6 +368,8 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.7.1`, date: `2026-09-08`, held: false, divider: false,
+      items: [`<b>修复：提醒事项页面仍然不显示日程</b>——v2.7.0 里取当天日程时用了 <code>window.Calendar</code> 做存在性判断，但 <code>calendar.js</code> 是 <code>const Calendar = ...</code> 声明，顶层 <code>const</code> 属于全局词法环境、<b>不会成为 window 的属性</b>（对比 <code>sync.js</code> 是显式 <code>window.Sync = ...</code> 挂载），所以该判断恒为假、日程数组被短路成空数组，一条都不显示（「点日程打开编辑弹窗」「日程同色条」同样受影响）。现改为 <code>typeof Calendar !== 'undefined'</code> 判断裸标识符（对未声明变量也安全，不会抛 ReferenceError）。版本号 bump 至 v2.7.1 以强制 SW 缓存失效。`] },
     { ver: `v2.7.0`, date: `2026-09-08`, held: false, divider: false,
       items: [`<b>修复：已添加的日程无法修改</b>——根因是 <code>editEvent</code> 里 <code>ev = Object.assign({...}, ev)</code> 生成的是副本，而保存时只有新建分支执行 <code>push</code>、编辑分支从不写回数组，所有改动都落在副本上、原数据纹丝不动。现改为编辑时按 id 写回 <code>DB.data.events</code>，改标题 / 时间 / 地点 / 备注即刻生效。<br><br><b>新增：日程删除功能</b>——此前删除逻辑存在但界面上<b>没有任何入口</b>（死代码），日程根本删不掉。现于日程编辑弹窗底部新增「删除这条日程」按钮（仅编辑已有日程时出现），带二次确认防误触。<br><br><b>提醒事项界面显示当天日程</b>：每一天分组里会列出当天日程（含跨天与重复展开），默认排在该天提醒事项上方，显示「时间 + 标题」（有地点则附在后面）。点击日程直接打开编辑弹窗，改完即时刷新，不用来回切到日历页。<br><br><b>日程与提醒事项可交叉调序</b>：每天的日程和未完成事项共用一套顺序，每条右侧都有 ↑↓，可以把某条日程一路下移穿过事项、也能把事项移到日程上方；已完成的待办仍单独排在下方，不参与混排。三处版本常量同步 bump 至 v2.7.0。`] },
     { ver: `v2.6.13`, date: `2026-09-01`, held: false, divider: false,

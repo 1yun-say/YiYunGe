@@ -365,7 +365,9 @@ const Todo = (() => {
   /* ---------- 当天条目混排：日程 + 未完成待办（共用一套顺序，可交叉调序） ----------
      默认日程排在该天待办上方；一旦手动调过序（写入 order），就严格按 order 交叉排列。 */
   function dayItems(d) {
-    const evs = (window.Calendar && Calendar.eventsOf) ? Calendar.eventsOf(d) : [];
+    // 注意：calendar.js 是 const Calendar = ... 声明，顶层 const 不挂 window，
+    // 必须用 typeof 判断裸标识符；写 window.Calendar 会恒为 undefined 导致日程一条都不显示。
+    const evs = (typeof Calendar !== 'undefined' && Calendar.eventsOf) ? Calendar.eventsOf(d) : [];
     const todos = DB.data.todos.filter(t => {
       if (occursOnDate(t, d)) return true;
       if (t.repeat && t.repeat !== 'never' && Array.isArray(t.completedDates) && t.completedDates.includes(d)) return true;
@@ -393,7 +395,7 @@ const Todo = (() => {
 
   /* 待办页里的日程行：左侧用日历同色条（日程无完成态，不做勾选框），点击打开日程编辑弹窗 */
   function eventRowHTML(e, viewDate) {
-    const c = (window.Calendar && Calendar.eventColor) ? Calendar.eventColor(e.calendar) : '#ff8fb3';
+    const c = (typeof Calendar !== 'undefined' && Calendar.eventColor) ? Calendar.eventColor(e.calendar) : '#ff8fb3';
     const timeText = e.allDay ? '全天' : `${e.startTime || '--:--'}${e.endTime ? ' — ' + e.endTime : ''}`;
     return `<div class="todo-item ev-item" data-eid="${e.id}" data-view="${viewDate}">
       <div class="ev-bar" style="background:${c}"></div>
@@ -578,7 +580,7 @@ const Todo = (() => {
           // 待办页里点日程：直接打开日历的日程编辑弹窗，保存后回到待办页刷新
           const eid = item && item.dataset.eid;
           const ev = eid && DB.data.events.find(x => x.id === eid);
-          if (ev && window.Calendar) Calendar.editEvent(ev, () => render());
+          if (ev && typeof Calendar !== 'undefined') Calendar.editEvent(ev, () => render());
           break;
         }
         case 'pullOne': {
