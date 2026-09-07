@@ -368,6 +368,8 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.7.0`, date: `2026-09-08`, held: false, divider: false,
+      items: [`<b>修复：已添加的日程无法修改</b>——根因是 <code>editEvent</code> 里 <code>ev = Object.assign({...}, ev)</code> 生成的是副本，而保存时只有新建分支执行 <code>push</code>、编辑分支从不写回数组，所有改动都落在副本上、原数据纹丝不动。现改为编辑时按 id 写回 <code>DB.data.events</code>，改标题 / 时间 / 地点 / 备注即刻生效。<br><br><b>新增：日程删除功能</b>——此前删除逻辑存在但界面上<b>没有任何入口</b>（死代码），日程根本删不掉。现于日程编辑弹窗底部新增「删除这条日程」按钮（仅编辑已有日程时出现），带二次确认防误触。<br><br><b>提醒事项界面显示当天日程</b>：每一天分组里会列出当天日程（含跨天与重复展开），默认排在该天提醒事项上方，显示「时间 + 标题」（有地点则附在后面）。点击日程直接打开编辑弹窗，改完即时刷新，不用来回切到日历页。<br><br><b>日程与提醒事项可交叉调序</b>：每天的日程和未完成事项共用一套顺序，每条右侧都有 ↑↓，可以把某条日程一路下移穿过事项、也能把事项移到日程上方；已完成的待办仍单独排在下方，不参与混排。三处版本常量同步 bump 至 v2.7.0。`] },
     { ver: `v2.6.13`, date: `2026-09-01`, held: false, divider: false,
       items: [`<b>修复：v2.6.12 更新日志误用反引号导致 extra.js 整体语法错误、「我的」等视图无法注册</b>：v2.6.12 的更新日志在模板字符串内用反引号包裹代码名（<code>up</code>/<code>down</code> 等），反引号会提前终止模板字符串，使整个 <code>extra.js</code> 解析失败，<code>Views.more</code> 等视图未注册；点击「我的」时 <code>go('more')</code> 找不到视图便 fallback 到主页（表现为「跳主页」）。本版重写该日志、改用 <code>&lt;code&gt;</code> 标签包裹代码名，<code>extra.js</code> 语法恢复正常，「我的 / 更多 / AI 助手 / 帮助 / 更新日志」全部恢复可用。版本号 bump 至 v2.6.13 以强制 SW 缓存失效。`] },
     { ver: `v2.6.12`, date: `2026-09-01`, held: false, divider: false,

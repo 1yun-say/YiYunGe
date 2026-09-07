@@ -245,6 +245,11 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .chk-blocked{background:#a8899a!important;border-color:#a8899a!important}
 .t-body{flex:1;min-width:0}
 .t-title{font-size:15px;line-height:1.35}
+/* 待办页里的日程行（与待办混排）：左侧用日历同色条代替勾选框，点击打开日程编辑弹窗 */
+.todo-item.ev-item{cursor:pointer}
+.ev-bar{width:3px;border-radius:2px;flex:none;align-self:stretch;min-height:22px;margin-top:1px}
+.todo-item.ev-item .t-body{display:flex;align-items:center}
+.todo-item.ev-item .t-title{font-size:14px}
 .t-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:3px}
 .t-actions{display:flex;gap:2px;opacity:0;transition:.18s}
 .todo-item:hover .t-actions{opacity:1}

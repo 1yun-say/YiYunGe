@@ -184,7 +184,10 @@ const Calendar = (() => {
           <div class="field"><label>提醒</label><select class="input" id="ev_alert">${alertOpts}</select></div>
           <div class="field"><label>日历</label><select class="input" id="ev_cal">${calOpts}</select></div>
         </div>
-        <div class="field"><label>备注</label><textarea class="input" id="ev_note" rows="2">${U.esc(ev.note)}</textarea></div>`,
+        <div class="field"><label>备注</label><textarea class="input" id="ev_note" rows="2">${U.esc(ev.note)}</textarea></div>
+        ${isNew ? '' : `<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+          <button class="btn btn-danger btn-sm" id="ev_del" style="width:100%;justify-content:center">删除这条日程</button>
+        </div>`}`,
       onOk: b => {
         ev.title = U.$('#ev_title', b).value.trim();
         if (!ev.title) { U.toast('请填写日程标题', 'warn'); return false; }
@@ -201,11 +204,27 @@ const Calendar = (() => {
         if (ev.endDate < ev.startDate) { U.toast('结束日期不能早于开始日期', 'warn'); return false; }
         if (!ev.allDay && ev.endDate === ev.startDate && ev.endTime < ev.startTime) { U.toast('结束时间不能早于开始时间', 'warn'); return false; }
         if (isNew) DB.data.events.push(ev);
+        else {
+          // 关键：ev 是上面 Object.assign 产生的副本（不是数组里的原对象），
+          // 必须按 id 写回原数组，否则「编辑已有日程」改的是副本、永远不生效。
+          const i = DB.data.events.findIndex(x => x.id === ev.id);
+          if (i >= 0) DB.data.events[i] = ev;
+        }
         DB.save();
         if (after) after(); else render();
         U.toast(isNew ? '已添加日程' : '已保存日程', 'ok');
       }
     });
+
+    const delBtn = U.$('#ev_del', mm.body);
+    if (delBtn) delBtn.onclick = () => {
+      U.confirm('删除这条日程？删除后无法恢复。', () => {
+        DB.removeRecord('events', ev.id); DB.save();
+        mm.close();
+        if (after) after(); else render();
+        U.toast('已删除日程');
+      }, '删除');
+    };
 
     const sw = U.$('#ev_allday_sw', mm.body);
     sw.onclick = () => {
@@ -496,5 +515,5 @@ const Calendar = (() => {
       render();
     }
   };
-  return { render, setView, editEvent, showAddChoice };
+  return { render, setView, editEvent, showAddChoice, eventsOf, eventColor };
 })();

@@ -254,6 +254,7 @@ const Todo = (() => {
     const undone = list.filter(t => t.status !== 'done').sort(sortFn);
     const done = list.filter(t => t.status === 'done').sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
     lastUndone = undone;                                           // 给上下排序用
+    const dayMix = dayItems(curDate);                              // 当天日程 + 未完成待办（混排）
     const overdue = computeOverdue();
     const isM = U.isMobile();
     const isToday = curDate === U.today();
@@ -294,7 +295,7 @@ const Todo = (() => {
           </div>`}
 
           <div class="todo-list">
-            ${undone.length ? undone.map(t => rowHTML(t)).join('')
+            ${dayMix.length ? dayMix.map(it => it.kind === 'event' ? eventRowHTML(it.ref, curDate) : rowHTML(it.ref)).join('')
         : `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-flower"/></svg>
                  <p>${isM ? '这一天很清爽，点右下角 + 新建一件吧' : '这一天很清爽，从右侧模板一键导入日常提醒吧'}</p></div>`}
           </div>
@@ -361,6 +362,51 @@ const Todo = (() => {
     </div>`;
   }
 
+  /* ---------- 当天条目混排：日程 + 未完成待办（共用一套顺序，可交叉调序） ----------
+     默认日程排在该天待办上方；一旦手动调过序（写入 order），就严格按 order 交叉排列。 */
+  function dayItems(d) {
+    const evs = (window.Calendar && Calendar.eventsOf) ? Calendar.eventsOf(d) : [];
+    const todos = DB.data.todos.filter(t => {
+      if (occursOnDate(t, d)) return true;
+      if (t.repeat && t.repeat !== 'never' && Array.isArray(t.completedDates) && t.completedDates.includes(d)) return true;
+      return false;
+    }).filter(t => !isDoneOnDay(t, d));
+
+    const mk = (kind, ref, ord, time, extra) => Object.assign(
+      { kind, ref, ord, time: time || '99:59', createdAt: ref.createdAt || 0 }, extra || {});
+    const all = evs.map(e => mk('event', e, (typeof e.order === 'number') ? e.order : null,
+      e.allDay ? '00:00' : (e.startTime || '00:00')))
+      .concat(todos.map(t => mk('todo', t, (typeof t.order === 'number') ? t.order : null,
+        t.time || '99:59', { flag: t.flag ? 1 : 0 })));
+
+    all.sort((a, b) => {
+      const oa = a.ord, ob = b.ord;
+      if (oa !== null && ob !== null) return oa - ob;            // 都手动排过序：按 order
+      if (oa !== null && ob === null) return -1;                 // 排过序的靠前
+      if (oa === null && ob !== null) return 1;
+      if (a.kind !== b.kind) return a.kind === 'event' ? -1 : 1; // 默认：日程在上
+      if (a.kind === 'todo' && (b.flag - a.flag)) return b.flag - a.flag;
+      return a.time.localeCompare(b.time) || a.createdAt - b.createdAt;
+    });
+    return all;
+  }
+
+  /* 待办页里的日程行：左侧用日历同色条（日程无完成态，不做勾选框），点击打开日程编辑弹窗 */
+  function eventRowHTML(e, viewDate) {
+    const c = (window.Calendar && Calendar.eventColor) ? Calendar.eventColor(e.calendar) : '#ff8fb3';
+    const timeText = e.allDay ? '全天' : `${e.startTime || '--:--'}${e.endTime ? ' — ' + e.endTime : ''}`;
+    return `<div class="todo-item ev-item" data-eid="${e.id}" data-view="${viewDate}">
+      <div class="ev-bar" style="background:${c}"></div>
+      <div class="t-body" data-act="editEvent" title="点击编辑这条日程">
+        <div class="t-title"><span class="t-time">${U.esc(timeText)}</span>${U.esc(e.title)}${e.location ? `<span class="t-note"> 📍${U.esc(e.location)}</span>` : ''}</div>
+      </div>
+      <div class="t-actions">
+        <button class="btn btn-icon" data-act="up" title="上移">↑</button>
+        <button class="btn btn-icon" data-act="down" title="下移">↓</button>
+      </div>
+    </div>`;
+  }
+
   /* 遗留卡片专用行：每条可单独「拉到今天 / 忽略 / 删除」，不再强制批量拉到今天 */
   function overdueRowHTML(t) {
     const stu = t.studentId ? DB.student(t.studentId) : null;
@@ -399,15 +445,10 @@ const Todo = (() => {
         if (t.repeat && t.repeat !== 'never' && Array.isArray(t.completedDates) && t.completedDates.includes(d)) return true;
         return false;
       });
-      const sortFn = (a, b) => (b.flag ? 1 : 0) - (a.flag ? 1 : 0)
-        || (a.order || 0) - (b.order || 0)
-        || (a.time || '99:59').localeCompare(b.time || '99:59')
-        || a.createdAt - b.createdAt;
-      const undone = dayTodos.filter(t => !isDoneOnDay(t, d)).sort(sortFn);
       const done = dayTodos.filter(t => isDoneOnDay(t, d)).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
-      const itemsHTML = (undone.length || done.length)
-        ? undone.map(t => rowHTML(t, d, false)).join('') + done.map(t => rowHTML(t, d, false)).join('')
-        : '';
+      const mixed = dayItems(d);                       // 当天日程 + 未完成待办（混排，日程默认在上）
+      const itemsHTML = mixed.map(it => it.kind === 'event' ? eventRowHTML(it.ref, d) : rowHTML(it.ref, d, false)).join('')
+        + done.map(t => rowHTML(t, d, false)).join('');
       const header = `${U.cnDate(d)} <span class="wd">${U.wdName(d)}</span>${isDayToday ? '<span class="tag today-pill">今天</span>' : ''}`;
       return `<section class="day-group${isDayToday ? ' today' : ''}">
         <div class="day-h">${header}</div>
@@ -514,28 +555,30 @@ const Todo = (() => {
         }
         case 'up':
         case 'down': {
-          // 按事项所在天（data-view）在「当天未完成列表」内调序。
-          // 桌面端 vd=curDate（与 ofDate 一致）；手机 7 天视图里每条事项挂在各自那天，
-          // 必须用所属日重新算列表，否则 lastUndone 为空会导致 idx<0 直接 break（之前手机端没反应的根源）。
+          // 日程与待办混排调序：按所属天（data-view）重算「当天条目」（日程 + 未完成待办），
+          // 交换后统一写回 order（待办写 todos、日程写 events），两者因此可交叉排列。
           const vd = (item && item.dataset.view) || curDate;
-          const dayTodos = DB.data.todos.filter(t => occursOnDate(t, vd)              // 当天应出现（含重复展开、剔除已单次完成）
-            || (t.repeat && t.repeat !== 'never' && Array.isArray(t.completedDates) && t.completedDates.includes(vd)));
-          const sortFn = (a, b) => (b.flag ? 1 : 0) - (a.flag ? 1 : 0)
-            || (a.order || 0) - (b.order || 0)
-            || (a.time || '99:59').localeCompare(b.time || '99:59')
-            || a.createdAt - b.createdAt;
-          const undone = dayTodos.filter(t => !isDoneOnDay(t, vd)).sort(sortFn);
-          const ids = undone.map(x => x.id);
-          const idx = ids.indexOf(tid);
+          const isEv = !!(item && item.dataset.eid);
+          const curId = isEv ? item.dataset.eid : tid;
+          const list = dayItems(vd);
+          const idx = list.findIndex(it => it.kind === (isEv ? 'event' : 'todo') && it.ref.id === curId);
           if (idx < 0) break;
           const swap = act === 'up' ? idx - 1 : idx + 1;
-          if (swap < 0 || swap >= ids.length) break;
-          [ids[idx], ids[swap]] = [ids[swap], ids[idx]];
-          ids.forEach((id, i) => {
-            const x = DB.data.todos.find(z => z.id === id);
-            if (x) x.order = (i + 1) * 1000;
+          if (swap < 0 || swap >= list.length) break;
+          [list[idx], list[swap]] = [list[swap], list[idx]];
+          list.forEach((it, i) => {
+            const ord = (i + 1) * 1000;
+            if (it.kind === 'todo') { const x = DB.data.todos.find(z => z.id === it.ref.id); if (x) x.order = ord; }
+            else { const x = DB.data.events.find(z => z.id === it.ref.id); if (x) x.order = ord; }
           });
           DB.save(); render(); App.refreshBadge();
+          break;
+        }
+        case 'editEvent': {
+          // 待办页里点日程：直接打开日历的日程编辑弹窗，保存后回到待办页刷新
+          const eid = item && item.dataset.eid;
+          const ev = eid && DB.data.events.find(x => x.id === eid);
+          if (ev && window.Calendar) Calendar.editEvent(ev, () => render());
           break;
         }
         case 'pullOne': {
