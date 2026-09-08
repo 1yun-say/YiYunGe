@@ -368,6 +368,8 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.7.3`, date: `2026-09-08`, held: false, divider: false,
+      items: [`<b>日历页：提醒事项行高回调，与「提醒事项」页面看齐</b>——v2.7.2 压得偏小，本版把日历里提醒事项的尺寸直接对齐提醒事项页面（<code>.todo-item</code>）的既有数值：行内边距 <code>8px</code>（手机 <code>8px 10px</code>、桌面 <code>8px 12px</code>）、标题 <code>15px</code> 行高 <code>1.32</code>、勾选框 <code>20px</code>、状态小字 <code>11px</code>，两个页面现在看起来一致。仍然<b>只作用于提醒事项</b>（<code>.cal-todo</code>），日程块保持原样；44px 触控下限依旧保持卸载，勾选框靠透明热区保证好点。版本号 bump 至 v2.7.3 以强制 SW 缓存失效。`] },
     { ver: `v2.7.2`, date: `2026-09-08`, held: false, divider: false,
       items: [`<b>日历页：提醒事项行高压缩</b>——手机端此前被触控规范锁死：样式表里 <code>.cal-check,.cal-event{min-height:44px}</code> 把每一行（连勾选框一起）强制撑到 44px，光调内边距根本降不下来。现给提醒事项行加上专属类 <code>.cal-todo</code>，在手机端卸载这个下限、行高改由内容决定，同时用透明 <code>::after</code> 把勾选框的可点热区撑回约 40px（不占行高、照样好点）；另压缩了行内边距、标题行高与状态行字号。本次<b>只改提醒事项</b>，日程块（<code>.cal-event-block</code>）保持原样未动。版本号 bump 至 v2.7.2 以强制 SW 缓存失效。`] },
     { ver: `v2.7.1`, date: `2026-09-08`, held: false, divider: false,
