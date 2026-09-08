@@ -368,6 +368,8 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.7.2`, date: `2026-09-08`, held: false, divider: false,
+      items: [`<b>日历页：提醒事项行高压缩</b>——手机端此前被触控规范锁死：样式表里 <code>.cal-check,.cal-event{min-height:44px}</code> 把每一行（连勾选框一起）强制撑到 44px，光调内边距根本降不下来。现给提醒事项行加上专属类 <code>.cal-todo</code>，在手机端卸载这个下限、行高改由内容决定，同时用透明 <code>::after</code> 把勾选框的可点热区撑回约 40px（不占行高、照样好点）；另压缩了行内边距、标题行高与状态行字号。本次<b>只改提醒事项</b>，日程块（<code>.cal-event-block</code>）保持原样未动。版本号 bump 至 v2.7.2 以强制 SW 缓存失效。`] },
     { ver: `v2.7.1`, date: `2026-09-08`, held: false, divider: false,
       items: [`<b>修复：提醒事项页面仍然不显示日程</b>——v2.7.0 里取当天日程时用了 <code>window.Calendar</code> 做存在性判断，但 <code>calendar.js</code> 是 <code>const Calendar = ...</code> 声明，顶层 <code>const</code> 属于全局词法环境、<b>不会成为 window 的属性</b>（对比 <code>sync.js</code> 是显式 <code>window.Sync = ...</code> 挂载），所以该判断恒为假、日程数组被短路成空数组，一条都不显示（「点日程打开编辑弹窗」「日程同色条」同样受影响）。现改为 <code>typeof Calendar !== 'undefined'</code> 判断裸标识符（对未声明变量也安全，不会抛 ReferenceError）。版本号 bump 至 v2.7.1 以强制 SW 缓存失效。`] },
     { ver: `v2.7.0`, date: `2026-09-08`, held: false, divider: false,

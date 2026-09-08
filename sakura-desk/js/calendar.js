@@ -92,7 +92,7 @@ const Calendar = (() => {
       : x.status === 'blocked'
         ? '<svg viewBox="0 0 24 24" class="ico"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>'
         : '';
-    return `<div class="cal-event ${doneOnDay ? 'done' : ''} ${x.status === 'blocked' ? 'blocked' : ''}" data-tid="${x.id}">
+    return `<div class="cal-event cal-todo ${doneOnDay ? 'done' : ''} ${x.status === 'blocked' ? 'blocked' : ''}" data-tid="${x.id}">
       <button class="cal-check" data-act="toggleTodo" aria-label="${doneOnDay ? '已完成' : st.name}" style="border-color:${chkColor};${doneOnDay || x.status !== 'pending' ? 'background:' + chkColor : ''}">
         ${chkIcon}
       </button>
