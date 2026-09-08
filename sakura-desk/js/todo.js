@@ -335,21 +335,22 @@ const Todo = (() => {
     const chkCls = doneOnCur ? 'done' : (blockedOnCur ? 'blocked' : 'pending');
     // 重复任务勾掉（写进 completedDates）的完成态用绿色语义，而非「未完成」粉色。
     const chkColor = doneOnCur ? 'var(--leaf, #38a169)' : st.color;
+    // 注意：「已完成」与「完成于 xx:xx」不再放在这里（原本会在标题下方另起一行 .t-meta），
+    // 已改为紧跟标题内联显示（见下方 .t-title），避免已完成事项下面多出一行。
     const metaInner = [
-      (t.status !== 'pending' ? `<span class="tag" style="background:${st.color}1f;color:${st.color}">${st.name}</span>` : ''),
+      ((t.status !== 'pending' && t.status !== 'done') ? `<span class="tag" style="background:${st.color}1f;color:${st.color}">${st.name}</span>` : ''),
       (t.tag ? `<span class="tag gray">${U.esc(t.tag)}</span>` : ''),
       (t.flag ? `<span class="tag" style="background:#ffd9d9;color:#cf5252">🚩 标记</span>` : ''),
       (t.autoKey ? `<span class="tag gold">自动生成</span>` : ''),
       (stu ? `<span class="tag sky">${U.esc(DB.studentLabel(stu))}</span>` : ''),
       (() => { const r = U.recurRuleOf(t.repeat, t.date); const d = U.recurDescribe(r); return (d && d !== '不重复') ? `<span class="tag" style="background:#e8f1ff;color:#3a6ea5">🔁 ${U.esc(d)}</span>` : ''; })(),
-      (showDate ? `<span class="tag alert">${U.cnDate(t.date)}</span>` : ''),
-      (t.status === 'done' && t.doneAt ? `<span class="muted" style="font-size:11px">完成于 ${new Date(t.doneAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>` : '')
+      (showDate ? `<span class="tag alert">${U.cnDate(t.date)}</span>` : '')
     ].join('');
     return `<div class="todo-item ${doneOnCur ? 'done' : ''} ${blockedOnCur ? 'blocked' : ''}" data-p="${t.priority}" data-id="${t.id}" data-view="${viewDate}">
       <div class="chk chk-${chkCls}" data-act="toggle" title="${doneOnCur ? '已完成' : (blockedOnCur ? '今日无法完成' : '未完成')}" style="color:#fff;border-color:${chkColor};${doneOnCur || blockedOnCur ? 'background:' + chkColor : ''}">${chkIcon}</div>
       <div class="t-body">
         <div class="t-title">
-          ${t.time ? `<span class="t-time">${U.esc(t.time)}</span>` : ''}${U.esc(t.title)}${t.note ? `<span class="t-note"> ${U.esc(t.note)}</span>` : ''}
+          ${t.time ? `<span class="t-time">${U.esc(t.time)}</span>` : ''}${U.esc(t.title)}${t.note ? `<span class="t-note"> ${U.esc(t.note)}</span>` : ''}${doneOnCur ? `<span class="t-note" style="color:var(--leaf,#38a169)"> ${U.esc(t.status === 'done' ? st.name : '已完成')}</span>` : ''}${doneOnCur && t.doneAt ? `<span class="t-note"> 完成于 ${new Date(t.doneAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>` : ''}
         </div>
         ${metaInner ? `<div class="t-meta">${metaInner}</div>` : ''}
       </div>

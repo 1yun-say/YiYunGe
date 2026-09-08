@@ -368,6 +368,8 @@ const Changelog = (() => {
   /* 更新日志数据：每个版本 = {ver, date, items:[html...], divider?, held?}
      新增版本只需在 CHANGELOG 数组顶部 push 一个对象，无需再手写大段模板。 */
   const CHANGELOG = [
+    { ver: `v2.7.4`, date: `2026-09-08`, held: false, divider: false,
+      items: [`<b>提醒事项：完成信息改为紧跟标题，不再另起一行</b>——打勾后「已完成」「完成于 xx:xx」原本显示在事项<b>下方单独一行</b>（<code>.t-meta</code>），让已完成的事项凭空多出一行、整行被撑高。现改为<b>紧跟在标题文字后面内联显示</b>：绿色小字「已完成」＋灰色「完成于 xx:xx」，与备注同一行，下方不再多出空行。重复任务当天被勾掉（状态仍是 pending、只记进 <code>completedDates</code>）时同样会显示，且不会误显示成「未完成」。其余标签（🚩 标记 / 学员 / 重复 / 日期）仍按原样在下方显示。版本号 bump 至 v2.7.4 以强制 SW 缓存失效。`] },
     { ver: `v2.7.3`, date: `2026-09-08`, held: false, divider: false,
       items: [`<b>日历页：提醒事项行高回调，与「提醒事项」页面看齐</b>——v2.7.2 压得偏小，本版把日历里提醒事项的尺寸直接对齐提醒事项页面（<code>.todo-item</code>）的既有数值：行内边距 <code>8px</code>（手机 <code>8px 10px</code>、桌面 <code>8px 12px</code>）、标题 <code>15px</code> 行高 <code>1.32</code>、勾选框 <code>20px</code>、状态小字 <code>11px</code>，两个页面现在看起来一致。仍然<b>只作用于提醒事项</b>（<code>.cal-todo</code>），日程块保持原样；44px 触控下限依旧保持卸载，勾选框靠透明热区保证好点。版本号 bump 至 v2.7.3 以强制 SW 缓存失效。`] },
     { ver: `v2.7.2`, date: `2026-09-08`, held: false, divider: false,
