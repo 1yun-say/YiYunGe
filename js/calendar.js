@@ -267,6 +267,8 @@ const Calendar = (() => {
         </div>
         <button class="btn btn-primary btn-sm" data-act="add" data-day="${anchor}">
           <svg class="ico"><use href="#i-plus"/></svg>新建</button>
+        <button class="btn btn-ghost btn-sm" data-act="exportICS" title="导出到手机日历">
+          <svg class="ico"><use href="#i-download"/></svg>导出日历</button>
       </div>
       <div class="cal-body" id="calBody"></div>
     </div>`;
@@ -284,6 +286,7 @@ const Calendar = (() => {
       else if (a.dataset.act === 'next') shift(1);
       else if (a.dataset.act === 'today') { anchor = U.today(); render(); }
       else if (a.dataset.act === 'add') showAddChoice(a.dataset.day || U.today());
+      else if (a.dataset.act === 'exportICS') exportEventsICS();
       else if (a.dataset.act === 'toggleTodo') {
         const x = DB.data.todos.find(y => y.id === a.closest('[data-tid]').dataset.tid);
         if (!x) return;
@@ -511,6 +514,109 @@ const Calendar = (() => {
     });
   }
 
+  /* ---------- 导出日程到系统日历（.ics） ---------- */
+  function alertTrigger(a) {
+    // 映射逸云阁提醒设置 → iCalendar VALARM TRIGGER
+    if (a === '0') return 'PT0S';      // 事件发生时
+    if (a === '5') return '-PT5M';     // 5 分钟前
+    if (a === '15') return '-PT15M';   // 15 分钟前
+    if (a === '30') return '-PT30M';   // 30 分钟前
+    if (a === '60') return '-PT1H';    // 1 小时前
+    return null;                       // 'none' 不生成提醒
+  }
+  function escICS(s) {
+    // RFC 5545 TEXT 转义：反斜杠、换行、分号、逗号
+    return String(s == null ? '' : s)
+      .replace(/\\/g, '\\\\')
+      .replace(/\r?\n/g, '\\n')
+      .replace(/;/g, '\\;')
+      .replace(/,/g, '\\,');
+  }
+  function utf8len(ch) { return new TextEncoder().encode(ch).length; }
+  function foldICS(line) {
+    // 按 73 字节折行，不切断多字节字符（兼容中文），续行以单个空格开头
+    const out = []; let cur = ''; let n = 0;
+    for (const ch of line) {
+      const bl = utf8len(ch);
+      if (n && n + bl > 73) { out.push(cur); cur = ' ' + ch; n = 1 + bl; }
+      else { cur += ch; n += bl; }
+    }
+    if (cur) out.push(cur);
+    return out.join('\r\n');
+  }
+  function icsUTCNow() {
+    const d = new Date();
+    const p = x => String(x).padStart(2, '0');
+    return d.getUTCFullYear() + p(d.getUTCMonth() + 1) + p(d.getUTCDate())
+      + 'T' + p(d.getUTCHours()) + p(d.getUTCMinutes()) + p(d.getUTCSeconds()) + 'Z';
+  }
+  function veventLines(e, sd, ed) {
+    const col = eventColor(e.calendar);
+    const L = ['BEGIN:VEVENT'];
+    L.push('UID:' + (e.id + '-' + sd));
+    L.push('DTSTAMP:' + icsUTCNow());
+    L.push('SUMMARY:' + escICS(e.title || '(无标题)'));
+    if (e.location) L.push('LOCATION:' + escICS(e.location));
+    if (e.calendar) L.push('CATEGORIES:' + escICS(e.calendar));
+    L.push('COLOR:' + col);
+    L.push('X-APPLE-CALENDAR-COLOR:' + col);
+    L.push('TRANSP:OPAQUE');
+    if (e.allDay) {
+      // 全天事件：DTEND 取排他结束日（endDate + 1）
+      L.push('DTSTART;VALUE=DATE:' + sd.replace(/-/g, ''));
+      L.push('DTEND;VALUE=DATE:' + U.addDays(ed, 1).replace(/-/g, ''));
+    } else {
+      // 带时间的事件：本地浮动时间（无时区，设备按本地解释）
+      const st = (e.startTime || '00:00').replace(':', '');
+      const et = (e.endTime || '00:00').replace(':', '');
+      L.push('DTSTART:' + sd.replace(/-/g, '') + 'T' + st + '00');
+      L.push('DTEND:' + ed.replace(/-/g, '') + 'T' + et + '00');
+    }
+    if (e.note) L.push('DESCRIPTION:' + escICS(e.note));
+    const trig = alertTrigger(e.alert);
+    if (trig) {
+      L.push('BEGIN:VALARM');
+      L.push('TRIGGER:' + trig);
+      L.push('ACTION:DISPLAY');
+      L.push('DESCRIPTION:' + escICS(e.title || '(无标题)'));
+      L.push('END:VALARM');
+    }
+    L.push('END:VEVENT');
+    return L.map(foldICS).join('\r\n');
+  }
+  function exportEventsICS() {
+    const evs = DB.data.events || [];
+    if (!evs.length) { U.toast('还没有任何日程可以导出', 'warn'); return; }
+    const t0 = U.today();
+    const horizon = U.addDays(t0, 365); // 仅导出今天起未来 365 天内的发生
+    const blocks = [];
+    let count = 0;
+    for (const e of evs) {
+      const rule = U.recurRuleOf(e.repeat, e.startDate);
+      for (let d = t0; d <= horizon; d = U.addDays(d, 1)) {
+        if (!U.recurOccursOn(d, rule)) continue;
+        const off = U.daysDiff(e.startDate, d);
+        const sd = d;
+        const ed = off ? U.addDays(e.endDate, off) : e.endDate;
+        blocks.push(veventLines(e, sd, ed));
+        count++;
+      }
+    }
+    if (!count) { U.toast('未来 365 天内没有可导出的日程', 'warn'); return; }
+    const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0',
+      'PRODID:-//YiYunGe//Calendar Export//CN',
+      'CALSCALE:GREGORIAN', 'METHOD:PUBLISH']
+      .concat(blocks).concat(['END:VCALENDAR'])
+      .map(foldICS).join('\r\n') + '\r\n';
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = '逸云阁日程.ics';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    U.toast(`已导出 ${count} 条日程到「逸云阁日程.ics」，导入手机日历即可提醒`, 'ok');
+  }
+
   /* ---------- 启动 ---------- */
   Views.calendar = {
     title: '日历',
@@ -522,5 +628,5 @@ const Calendar = (() => {
       render();
     }
   };
-  return { render, setView, editEvent, showAddChoice, eventsOf, eventColor };
+  return { render, setView, editEvent, showAddChoice, eventsOf, eventColor, exportEventsICS };
 })();
