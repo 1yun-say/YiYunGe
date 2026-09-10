@@ -291,6 +291,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .day-h .wd{font-size:12px;color:var(--ink-3,#9a8f95);font-weight:600}
 .day-h .today-pill{background:var(--pink-500,#f479a8);color:#fff;border:none;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
 .day-group .todo-list{padding:6px 10px;gap:4px}
+.day-group .divider{margin:4px 0}
 .day-quick{margin:0 12px 12px;width:calc(100% - 24px);border-style:dashed;border-color:var(--line-2,#e9e2e6)}
 .day-quick::placeholder{color:var(--ink-3,#9a8f95)}
 .empty.sm{padding:6px 2px;color:var(--ink-3,#9a8f95);font-size:12px}
@@ -908,6 +909,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
   .todo-view .todo-list, .todo-mobile .todo-list{gap:4px}
   .todo-view .empty, .todo-mobile .empty{padding:18px 12px}
   .todo-view .archive-head, .todo-mobile .archive-head{font-size:12px;padding:8px 0}
+  .day-group .archive-head{padding-top:4px;padding-bottom:3px}
   .todo-view .todo-item .t-actions, .todo-mobile .todo-item .t-actions{opacity:1;gap:1px;align-items:center}
   .todo-view .todo-item .t-actions .btn-icon, .todo-mobile .todo-item .t-actions .btn-icon{min-width:20px;width:20px;min-height:20px;height:20px;padding:2px;font-size:11px}
   .todo-view .todo-item .t-actions .btn-icon svg, .todo-mobile .todo-item .t-actions .btn-icon svg{width:13px;height:13px}
