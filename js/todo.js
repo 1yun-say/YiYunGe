@@ -124,6 +124,23 @@ const Todo = (() => {
       });
       if (DB.data.todos.length !== before) changed = true;
     }
+    // 迁移：旧版随机 id 的模板实例改为确定性 id（tpli_<tplId>_<date>），
+    // 让多端生成的同一条逻辑记录 id 一致 → 排序 / 打勾才能跨端同步。
+    // 同一确定性 id 出现多条（两端各生成过）时合并，保留 _mt 较新的一条。
+    {
+      const drops = new Set(); const byNew = {};
+      DB.data.todos.forEach(t => {
+        if (!t || !t.tplId || !t.date) return;
+        const nid = 'tpli_' + t.tplId + '_' + t.date;
+        if (t.id !== nid) { t.id = nid; changed = true; }
+        if (byNew[nid]) {
+          const a = byNew[nid];
+          const keep = (a._mt || 0) >= (t._mt || 0) ? a : t;
+          drops.add(keep === a ? t : a); byNew[nid] = keep; changed = true;
+        } else byNew[nid] = t;
+      });
+      if (drops.size) DB.data.todos = DB.data.todos.filter(o => !drops.has(o));
+    }
     (DB.data.templates || []).forEach(tpl => {
       if (!tpl.repeat || tpl.repeat === 'never') return;
       const start = tpl.startDate || U.today();
@@ -134,7 +151,7 @@ const Todo = (() => {
         if (DB.data.skippedTemplateDays && DB.data.skippedTemplateDays.some(s => s.tplId === tpl.id && s.date === d)) return; // 用户删除过的某天不再生成
         if (DB.data.todos.some(t => t.tplId === tpl.id && t.date === d)) return;
         DB.data.todos.push({
-          id: U.uid('td'), title: tpl.title, note: '', priority: (tpl.priority == null ? 1 : tpl.priority),
+          id: 'tpli_' + tpl.id + '_' + d, title: tpl.title, note: '', priority: (tpl.priority == null ? 1 : tpl.priority),
           tag: tpl.tag || '', date: d, time: '', status: 'pending', doneAt: null,
           tplId: tpl.id, createdAt: Date.now(), order: Date.now()
         });

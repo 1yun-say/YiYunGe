@@ -592,7 +592,7 @@ const Schedule = (() => {
     });
     const ocEl = U.$('#f_oc', b), oaEl = U.$('#f_oa', b);
     if (ocEl && oaEl) { DB.data.settings.overlapColor = ocEl.value; DB.data.settings.overlapAlpha = +oaEl.value; }
-    DB.save(); DB.touch('lesson'); render(); U.toast(scope === 'future' ? '已应用到此后所有同一重复课程' : '已保存');
+    DB.save(); DB.touch('lesson'); if (window.Sync) window.Sync.push().catch(()=>{}); render(); U.toast(scope === 'future' ? '已应用到此后所有同一重复课程' : '已保存');
   }
 
   function book(studentId, preset = {}, done) {
@@ -714,7 +714,7 @@ const Schedule = (() => {
       onOk: b => commitEditLesson(b, l, future),
     });
     modal.body.addEventListener('click', e => {
-      if (e.target.id === 'btnDone') { l.status = 'done'; l._mt = Date.now(); DB.save(); DB.touch('lesson'); render(); U.toast('已标记完成'); e.target.closest('.mask').remove(); }
+      if (e.target.id === 'btnDone') { l.status = 'done'; l._mt = Date.now(); DB.save(); DB.touch('lesson'); if (window.Sync) window.Sync.push().catch(()=>{}); render(); U.toast('已标记完成'); e.target.closest('.mask').remove(); }
       if (e.target.id === 'btnDel') {
         U.confirm('确定删除这一节课吗？此操作不可撤销。', () => {
           DB.markDeleted('lessons', l.id);
