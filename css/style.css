@@ -224,7 +224,9 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 
 /* ---------- 待办 ---------- */
 .todo-list{display:flex;flex-direction:column;gap:6px}
-.todo-item{display:flex;align-items:flex-start;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:var(--r-s);background:#fff;transition:.18s;position:relative;overflow:hidden}
+/* 平板/桌面端：整行约 28px（勾选框 20px + 上下各 4px），比勾选框略高一点即可。
+   手机端在下方媒体查询里另有覆盖（padding 8px 10px），保留更大的触控区。 */
+.todo-item{display:flex;align-items:flex-start;gap:10px;padding:4px 12px;border:1px solid var(--line);border-radius:var(--r-s);background:#fff;transition:.18s;position:relative;overflow:hidden}
 .todo-item::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--pink-300)}
 .todo-item[data-p="0"]::before{background:var(--alert)}
 .todo-item[data-p="1"]::before{background:var(--gold)}

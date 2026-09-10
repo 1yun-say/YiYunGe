@@ -450,12 +450,18 @@ const Todo = (() => {
       });
       const done = dayTodos.filter(t => isDoneOnDay(t, d)).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
       const mixed = dayItems(d);                       // 当天日程 + 未完成待办（混排，日程默认在上）
-      const itemsHTML = mixed.map(it => it.kind === 'event' ? eventRowHTML(it.ref, d) : rowHTML(it.ref, d, false)).join('')
-        + done.map(t => rowHTML(t, d, false)).join('');
+      const itemsHTML = mixed.map(it => it.kind === 'event' ? eventRowHTML(it.ref, d) : rowHTML(it.ref, d, false)).join('');
+      // 与桌面端一致：已完成的收进当天「已完成(n)」折叠区，默认收起，点标题行才展开
+      const doneHTML = done.length
+        ? `<div class="divider"></div>
+           <div class="archive-head" data-act="toggleArch"><span class="caret">&#9656;</span> 已完成（${done.length}）</div>
+           <div class="todo-list" style="display:none">${done.map(t => rowHTML(t, d, false)).join('')}</div>`
+        : '';
       const header = `${U.cnDate(d)} <span class="wd">${U.wdName(d)}</span>${isDayToday ? '<span class="tag today-pill">今天</span>' : ''}`;
       return `<section class="day-group${isDayToday ? ' today' : ''}">
         <div class="day-h">${header}</div>
         <div class="todo-list">${itemsHTML}</div>
+        ${doneHTML}
         <input class="input day-quick" data-date="${d}" placeholder="添加事项，回车确认（标题｜备注）">
       </section>`;
     }).join('');
@@ -532,6 +538,7 @@ const Todo = (() => {
             t.doneAt = t.status === 'done' ? Date.now() : (t.status === 'pending' ? null : t.doneAt);
             if (t.status === 'done') U.toast('完成一件，很好');
           }
+          t._mt = Date.now();   // 关键：打勾/取消打勾都要刷新修改时间，否则平板下载同步时判定旧数据更新、会把完成状态打回去
           DB.save(); render(); App.refreshBadge();
           break;
         }
@@ -569,10 +576,13 @@ const Todo = (() => {
           const swap = act === 'up' ? idx - 1 : idx + 1;
           if (swap < 0 || swap >= list.length) break;
           [list[idx], list[swap]] = [list[swap], list[idx]];
+          const now = Date.now();
           list.forEach((it, i) => {
             const ord = (i + 1) * 1000;
-            if (it.kind === 'todo') { const x = DB.data.todos.find(z => z.id === it.ref.id); if (x) x.order = ord; }
-            else { const x = DB.data.events.find(z => z.id === it.ref.id); if (x) x.order = ord; }
+            // 排序结果要能同步到别的设备：给每条被重排的记录刷新 _mt（含模板库生成的实例），
+            // 否则平板下载时它那份旧 order 的 _mt 不比这里新，会把排序打回原样。
+            if (it.kind === 'todo') { const x = DB.data.todos.find(z => z.id === it.ref.id); if (x) { x.order = ord; x._mt = now; } }
+            else { const x = DB.data.events.find(z => z.id === it.ref.id); if (x) { x.order = ord; x._mt = now; } }
           });
           DB.save(); render(); App.refreshBadge();
           break;
@@ -650,7 +660,13 @@ const Todo = (() => {
           break;
         }
         case 'toggleArch': {
-          const box = U.$('#archBox', root); const open = box.style.display === 'none';
+          // 手机端每天各有一个「已完成」折叠区，id 会重复，不能再用 #archBox 全局查找；
+          // 统一改为「取紧跟在标题行后面的那个列表」，桌面端与手机端都适用。
+          const box = (btn.nextElementSibling && btn.nextElementSibling.classList.contains('todo-list'))
+            ? btn.nextElementSibling
+            : U.$('#archBox', root);
+          if (!box) break;
+          const open = box.style.display === 'none';
           box.style.display = open ? 'flex' : 'none'; btn.classList.toggle('open', open); break;
         }
         case 'importAll': importTemplates(); break;

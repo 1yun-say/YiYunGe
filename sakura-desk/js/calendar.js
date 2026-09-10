@@ -55,7 +55,14 @@ const Calendar = (() => {
       if (!U.recurOccursOn(dt, rule)) continue;
       out.push(x);
     }
-    out.sort((a, b) => (a.status === 'done') - (b.status === 'done') || (a.time || '99:59').localeCompare(b.time || '99:59') || a.priority - b.priority || a.createdAt - b.createdAt);
+    // 排序口径与「提醒事项」页面保持一致（🚩置顶 → 手动 order → 时间 → 优先级 → 创建时间），
+    // 这样在提醒事项页手动调过的顺序，日历里完全一样；已完成仍统一排在后面。
+    out.sort((a, b) => (a.status === 'done') - (b.status === 'done')
+      || ((b.flag ? 1 : 0) - (a.flag ? 1 : 0))
+      || (a.order || 0) - (b.order || 0)
+      || (a.time || '99:59').localeCompare(b.time || '99:59')
+      || a.priority - b.priority
+      || a.createdAt - b.createdAt);
     return out;
   }
 
