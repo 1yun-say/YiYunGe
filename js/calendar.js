@@ -286,7 +286,7 @@ const Calendar = (() => {
       else if (a.dataset.act === 'next') shift(1);
       else if (a.dataset.act === 'today') { anchor = U.today(); render(); }
       else if (a.dataset.act === 'add') showAddChoice(a.dataset.day || U.today());
-      else if (a.dataset.act === 'exportICS') exportEventsICS();
+      else if (a.dataset.act === 'exportICS') openExportDialog();
       else if (a.dataset.act === 'toggleTodo') {
         const x = DB.data.todos.find(y => y.id === a.closest('[data-tid]').dataset.tid);
         if (!x) return;
@@ -584,14 +584,16 @@ const Calendar = (() => {
     L.push('END:VEVENT');
     return L.map(foldICS).join('\r\n');
   }
-  function exportEventsICS() {
+  function exportEventsICS(ids) {
     const evs = DB.data.events || [];
     if (!evs.length) { U.toast('还没有任何日程可以导出', 'warn'); return; }
+    const idSet = (ids && ids.size) ? ids : null;
     const t0 = U.today();
     const horizon = U.addDays(t0, 365); // 仅导出今天起未来 365 天内的发生
     const blocks = [];
     let count = 0;
     for (const e of evs) {
+      if (idSet && !idSet.has(e.id)) continue;
       const rule = U.recurRuleOf(e.repeat, e.startDate);
       for (let d = t0; d <= horizon; d = U.addDays(d, 1)) {
         if (!U.recurOccursOn(d, rule)) continue;
@@ -602,7 +604,7 @@ const Calendar = (() => {
         count++;
       }
     }
-    if (!count) { U.toast('未来 365 天内没有可导出的日程', 'warn'); return; }
+    if (!count) { U.toast('所选日程在未来 365 天内没有可导出项', 'warn'); return; }
     const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0',
       'PRODID:-//YiYunGe//Calendar Export//CN',
       'CALSCALE:GREGORIAN', 'METHOD:PUBLISH']
@@ -615,6 +617,83 @@ const Calendar = (() => {
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1500);
     U.toast(`已导出 ${count} 条日程到「逸云阁日程.ics」，导入手机日历即可提醒`, 'ok');
+  }
+
+  // 列出未来 365 天内每个日程的「首次发生日 + 发生次数」，用于勾选导出
+  function buildExportList() {
+    const evs = DB.data.events || [];
+    const t0 = U.today(), horizon = U.addDays(t0, 365);
+    const list = [];
+    for (const e of evs) {
+      const rule = U.recurRuleOf(e.repeat, e.startDate);
+      let first = null, n = 0;
+      for (let d = t0; d <= horizon; d = U.addDays(d, 1)) {
+        if (!U.recurOccursOn(d, rule)) continue;
+        if (!first) first = d;
+        n++;
+      }
+      if (first) list.push({ e, first, count: n });
+    }
+    list.sort((a, b) => (a.first < b.first ? -1 : a.first > b.first ? 1 : 0));
+    return list;
+  }
+
+  // 勾选导出弹窗：默认全选，可逐条取消，支持按分类/标题过滤 + 全选/全不选/反选
+  function openExportDialog() {
+    const list = buildExportList();
+    if (!list.length) { U.toast('未来 365 天内没有可导出的日程', 'warn'); return; }
+    const cats = [...new Set(list.map(x => x.e.calendar))];
+    const rows = list.map(({ e, first, count }) => {
+      const col = eventColor(e.calendar);
+      const sub = U.esc(e.calendar) + ' · 下次 ' + first + (count > 1 ? ' · 共 ' + count + ' 次' : '');
+      return `<label class="exp-row" data-id="${e.id}" data-cat="${U.esc(e.calendar)}" data-title="${U.esc((e.title || '').toLowerCase())}">
+        <input type="checkbox" class="exp-chk" checked>
+        <span class="dot" style="background:${col}"></span>
+        <span class="exp-main"><span class="exp-title">${U.esc(e.title || '(无标题)')}</span>
+        <span class="exp-sub">${sub}</span></span></label>`;
+    }).join('');
+    const catOpts = '<option value="">全部分类</option>' + cats.map(c => `<option value="${U.esc(c)}">${U.esc(c)}</option>`).join('');
+    const body = `<div class="exp-toolbar">
+        <input class="input exp-search" placeholder="搜索标题…">
+        <select class="input exp-cat">${catOpts}</select></div>
+      <div class="exp-acts">
+        <button class="btn btn-ghost btn-sm" data-exp="all">全选</button>
+        <button class="btn btn-ghost btn-sm" data-exp="none">全不选</button>
+        <button class="btn btn-ghost btn-sm" data-exp="inv">反选</button>
+        <span class="exp-count muted" style="margin-left:auto"></span></div>
+      <div class="exp-list">${rows}</div>`;
+    const mm = U.modal({
+      title: '选择要导出的日程', okText: '导出选中', body,
+      onOk: (bd) => {
+        const ids = new Set([...bd.querySelectorAll('.exp-chk:checked')]
+          .map(c => c.closest('.exp-row').dataset.id));
+        if (!ids.size) { U.toast('请至少选择一条日程', 'warn'); return false; }
+        exportEventsICS(ids);
+      }
+    });
+    const refreshCount = () => {
+      const n = mm.body.querySelectorAll('.exp-chk:checked').length;
+      mm.body.querySelector('.exp-count').textContent = `已选 ${n} / ${list.length}`;
+    };
+    const applyFilter = () => {
+      const kw = mm.body.querySelector('.exp-search').value.trim().toLowerCase();
+      const cat = mm.body.querySelector('.exp-cat').value;
+      mm.body.querySelectorAll('.exp-row').forEach(r => {
+        const ok = (!cat || r.dataset.cat === cat) && (!kw || r.dataset.title.includes(kw));
+        r.classList.toggle('hidden', !ok);
+      });
+    };
+    mm.body.addEventListener('click', e => {
+      const b = e.target.closest('[data-exp]'); if (!b) return;
+      const chk = [...mm.body.querySelectorAll('.exp-chk')];
+      if (b.dataset.exp === 'all') chk.forEach(c => c.checked = true);
+      else if (b.dataset.exp === 'none') chk.forEach(c => c.checked = false);
+      else chk.forEach(c => c.checked = !c.checked);
+      refreshCount();
+    });
+    mm.body.addEventListener('input', applyFilter);
+    mm.body.addEventListener('change', applyFilter);
+    refreshCount();
   }
 
   /* ---------- 启动 ---------- */

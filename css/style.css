@@ -414,6 +414,22 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .modal-b{padding:18px 20px;overflow:auto}
 .modal-f{padding:13px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:9px;background:var(--pink-50)}
 
+/* 导出日程勾选弹窗 */
+.exp-toolbar{display:flex;gap:8px;margin-bottom:10px}
+.exp-toolbar .exp-search{flex:1}
+.exp-acts{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.exp-acts .btn-sm{padding:5px 10px;font-size:12px}
+.exp-list{max-height:56vh;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:4px}
+.exp-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;cursor:pointer}
+.exp-row+.exp-row{border-top:1px solid var(--line)}
+.exp-row:hover{background:var(--pink-50)}
+.exp-row.hidden{display:none}
+.exp-row .dot{width:10px;height:10px;border-radius:50%;flex:none}
+.exp-row .exp-chk{width:18px;height:18px;flex:none;accent-color:var(--pink-500)}
+.exp-main{display:flex;flex-direction:column;min-width:0}
+.exp-title{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exp-sub{font-size:11.5px;color:var(--muted)}
+
 .toast-root{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;align-items:center}
 .toast{background:rgba(74,44,60,.92);color:#fff;padding:9px 18px;border-radius:20px;font-size:12.5px;box-shadow:var(--shadow-l);animation:pop .2s}
 .toast.ok{background:linear-gradient(120deg,var(--pink-500),var(--pink-600))}
