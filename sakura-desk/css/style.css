@@ -239,7 +239,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .todo-item.plain::before{display:none}
 .todo-item.done .t-title{text-decoration:line-through}
 /* 拖拽排序手柄（⠿）：置于行尾最右的独立胶囊，仅手柄响应指针拖拽，不影响勾选/按钮/页面滚动 */
-.drag-handle{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:24px;height:30px;margin:-4px -6px -4px 8px;padding:0 2px;border-radius:9px;color:var(--muted);cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none;opacity:.5;transition:background .15s,color .15s,opacity .15s}
+.drag-handle{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:24px;height:30px;margin:-4px -6px -4px -8px;padding:0 2px;border-radius:9px;color:var(--muted);cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none;opacity:.5;transition:background .15s,color .15s,opacity .15s}
 .drag-handle:hover{color:var(--pink-600);opacity:1;background:var(--pink-50,#fff0f4)}
 .drag-handle:active{cursor:grabbing;color:var(--pink-600);background:var(--pink-100,#ffe3ec)}
 .drag-handle .grip{width:18px;height:18px;fill:currentColor}
