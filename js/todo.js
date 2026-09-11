@@ -386,8 +386,6 @@ const Todo = (() => {
         ${metaInner ? `<div class="t-meta">${metaInner}</div>` : ''}
       </div>
       <div class="t-actions">
-        <button class="btn btn-icon" data-act="up" title="上移">↑</button>
-        <button class="btn btn-icon" data-act="down" title="下移">↓</button>
         <button class="btn btn-icon" data-act="edit" title="编辑"><svg class="ico"><use href="#i-edit"/></svg></button>
         <button class="btn btn-icon" data-act="del" title="删除"><svg class="ico"><use href="#i-trash"/></svg></button>
       </div>
@@ -433,10 +431,6 @@ const Todo = (() => {
       <div class="ev-bar" style="background:${c}"></div>
       <div class="t-body" data-act="editEvent" title="点击编辑这条日程">
         <div class="t-title"><span class="t-time">${U.esc(timeText)}</span>${U.esc(e.title)}${e.location ? `<span class="t-note"> 📍${U.esc(e.location)}</span>` : ''}</div>
-      </div>
-      <div class="t-actions">
-        <button class="btn btn-icon" data-act="up" title="上移">↑</button>
-        <button class="btn btn-icon" data-act="down" title="下移">↓</button>
       </div>
     </div>`;
   }
@@ -594,30 +588,6 @@ const Todo = (() => {
           DB.removeRecord('todos', tid); DB.save(); render(); App.refreshBadge();
           break;
         }
-        case 'up':
-        case 'down': {
-          // 日程与待办混排调序：按所属天（data-view）重算「当天条目」（日程 + 未完成待办），
-          // 交换后统一写回 order（待办写 todos、日程写 events），两者因此可交叉排列。
-          const vd = (item && item.dataset.view) || curDate;
-          const isEv = !!(item && item.dataset.eid);
-          const curId = isEv ? item.dataset.eid : tid;
-          const list = dayItems(vd);
-          const idx = list.findIndex(it => it.kind === (isEv ? 'event' : 'todo') && it.ref.id === curId);
-          if (idx < 0) break;
-          const swap = act === 'up' ? idx - 1 : idx + 1;
-          if (swap < 0 || swap >= list.length) break;
-          [list[idx], list[swap]] = [list[swap], list[idx]];
-          const now = Date.now();
-          list.forEach((it, i) => {
-            const ord = (i + 1) * 1000;
-            // 排序结果要能同步到别的设备：给每条被重排的记录刷新 _mt（含模板库生成的实例），
-            // 否则平板下载时它那份旧 order 的 _mt 不比这里新，会把排序打回原样。
-            if (it.kind === 'todo') { const x = DB.data.todos.find(z => z.id === it.ref.id); if (x) { x.order = ord; x._mt = now; } }
-            else { const x = DB.data.events.find(z => z.id === it.ref.id); if (x) { x.order = ord; x._mt = now; } }
-          });
-          DB.save(); render(); App.refreshBadge();
-          break;
-        }
         case 'editEvent': {
           // 待办页里点日程：直接打开日历的日程编辑弹窗，保存后回到待办页刷新
           const eid = item && item.dataset.eid;
@@ -758,9 +728,9 @@ const Todo = (() => {
   }
 
   /* ---------- 拖拽排序（鼠标 + 触屏通用，Pointer Events）----------
-     仅在「未完成」列表里给每行加一个拖拽手柄（⠿）；从手柄按下并移动才开始拖，
+     仅在「未完成」列表里给每行加一个拖拽手柄（置于行尾最右）；从手柄按下并移动才开始拖，
      不干扰勾选框点击、编辑/删除按钮，也不触发页面滚动。落下后按最终 DOM 顺序重写
-     该天每条记录的 order + _mt（与「上移/下移」同一套持久化，跨端同步不变）。 */
+     该天每条记录的 order + _mt（持久化，跨端同步不变）。 */
   function bindDrag(root) {
     if (!root._dragBound) {
       root.addEventListener('pointerdown', onDragPointerDown);
@@ -781,7 +751,7 @@ const Todo = (() => {
         h.setAttribute('aria-label', '拖动排序');
         h.innerHTML = '<svg viewBox="0 0 24 24" class="grip"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg>';
         h.addEventListener('click', e => e.stopPropagation());             // 防止误触冒泡到 rebind 的 click 委托
-        el.insertBefore(h, el.firstChild);
+        el.appendChild(h);                                                // 手柄置于行尾（最右），与操作按钮分离
       });
     });
   }
