@@ -32,6 +32,12 @@ const App = (() => {
     U.$('#pageTitle').textContent = Views[r].title;
     const v = U.$('#view'); v.innerHTML = ''; v.scrollTop = 0;
     U.unbindNode(v);   // 清掉上一个视图遗留的委托监听器，避免点击串台
+    // 进入任何页面前统一清理「已删除 / 已跳过某天」的模板实例：
+    // 否则这些残留实例只在待办页被清理，日历 / 主页照常显示，表现为「删了又冒出来、切页又消失」。
+    // 注：Todo 是顶层 const（不挂 window），必须用 typeof 判断裸标识符。
+    if (typeof Todo !== 'undefined' && Todo.cleanupInstances) {
+      try { Todo.cleanupInstances(); } catch (_) {}
+    }
     Views[r].render(v);
     // 移动端切换路由后回到顶部
     if (U.isMobile()) window.scrollTo(0, 0);

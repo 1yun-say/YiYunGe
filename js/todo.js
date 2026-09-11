@@ -140,19 +140,27 @@ const Todo = (() => {
     return t.status === 'done';
   }
 
+  /* 清理「已标记跳过某天」的模板实例。
+   * 关键：必须**任何页面进入前**都跑一次（由 app.js 的 go() 统一调用），不能只在待办页跑。
+   * 否则被跳过、却仍残留在库里的实例会在日历 / 主页照常显示，表现就是「删掉了又冒出来、
+   * 切到提醒事项页再回来又没了」——因为只有待办页渲染时会清理，其它页面不清理。 */
+  function cleanupSkippedInstances() {
+    if (!Array.isArray(DB.data.skippedTemplateDays) || !DB.data.skippedTemplateDays.length) return false;
+    const before = DB.data.todos.length;
+    DB.data.todos = DB.data.todos.filter(t => {
+      if (!t || !t.tplId) return true;
+      return !DB.data.skippedTemplateDays.some(s => s.tplId === t.tplId && s.date === t.date);
+    });
+    if (DB.data.todos.length !== before) { DB.save(); return true; }
+    return false;
+  }
+
   /* 移动端：按可见的若干天，把「设置了重复规则的模板」幂等展开成具体待办实例。
    * 每天只生成一次（tplId+date 去重），不重复堆积。 */
   function ensureTemplateInstances(days) {
     let changed = false;
     // 先清理：被「跳过某天」的模板实例（含跨端同步过来的 skip），确保删除某天模板实例在本机/他端都彻底消失
-    if (Array.isArray(DB.data.skippedTemplateDays) && DB.data.skippedTemplateDays.length) {
-      const before = DB.data.todos.length;
-      DB.data.todos = DB.data.todos.filter(t => {
-        if (!t || !t.tplId) return true;
-        return !DB.data.skippedTemplateDays.some(s => s.tplId === t.tplId && s.date === t.date);
-      });
-      if (DB.data.todos.length !== before) changed = true;
-    }
+    if (cleanupSkippedInstances()) changed = true;
     // 注：模板实例的「确定性 id + 去重合并」已统一移到 migrate() → normalizeTemplateTodoIds()，
     // 在所有设备启动期运行（不再只在移动端），从根本上消除跨端重复待办。此处不再处理。
     (DB.data.templates || []).forEach(tpl => {
@@ -244,8 +252,10 @@ const Todo = (() => {
     return `<div style="display:flex;flex-direction:column;gap:16px">
         <div class="card">
           <div class="card-h"><h3>每日模板库</h3>
-            <button class="btn btn-icon ${tplSelMode ? 'on' : ''}" data-act="tplBatch" title="${tplSelMode ? '退出批量删除' : '批量删除'}"><svg class="ico"><use href="#i-check"/></svg></button>
-            <button class="btn btn-icon" data-act="addTpl" title="新增模板"><svg class="ico"><use href="#i-plus"/></svg></button>
+            <div class="ch-acts">
+              <button class="btn btn-icon ${tplSelMode ? 'on' : ''}" data-act="tplBatch" title="${tplSelMode ? '退出批量删除' : '批量删除'}"><svg class="ico"><use href="#i-check"/></svg></button>
+              <button class="btn btn-icon" data-act="addTpl" title="新增模板"><svg class="ico"><use href="#i-plus"/></svg></button>
+            </div>
           </div>
           <button class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:11px" data-act="importAll">
             一键导入全部到${curDate === U.today() ? '今天' : U.cnDate(curDate)}
@@ -262,8 +272,10 @@ const Todo = (() => {
     lastTemplates = sortTemplates();
     return `      <div class="card">
         <div class="card-h"><h3>每日模板库</h3>
-          <button class="btn btn-icon ${tplSelMode ? 'on' : ''}" data-act="tplBatch" title="${tplSelMode ? '退出批量删除' : '批量删除'}"><svg class="ico"><use href="#i-check"/></svg></button>
-          <button class="btn btn-icon" data-act="addTpl" title="新增模板"><svg class="ico"><use href="#i-plus"/></svg></button>
+          <div class="ch-acts">
+            <button class="btn btn-icon ${tplSelMode ? 'on' : ''}" data-act="tplBatch" title="${tplSelMode ? '退出批量删除' : '批量删除'}"><svg class="ico"><use href="#i-check"/></svg></button>
+            <button class="btn btn-icon" data-act="addTpl" title="新增模板"><svg class="ico"><use href="#i-plus"/></svg></button>
+          </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:7px">
           ${lastTemplates.length ? lastTemplates.map(tpl => tplChipHTML(tpl, tplSelMode, tplSel.has(tpl.id))).join('') : `<p class="muted" style="font-size:12px">还没有模板，点右上角 + 添加</p>`}
@@ -529,11 +541,45 @@ const Todo = (() => {
     });
   }
 
+  /* 切换一条待办的完成状态：点勾选框、点行任意处，共用同一套逻辑 */
+  function toggleTodo(t, item) {
+    if (!t) return;
+    const vd = item && item.dataset.view ? item.dataset.view : curDate; // 当前事项所属视图日期（移动端为所在天）
+    const rule = U.recurRuleOf(t.repeat, t.date);
+    // 仅「真正重复」的任务(type!=='never' 且当前展示日确为发生日)才走「按日期单独勾选」分支；
+    // 非重复任务(never)必须改 status，否则在到期日当天点击时只写 completedDates、
+    // 而渲染/未读数都按 status 判定，导致对勾不显示、未读数不减。
+    if (rule.type !== 'never' && U.recurOccursOn(vd, rule)) {
+      // 重复任务：按当前展示日单独勾选完成
+      t.completedDates = Array.isArray(t.completedDates) ? t.completedDates : [];
+      const i = t.completedDates.indexOf(curDate);
+      if (i >= 0) { t.completedDates.splice(i, 1); t.doneAt = null; U.toast('已恢复为未完成'); }
+      else { t.completedDates.push(curDate); t.doneAt = Date.now(); U.toast('完成一件，很好'); }
+    } else {
+      t.status = cycle(t.status);
+      t.doneAt = t.status === 'done' ? Date.now() : (t.status === 'pending' ? null : t.doneAt);
+      if (t.status === 'done') U.toast('完成一件，很好');
+    }
+    t._mt = Date.now();   // 关键：打勾/取消打勾都要刷新修改时间，否则平板下载同步时判定旧数据更新、会把完成状态打回去
+    DB.save(); render(); App.refreshBadge();
+  }
+
   function bind(root) {
     U.$('#tdDate', root).onchange = e => { curDate = e.target.value; render(); };
 
     U.rebind(root, 'todo', e => {
-      const btn = e.target.closest('[data-act]'); if (!btn) return;
+      const btn0 = e.target.closest('[data-act]');
+      // 点行任意处即可打勾：编辑 / 删除 / 拖拽手柄都有自己的 data-act，不会被这里截获；
+      // 日程行（data-eid）没有完成态，保持「点行=编辑日程」。
+      if (!btn0) {
+        const rowEl = e.target.closest('.todo-item');
+        if (rowEl && rowEl.dataset.id && !rowEl.dataset.eid) {
+          const rowTodo = DB.data.todos.find(x => x.id === rowEl.dataset.id);
+          if (rowTodo) toggleTodo(rowTodo, rowEl);
+        }
+        return;
+      }
+      const btn = btn0;
       const act = btn.dataset.act;
       const item = btn.closest('.todo-item');
       const tid = item && item.dataset.id;
@@ -546,27 +592,7 @@ const Todo = (() => {
         case 'nextDay': curDate = U.addDays(curDate, 1); render(); break;
         case 'backToday': curDate = U.today(); render(); break;
         case 'quickAdd': doQuickAdd(root); break;
-        case 'toggle': {
-          const vd = item && item.dataset.view ? item.dataset.view : curDate; // 当前事项所属视图日期（移动端为所在天）
-          const rule = U.recurRuleOf(t.repeat, t.date);
-          // 仅「真正重复」的任务(type!=='never' 且当前展示日确为发生日)才走「按日期单独勾选」分支；
-          // 非重复任务(never)必须改 status，否则在到期日当天点击时只写 completedDates、
-          // 而渲染/未读数都按 status 判定，导致对勾不显示、未读数不减。
-          if (rule.type !== 'never' && U.recurOccursOn(vd, rule)) {
-            // 重复任务：按当前展示日单独勾选完成
-            t.completedDates = Array.isArray(t.completedDates) ? t.completedDates : [];
-            const i = t.completedDates.indexOf(curDate);
-            if (i >= 0) { t.completedDates.splice(i, 1); t.doneAt = null; U.toast('已恢复为未完成'); }
-            else { t.completedDates.push(curDate); t.doneAt = Date.now(); U.toast('完成一件，很好'); }
-          } else {
-            t.status = cycle(t.status);
-            t.doneAt = t.status === 'done' ? Date.now() : (t.status === 'pending' ? null : t.doneAt);
-            if (t.status === 'done') U.toast('完成一件，很好');
-          }
-          t._mt = Date.now();   // 关键：打勾/取消打勾都要刷新修改时间，否则平板下载同步时判定旧数据更新、会把完成状态打回去
-          DB.save(); render(); App.refreshBadge();
-          break;
-        }
+        case 'toggle': toggleTodo(t, item); break;
         case 'edit': editTodo(t); break;
         case 'del': {
           if (t && t.tplId) {
@@ -756,7 +782,7 @@ const Todo = (() => {
     });
   }
 
-  let _drag = null;
+  let _drag = null, _dragRaf = 0, _dragPt = null;
   function onDragPointerDown(e) {
     const h = e.target.closest('.drag-handle');
     if (!h) return;
@@ -769,51 +795,67 @@ const Todo = (() => {
     _drag = { item, list, pid: e.pointerId,
       startX: e.clientX, startY: e.clientY,
       offX: e.clientX - rect.left, offY: e.clientY - rect.top,
-      moved: false, ghost: null };
+      moved: false, ghost: null, rects: null, w: rect.width };
     try { item.setPointerCapture(e.pointerId); } catch (_) {}
     window.addEventListener('pointermove', onDragPointerMove);
     window.addEventListener('pointerup', onDragPointerEnd);
     window.addEventListener('pointercancel', onDragPointerEnd);
   }
+  /* 性能优化：pointermove 在手机上可高达 100+ 次/秒，若每次都读 getBoundingClientRect
+     会反复强制同步布局（layout thrashing）造成卡顿。这里每帧只处理一次（rAF 节流），
+     并且把各行位置缓存起来——只有真正发生插入、DOM 顺序变了才重新量一次。 */
   function onDragPointerMove(e) {
     if (!_drag) return;
-    const dx = e.clientX - _drag.startX, dy = e.clientY - _drag.startY;
+    _dragPt = { x: e.clientX, y: e.clientY };
+    if (_dragRaf) return;
+    _dragRaf = requestAnimationFrame(() => { _dragRaf = 0; applyDragMove(); });
+  }
+  function applyDragMove() {
+    const p = _dragPt;
+    if (!_drag || !p) return;
+    const dx = p.x - _drag.startX, dy = p.y - _drag.startY;
     if (!_drag.moved) {
       if (dx * dx + dy * dy < 36) return;                                 // 移动阈值 ~6px，避免误触
       _drag.moved = true;
       const g = _drag.item.cloneNode(true);
       g.classList.add('drag-ghost');
-      g.style.width = _drag.item.getBoundingClientRect().width + 'px';
+      g.style.width = _drag.w + 'px';
+      g.style.left = '0px'; g.style.top = '0px';
       document.body.appendChild(g);
       _drag.ghost = g;
       _drag.item.classList.add('dragging');
+      measureDragRects();
     }
-    _drag.ghost.style.left = (e.clientX - _drag.offX) + 'px';
-    _drag.ghost.style.top = (e.clientY - _drag.offY) + 'px';
-    const target = dragInsertTarget(e.clientY, _drag.list, _drag.item);
+    // ghost 用 transform 移动：只走合成层，不触发重排（原来每帧改 left/top 都会重排整页）
+    _drag.ghost.style.transform = 'translate3d(' + (p.x - _drag.offX) + 'px,' + (p.y - _drag.offY) + 'px,0)';
+    const target = cachedInsertTarget(p.y);
     if (target === _drag.item) return;
     if (target) _drag.list.insertBefore(_drag.item, target);
     else _drag.list.appendChild(_drag.item);
+    measureDragRects();                                                   // 顺序变了才重新量
+  }
+  // 缓存列表内各行的中线位置（拖拽期间复用，避免每帧读取布局）
+  function measureDragRects() {
+    if (!_drag) return;
+    _drag.rects = Array.prototype.filter.call(_drag.list.children, el =>
+      el.classList && el.classList.contains('todo-item') && el !== _drag.item && el.hasAttribute('data-view')
+    ).map(el => { const r = el.getBoundingClientRect(); return { el: el, mid: r.top + r.height / 2 }; });
+  }
+  function cachedInsertTarget(y) {
+    if (!_drag.rects) measureDragRects();
+    for (const it of _drag.rects) if (y < it.mid) return it.el;
+    return null;
   }
   function onDragPointerEnd() {
     if (!_drag) return;
+    if (_dragRaf) { cancelAnimationFrame(_dragRaf); _dragRaf = 0; applyDragMove(); }  // 补上最后一帧，避免落点差一帧
     window.removeEventListener('pointermove', onDragPointerMove);
     window.removeEventListener('pointerup', onDragPointerEnd);
     window.removeEventListener('pointercancel', onDragPointerEnd);
     if (_drag.ghost) _drag.ghost.remove();
     _drag.item.classList.remove('dragging');
     if (_drag.moved) persistDayOrder(_drag.list);                         // 写回 order + _mt 并刷新
-    _drag = null;
-  }
-  // 返回应插入到其「之前」的元素；null 表示插到末尾
-  function dragInsertTarget(y, list, exclude) {
-    const kids = Array.prototype.filter.call(list.children, el =>
-      el.classList && el.classList.contains('todo-item') && el !== exclude && el.hasAttribute('data-view'));
-    for (const el of kids) {
-      const r = el.getBoundingClientRect();
-      if (y < r.top + r.height / 2) return el;
-    }
-    return null;
+    _drag = null; _dragPt = null;
   }
   // 按列表最终 DOM 顺序重写当天每条记录的 order（与「上移/下移」同一套，含 _mt 用于跨端同步）
   function persistDayOrder(listEl) {
@@ -980,5 +1022,5 @@ const Todo = (() => {
     render(root) { curDate = U.today(); render(); }
   };
 
-  return { checkAuto, pendingCount, P, pInfo, STATUS, sInfo, cycle, add, addNew, ofDate, render, editTodo, importTemplates, editTpl };
+  return { checkAuto, pendingCount, P, pInfo, STATUS, sInfo, cycle, add, addNew, ofDate, render, editTodo, importTemplates, editTpl, cleanupInstances: cleanupSkippedInstances };
 })();

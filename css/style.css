@@ -95,6 +95,9 @@ body.public .secret{display:none!important}
 .card-h h3{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
 .card-h h3::before{content:"";width:6px;height:16px;border-radius:4px;background:linear-gradient(var(--pink-300),var(--pink-500))}
 .card-h .sub{font-size:11.5px;color:var(--ink-3)}
+/* 卡片头部右侧操作组：包成一组后用 margin-left:auto 顶到最右，
+   避免 space-between 在多个子元素之间均分空间、把按钮甩到两端 */
+.ch-acts{display:flex;align-items:center;gap:2px;margin-left:auto;flex:0 0 auto}
 .grid{display:grid;gap:16px}
 .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -244,7 +247,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .drag-handle:active{cursor:grabbing;color:var(--pink-600);background:var(--pink-100,#ffe3ec)}
 .drag-handle .grip{width:18px;height:18px;fill:currentColor}
 .todo-item.dragging{opacity:.4;outline:1px dashed var(--pink-300);background:var(--pink-50,#fff0f4)}
-.drag-ghost{position:fixed;z-index:9999;pointer-events:none;left:0;top:0;box-shadow:0 10px 26px rgba(0,0,0,.22);opacity:.96;background:var(--card);border:1px solid var(--pink-300);border-radius:var(--r-s)}
+.drag-ghost{position:fixed;z-index:9999;pointer-events:none;left:0;top:0;will-change:transform;box-shadow:0 10px 26px rgba(0,0,0,.22);opacity:.96;background:var(--card);border:1px solid var(--pink-300);border-radius:var(--r-s)}
 .chk{width:20px;height:20px;flex:none;border:2px solid var(--pink-300);border-radius:6px;cursor:pointer;display:grid;place-items:center;margin-top:1px;transition:.18s;background:#fff}
 .chk:hover{border-color:var(--pink-500);background:var(--pink-75)}
 .chk.on{background:var(--pink-500);border-color:var(--pink-500)}
