@@ -754,6 +754,114 @@ const Todo = (() => {
 
     const quickTitle = U.$('#quickTitle', root);
     if (quickTitle) quickTitle.addEventListener('keydown', e => { if (e.key === 'Enter') doQuickAdd(root); });
+    bindDrag(root);
+  }
+
+  /* ---------- 拖拽排序（鼠标 + 触屏通用，Pointer Events）----------
+     仅在「未完成」列表里给每行加一个拖拽手柄（⠿）；从手柄按下并移动才开始拖，
+     不干扰勾选框点击、编辑/删除按钮，也不触发页面滚动。落下后按最终 DOM 顺序重写
+     该天每条记录的 order + _mt（与「上移/下移」同一套持久化，跨端同步不变）。 */
+  function bindDrag(root) {
+    if (!root._dragBound) {
+      root.addEventListener('pointerdown', onDragPointerDown);
+      root._dragBound = true;
+    }
+    // 给当天「未完成」列表里的每行插入手柄；已完成/遗留列表不加
+    root.querySelectorAll('.todo-list').forEach(listEl => {
+      if (listEl.id === 'archBox') return;
+      if (listEl.style.display === 'none') return;                          // 移动端「已完成」折叠区
+      if (listEl.previousElementSibling && listEl.previousElementSibling.classList.contains('archive-head')) return; // 桌面端已完成区
+      Array.prototype.forEach.call(listEl.children, el => {
+        if (!el.classList || !el.classList.contains('todo-item')) return;
+        if (!el.hasAttribute('data-view')) return;                         // 仅当天发生的事项（排除遗留卡片）
+        if (el.querySelector(':scope > .drag-handle')) return;
+        const h = document.createElement('span');
+        h.className = 'drag-handle';
+        h.title = '拖动排序';
+        h.setAttribute('aria-label', '拖动排序');
+        h.innerHTML = '<svg viewBox="0 0 24 24" class="grip"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg>';
+        h.addEventListener('click', e => e.stopPropagation());             // 防止误触冒泡到 rebind 的 click 委托
+        el.insertBefore(h, el.firstChild);
+      });
+    });
+  }
+
+  let _drag = null;
+  function onDragPointerDown(e) {
+    const h = e.target.closest('.drag-handle');
+    if (!h) return;
+    const item = h.closest('.todo-item');
+    const list = item && item.closest('.todo-list');
+    if (!list || list.id === 'archBox' || list.style.display === 'none') return;
+    if (!item.hasAttribute('data-view')) return;
+    e.preventDefault();
+    const rect = item.getBoundingClientRect();
+    _drag = { item, list, pid: e.pointerId,
+      startX: e.clientX, startY: e.clientY,
+      offX: e.clientX - rect.left, offY: e.clientY - rect.top,
+      moved: false, ghost: null };
+    try { item.setPointerCapture(e.pointerId); } catch (_) {}
+    window.addEventListener('pointermove', onDragPointerMove);
+    window.addEventListener('pointerup', onDragPointerEnd);
+    window.addEventListener('pointercancel', onDragPointerEnd);
+  }
+  function onDragPointerMove(e) {
+    if (!_drag) return;
+    const dx = e.clientX - _drag.startX, dy = e.clientY - _drag.startY;
+    if (!_drag.moved) {
+      if (dx * dx + dy * dy < 36) return;                                 // 移动阈值 ~6px，避免误触
+      _drag.moved = true;
+      const g = _drag.item.cloneNode(true);
+      g.classList.add('drag-ghost');
+      g.style.width = _drag.item.getBoundingClientRect().width + 'px';
+      document.body.appendChild(g);
+      _drag.ghost = g;
+      _drag.item.classList.add('dragging');
+    }
+    _drag.ghost.style.left = (e.clientX - _drag.offX) + 'px';
+    _drag.ghost.style.top = (e.clientY - _drag.offY) + 'px';
+    const target = dragInsertTarget(e.clientY, _drag.list, _drag.item);
+    if (target === _drag.item) return;
+    if (target) _drag.list.insertBefore(_drag.item, target);
+    else _drag.list.appendChild(_drag.item);
+  }
+  function onDragPointerEnd() {
+    if (!_drag) return;
+    window.removeEventListener('pointermove', onDragPointerMove);
+    window.removeEventListener('pointerup', onDragPointerEnd);
+    window.removeEventListener('pointercancel', onDragPointerEnd);
+    if (_drag.ghost) _drag.ghost.remove();
+    _drag.item.classList.remove('dragging');
+    if (_drag.moved) persistDayOrder(_drag.list);                         // 写回 order + _mt 并刷新
+    _drag = null;
+  }
+  // 返回应插入到其「之前」的元素；null 表示插到末尾
+  function dragInsertTarget(y, list, exclude) {
+    const kids = Array.prototype.filter.call(list.children, el =>
+      el.classList && el.classList.contains('todo-item') && el !== exclude && el.hasAttribute('data-view'));
+    for (const el of kids) {
+      const r = el.getBoundingClientRect();
+      if (y < r.top + r.height / 2) return el;
+    }
+    return null;
+  }
+  // 按列表最终 DOM 顺序重写当天每条记录的 order（与「上移/下移」同一套，含 _mt 用于跨端同步）
+  function persistDayOrder(listEl) {
+    const items = Array.prototype.filter.call(listEl.children, el =>
+      el.classList && el.classList.contains('todo-item') && el.hasAttribute('data-view'));
+    if (!items.length) return;
+    const now = Date.now();
+    items.forEach((el, i) => {
+      const ord = (i + 1) * 1000;
+      if (el.dataset.eid) {
+        const x = DB.data.events.find(z => z.id === el.dataset.eid);
+        if (x) { x.order = ord; x._mt = now; }
+      } else if (el.dataset.id) {
+        const x = DB.data.todos.find(z => z.id === el.dataset.id);
+        if (x) { x.order = ord; x._mt = now; }
+      }
+    });
+    DB.save(); render(); App.refreshBadge();
   }
 
   function doQuickAdd(root) {

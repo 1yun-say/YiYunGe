@@ -238,6 +238,13 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .todo-item.blocked .t-title{color:var(--ink-3)}
 .todo-item.plain::before{display:none}
 .todo-item.done .t-title{text-decoration:line-through}
+/* 拖拽排序手柄（⠿）：仅手柄响应指针拖拽，不影响勾选/按钮/页面滚动 */
+.drag-handle{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:22px;height:28px;margin:-4px 0 -4px -4px;color:var(--muted);cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}
+.drag-handle:hover{color:var(--pink-600)}
+.drag-handle:active{cursor:grabbing}
+.drag-handle .grip{width:16px;height:16px;fill:currentColor}
+.todo-item.dragging{opacity:.35;outline:1px dashed var(--line-2)}
+.drag-ghost{position:fixed;z-index:9999;pointer-events:none;left:0;top:0;box-shadow:0 10px 26px rgba(0,0,0,.22);opacity:.96;background:var(--card);border:1px solid var(--pink-300);border-radius:var(--r-s)}
 .chk{width:20px;height:20px;flex:none;border:2px solid var(--pink-300);border-radius:6px;cursor:pointer;display:grid;place-items:center;margin-top:1px;transition:.18s;background:#fff}
 .chk:hover{border-color:var(--pink-500);background:var(--pink-75)}
 .chk.on{background:var(--pink-500);border-color:var(--pink-500)}
