@@ -44,6 +44,32 @@ const Todo = (() => {
       if (typeof tpl.order === 'number') return;
       tpl.order = idx;
     });
+    normalizeTemplateTodoIds();   // 跨端统一模板实例 id，消除重复待办（见下方定义）
+  }
+
+  /* 把「带 tplId 的待办」统一成确定性 id「tpli_<tplId>_<date>」，并按 id 去重合并。
+   * 必须在所有设备启动期运行（migrate 调用），不能只跑在移动端：
+   * 否则桌面端创建的 td_xxx 与移动端生成的 tpli_... 在云同步时因 id 不同而被判为两条不同记录
+   * → 同一模板同一天出现重复待办（主页显示 2 个、排序时两条孪生条目互换像“跳顶”）。 */
+  function normalizeTemplateTodoIds() {
+    const byNew = {};
+    const drops = new Set();
+    const out = [];
+    let changed = false;
+    for (const t of DB.data.todos) {
+      if (!t || !t.tplId || !t.date) { out.push(t); continue; }
+      const nid = 'tpli_' + t.tplId + '_' + t.date;
+      if (t.id !== nid) { t.id = nid; changed = true; }
+      if (byNew[nid]) {
+        const a = byNew[nid];
+        const keep = (a._mt || 0) >= (t._mt || 0) ? a : t;
+        drops.add(keep === a ? t : a); byNew[nid] = keep; changed = true;
+      } else byNew[nid] = t;
+      out.push(t);
+    }
+    DB.data.todos = out.filter(o => !drops.has(o));
+    if (changed) DB.save();
+    return changed;
   }
 
   /* --- 自动任务：试课回访 --- */
@@ -96,8 +122,11 @@ const Todo = (() => {
     sortTemplates().forEach((tpl, i) => {
       if (ids && !ids.includes(tpl.id)) return;
       if (tpl.repeat && tpl.repeat !== 'never') return;   // 已设重复规则的模板会自动生成，不再手动导入
-      if (DB.data.todos.some(t => t.date === curDate && t.tplId === tpl.id)) return; // 当天已导入
-      add({ title: tpl.title, priority: tpl.priority, tag: tpl.tag, tplId: tpl.id, date: curDate, order: base + i });
+      // 确定性 id「tpli_<tplId>_<date>」：跨端一致，导入与自动实例共用同一 id → 不会重复；
+      // 双重去重：按 id 或按 tplId+date，兼容旧版随机 id 的遗留数据。
+      const instId = 'tpli_' + tpl.id + '_' + curDate;
+      if (DB.data.todos.some(t => t.id === instId || (t.tplId === tpl.id && t.date === curDate))) return;
+      add({ id: instId, title: tpl.title, priority: tpl.priority, tag: tpl.tag, tplId: tpl.id, date: curDate, order: base + i });
       n++;
     });
     U.toast(n ? `已导入 ${n} 条模板任务` : '今天已经导入过了', n ? 'ok' : 'warn');
@@ -124,23 +153,8 @@ const Todo = (() => {
       });
       if (DB.data.todos.length !== before) changed = true;
     }
-    // 迁移：旧版随机 id 的模板实例改为确定性 id（tpli_<tplId>_<date>），
-    // 让多端生成的同一条逻辑记录 id 一致 → 排序 / 打勾才能跨端同步。
-    // 同一确定性 id 出现多条（两端各生成过）时合并，保留 _mt 较新的一条。
-    {
-      const drops = new Set(); const byNew = {};
-      DB.data.todos.forEach(t => {
-        if (!t || !t.tplId || !t.date) return;
-        const nid = 'tpli_' + t.tplId + '_' + t.date;
-        if (t.id !== nid) { t.id = nid; changed = true; }
-        if (byNew[nid]) {
-          const a = byNew[nid];
-          const keep = (a._mt || 0) >= (t._mt || 0) ? a : t;
-          drops.add(keep === a ? t : a); byNew[nid] = keep; changed = true;
-        } else byNew[nid] = t;
-      });
-      if (drops.size) DB.data.todos = DB.data.todos.filter(o => !drops.has(o));
-    }
+    // 注：模板实例的「确定性 id + 去重合并」已统一移到 migrate() → normalizeTemplateTodoIds()，
+    // 在所有设备启动期运行（不再只在移动端），从根本上消除跨端重复待办。此处不再处理。
     (DB.data.templates || []).forEach(tpl => {
       if (!tpl.repeat || tpl.repeat === 'never') return;
       const start = tpl.startDate || U.today();

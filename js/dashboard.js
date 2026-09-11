@@ -444,8 +444,10 @@ const Dashboard = (() => {
         case 'importTpl': {
           let n = 0;
           DB.data.templates.forEach(tpl => {
-            if (DB.data.todos.some(x => x.date === t && x.tplId === tpl.id)) return;
-            Todo.add({ title: tpl.title, priority: tpl.priority, tag: tpl.tag, tplId: tpl.id, date: t }); n++;
+            if (tpl.repeat && tpl.repeat !== 'never') return;   // 重复模板由待办页自动生成，主页不重复导入
+            const instId = 'tpli_' + tpl.id + '_' + t;            // 确定性 id，与待办页导入共用 → 不重复
+            if (DB.data.todos.some(x => x.id === instId || (x.tplId === tpl.id && x.date === t))) return;
+            Todo.add({ id: instId, title: tpl.title, priority: tpl.priority, tag: tpl.tag, tplId: tpl.id, date: t }); n++;
           });
           DB.save(); render(); App.refreshBadge();
           U.toast(n ? `已导入 ${n} 条模板任务` : '今天已经导入过了', n ? 'ok' : 'warn');
