@@ -98,6 +98,11 @@ body.public .secret{display:none!important}
 /* 卡片头部右侧操作组：包成一组后用 margin-left:auto 顶到最右，
    避免 space-between 在多个子元素之间均分空间、把按钮甩到两端 */
 .ch-acts{display:flex;align-items:center;gap:2px;margin-left:auto;flex:0 0 auto}
+/* 上午 / 下午分栏：栏目小标题，以及日期行最右侧的分栏开关 */
+.slot-h{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-3);margin:10px 0 4px}
+.slot-h::after{content:"";flex:1;height:1px;background:var(--line)}
+.split-sw{display:inline-flex;align-items:center;gap:5px;margin-left:auto;font-size:12px;color:var(--ink-3);cursor:pointer;flex:0 0 auto;-webkit-user-select:none;user-select:none}
+.split-sw input{width:15px;height:15px;accent-color:var(--pink-500, #ff8fb3);cursor:pointer;margin:0}
 .grid{display:grid;gap:16px}
 .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .g3{grid-template-columns:repeat(3,minmax(0,1fr))}

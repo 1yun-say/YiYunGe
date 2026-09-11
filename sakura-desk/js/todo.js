@@ -126,7 +126,7 @@ const Todo = (() => {
       // 双重去重：按 id 或按 tplId+date，兼容旧版随机 id 的遗留数据。
       const instId = 'tpli_' + tpl.id + '_' + curDate;
       if (DB.data.todos.some(t => t.id === instId || (t.tplId === tpl.id && t.date === curDate))) return;
-      add({ id: instId, title: tpl.title, priority: tpl.priority, tag: tpl.tag, tplId: tpl.id, date: curDate, order: base + i });
+      add({ id: instId, title: tpl.title, priority: tpl.priority, tag: tpl.tag, tplId: tpl.id, date: curDate, time: tpl.time || '', slot: slotOfTemplate(tpl), order: base + i });
       n++;
     });
     U.toast(n ? `已导入 ${n} 条模板任务` : '今天已经导入过了', n ? 'ok' : 'warn');
@@ -138,6 +138,46 @@ const Todo = (() => {
     const r = U.recurRuleOf(t.repeat, t.date);
     if (r.type !== 'never') return Array.isArray(t.completedDates) && t.completedDates.includes(d);
     return t.status === 'done';
+  }
+
+  /* ---------- 上午 / 下午分栏（默认每天都分，可逐天取消） ---------- */
+  const SPLIT_AT = '12:00';                       // 中午 12 点为界
+  function daySplitOn(d) {
+    const off = DB.data.settings && DB.data.settings.daySplitOff;
+    return !(Array.isArray(off) && off.indexOf(d) >= 0);
+  }
+  function setDaySplit(d, on) {
+    DB.data.settings = DB.data.settings || {};
+    const off = Array.isArray(DB.data.settings.daySplitOff) ? DB.data.settings.daySplitOff.slice() : [];
+    const i = off.indexOf(d);
+    if (on && i >= 0) off.splice(i, 1);
+    else if (!on && i < 0) off.push(d);
+    DB.data.settings.daySplitOff = off;
+    DB.save();
+  }
+  // 归属上午还是下午：优先用记录自带的 slot（手动拖过就以它为准），没设过则按时间；
+  // 没写时间的默认上午。注意只影响「归到哪一栏」，绝不改动事项原本的时间。
+  function slotOf(it) {
+    if (!it) return 'am';
+    if (it.slot === 'am' || it.slot === 'pm') return it.slot;
+    const tm = String(it.time || it.startTime || '');
+    if (!tm) return 'am';
+    return tm < SPLIT_AT ? 'am' : 'pm';
+  }
+  // 模板库导入：按中午 12 点自动归栏（模板没设时间则默认上午）
+  function slotOfTemplate(tpl) {
+    const tm = String((tpl && tpl.time) || '');
+    return (tm && tm >= SPLIT_AT) ? 'pm' : 'am';
+  }
+  // 把当天混排按上午 / 下午拆成两个列表；data-day / data-slot 供跨天、跨栏拖动识别落点
+  function splitDayHTML(d, mixed) {
+    const one = (slot, label, arr) => `<div class="slot-h">${label}${arr.length ? `（${arr.length}）` : ''}</div>
+      <div class="todo-list" data-day="${d}" data-slot="${slot}">
+        ${arr.length ? arr.map(it => it.kind === 'event' ? eventRowHTML(it.ref, d) : rowHTML(it.ref, d)).join('')
+          : `<p class="muted" style="font-size:12px;padding:6px 2px">暂无</p>`}
+      </div>`;
+    return one('am', '上午', mixed.filter(it => slotOf(it.ref) === 'am'))
+      + one('pm', '下午', mixed.filter(it => slotOf(it.ref) === 'pm'));
   }
 
   /* 清理「已标记跳过某天」的模板实例。
@@ -174,8 +214,8 @@ const Todo = (() => {
         if (DB.data.todos.some(t => t.tplId === tpl.id && t.date === d)) return;
         DB.data.todos.push({
           id: 'tpli_' + tpl.id + '_' + d, title: tpl.title, note: '', priority: (tpl.priority == null ? 1 : tpl.priority),
-          tag: tpl.tag || '', date: d, time: '', status: 'pending', doneAt: null,
-          tplId: tpl.id, createdAt: Date.now(), order: Date.now()
+          tag: tpl.tag || '', date: d, time: tpl.time || '', status: 'pending', doneAt: null,
+          slot: slotOfTemplate(tpl), tplId: tpl.id, createdAt: Date.now(), order: Date.now()
         });
         changed = true;
       });
@@ -325,6 +365,7 @@ const Todo = (() => {
               <button class="btn btn-icon" data-act="prevDay" title="前一天">&#8249;</button>
               <input type="date" class="input" style="width:150px;padding:5px 8px" id="tdDate" value="${curDate}">
               <button class="btn btn-icon" data-act="nextDay" title="后一天">&#8250;</button>
+              <label class="split-sw" title="按上午 / 下午分开显示"><input type="checkbox" data-act="toggleSplit" data-day="${curDate}" ${daySplitOn(curDate) ? 'checked' : ''}> 上下午分栏</label>
             </div>
           </div>
 
@@ -337,11 +378,13 @@ const Todo = (() => {
             <button class="btn btn-primary" data-act="quickAdd">添加</button>
           </div>`}
 
-          <div class="todo-list">
+          ${daySplitOn(curDate)
+            ? splitDayHTML(curDate, dayMix)
+            : `<div class="todo-list" data-day="${curDate}" data-slot="all">
             ${dayMix.length ? dayMix.map(it => it.kind === 'event' ? eventRowHTML(it.ref, curDate) : rowHTML(it.ref)).join('')
         : `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-flower"/></svg>
                  <p>${isM ? '这一天很清爽，点右下角 + 新建一件吧' : '这一天很清爽，从右侧模板一键导入日常提醒吧'}</p></div>`}
-          </div>
+          </div>`}
 
           ${done.length ? `<div class="divider"></div>
             <div class="archive-head" data-act="toggleArch">
@@ -487,7 +530,10 @@ const Todo = (() => {
       });
       const done = dayTodos.filter(t => isDoneOnDay(t, d)).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
       const mixed = dayItems(d);                       // 当天日程 + 未完成待办（混排，日程默认在上）
-      const itemsHTML = mixed.map(it => it.kind === 'event' ? eventRowHTML(it.ref, d) : rowHTML(it.ref, d, false)).join('');
+      const splitOn = daySplitOn(d);                   // 该天是否按上午 / 下午分栏（默认分，可逐天关）
+      const itemsHTML = splitOn
+        ? splitDayHTML(d, mixed)
+        : `<div class="todo-list" data-day="${d}" data-slot="all">${mixed.map(it => it.kind === 'event' ? eventRowHTML(it.ref, d) : rowHTML(it.ref, d, false)).join('')}</div>`;
       // 与桌面端一致：已完成的收进当天「已完成(n)」折叠区，默认收起，点标题行才展开
       const doneHTML = done.length
         ? `<div class="divider"></div>
@@ -496,8 +542,8 @@ const Todo = (() => {
         : '';
       const header = `${U.cnDate(d)} <span class="wd">${U.wdName(d)}</span>${isDayToday ? '<span class="tag today-pill">今天</span>' : ''}`;
       return `<section class="day-group${isDayToday ? ' today' : ''}">
-        <div class="day-h">${header}</div>
-        <div class="todo-list">${itemsHTML}</div>
+        <div class="day-h">${header}<label class="split-sw" title="按上午 / 下午分开显示"><input type="checkbox" data-act="toggleSplit" data-day="${d}" ${splitOn ? 'checked' : ''}> 上下午分栏</label></div>
+        ${itemsHTML}
         ${doneHTML}
         <input class="input day-quick" data-date="${d}" placeholder="添加事项，回车确认（标题｜备注）">
       </section>`;
@@ -588,6 +634,12 @@ const Todo = (() => {
       const tpl = tplEl && DB.data.templates.find(x => x.id === tplEl.dataset.tpl);
 
       switch (act) {
+        case 'toggleSplit': {
+          // 日期行右侧的「上下午分栏」开关：checkbox 的勾选态浏览器已切好，按当前值存即可
+          const d = btn.dataset.day;
+          if (d) { setDaySplit(d, !!btn.checked); render(); }
+          break;
+        }
         case 'prevDay': curDate = U.addDays(curDate, -1); render(); break;
         case 'nextDay': curDate = U.addDays(curDate, 1); render(); break;
         case 'backToday': curDate = U.today(); render(); break;
@@ -795,7 +847,8 @@ const Todo = (() => {
     _drag = { item, list, pid: e.pointerId,
       startX: e.clientX, startY: e.clientY,
       offX: e.clientX - rect.left, offY: e.clientY - rect.top,
-      moved: false, ghost: null, rects: null, w: rect.width };
+      moved: false, ghost: null, rects: null, zones: null, w: rect.width,
+      homeDay: item.dataset.view || '', isEvent: !!item.dataset.eid };
     try { item.setPointerCapture(e.pointerId); } catch (_) {}
     window.addEventListener('pointermove', onDragPointerMove);
     window.addEventListener('pointerup', onDragPointerEnd);
@@ -828,11 +881,31 @@ const Todo = (() => {
     }
     // ghost 用 transform 移动：只走合成层，不触发重排（原来每帧改 left/top 都会重排整页）
     _drag.ghost.style.transform = 'translate3d(' + (p.x - _drag.offX) + 'px,' + (p.y - _drag.offY) + 'px,0)';
+    // 跨天 / 跨栏：先判断落点属于哪个列表（日程没有「归属日」可改，只允许在本天内调顺序）
+    const z = dropZoneAt(p.y);
+    if (z && z !== _drag.list && !(_drag.isEvent && z.dataset.day !== _drag.homeDay)) {
+      z.appendChild(_drag.item);
+      _drag.list = z;
+      _drag.item.dataset.view = z.dataset.day || _drag.item.dataset.view;
+      measureDropZones(); measureDragRects();
+    }
     const target = cachedInsertTarget(p.y);
     if (target === _drag.item) return;
     if (target) _drag.list.insertBefore(_drag.item, target);
     else _drag.list.appendChild(_drag.item);
-    measureDragRects();                                                   // 顺序变了才重新量
+    measureDropZones(); measureDragRects();                               // 顺序变了才重新量
+  }
+  // 所有可放置的列表（每天 / 每栏一个）：拖拽期间缓存上下边界，用于跨天跨栏判断落点
+  function measureDropZones() {
+    if (!_drag) return;
+    _drag.zones = Array.prototype.filter.call(document.querySelectorAll('.todo-list[data-day]'), el =>
+      el.id !== 'archBox' && el.style.display !== 'none'
+    ).map(el => { const r = el.getBoundingClientRect(); return { el: el, top: r.top, bottom: r.bottom }; });
+  }
+  function dropZoneAt(y) {
+    if (!_drag.zones) measureDropZones();
+    for (const z of _drag.zones) if (y >= z.top - 8 && y <= z.bottom + 8) return z.el;
+    return null;
   }
   // 缓存列表内各行的中线位置（拖拽期间复用，避免每帧读取布局）
   function measureDragRects() {
@@ -854,24 +927,46 @@ const Todo = (() => {
     window.removeEventListener('pointercancel', onDragPointerEnd);
     if (_drag.ghost) _drag.ghost.remove();
     _drag.item.classList.remove('dragging');
-    if (_drag.moved) persistDayOrder(_drag.list);                         // 写回 order + _mt 并刷新
+    if (_drag.moved) persistDayOrder();                                   // 写回 order / date / slot + _mt 并刷新
     _drag = null; _dragPt = null;
   }
-  // 按列表最终 DOM 顺序重写当天每条记录的 order（与「上移/下移」同一套，含 _mt 用于跨端同步）
-  function persistDayOrder(listEl) {
-    const items = Array.prototype.filter.call(listEl.children, el =>
-      el.classList && el.classList.contains('todo-item') && el.hasAttribute('data-view'));
-    if (!items.length) return;
+  /* 落下后统一写回：按每个列表的最终顺序重写 order，并把跨天 / 跨栏的结果落到记录上。
+     跨天 → 改归属日期（若这条是模板自动生成的，先把原日记为「跳过」，免得下次又生成一条）；
+     跨栏 → 只写 slot（属于上午还是下午），**绝不改动事项原本设置的时间**。 */
+  function persistDayOrder() {
+    const lists = Array.prototype.filter.call(document.querySelectorAll('.todo-list[data-day]'), el => el.id !== 'archBox');
+    if (!lists.length) return;
     const now = Date.now();
-    items.forEach((el, i) => {
-      const ord = (i + 1) * 1000;
-      if (el.dataset.eid) {
-        const x = DB.data.events.find(z => z.id === el.dataset.eid);
-        if (x) { x.order = ord; x._mt = now; }
-      } else if (el.dataset.id) {
-        const x = DB.data.todos.find(z => z.id === el.dataset.id);
-        if (x) { x.order = ord; x._mt = now; }
-      }
+    const byDay = {};
+    lists.forEach(L => { const d = L.dataset.day; (byDay[d] = byDay[d] || []).push(L); });
+    Object.keys(byDay).forEach(d => {
+      let i = 0;                                    // 同一天内的序号保持连续（上午栏 + 下午栏依次递增）
+      byDay[d].forEach(L => {
+        const slot = L.dataset.slot;
+        Array.prototype.filter.call(L.children, el =>
+          el.classList && el.classList.contains('todo-item') && el.hasAttribute('data-view')
+        ).forEach(el => {
+          const ord = (++i) * 1000;
+          if (el.dataset.eid) {
+            const x = DB.data.events.find(z => z.id === el.dataset.eid);
+            if (x) { x.order = ord; x._mt = now; if (slot && slot !== 'all') x.slot = slot; }
+          } else if (el.dataset.id) {
+            const x = DB.data.todos.find(z => z.id === el.dataset.id);
+            if (x) {
+              if (x.date !== d) {
+                if (x.tplId) {
+                  DB.data.skippedTemplateDays = Array.isArray(DB.data.skippedTemplateDays) ? DB.data.skippedTemplateDays : [];
+                  if (!DB.data.skippedTemplateDays.some(s => s.tplId === x.tplId && s.date === x.date))
+                    DB.data.skippedTemplateDays.push({ tplId: x.tplId, date: x.date });
+                }
+                x.date = d;
+              }
+              x.order = ord; x._mt = now;
+              if (slot && slot !== 'all') x.slot = slot;
+            }
+          }
+        });
+      });
     });
     DB.save(); render(); App.refreshBadge();
   }
