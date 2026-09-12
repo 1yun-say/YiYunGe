@@ -502,6 +502,13 @@ const DB = (() => {
     return d;
   }
 
+  // 模板补 amPm 字段（旧数据缺省为 'auto' = 按时间自动归栏），避免 slotOfTemplate 取到 undefined
+  function migrateTemplateAmPm(d) {
+    if (!Array.isArray(d.templates)) return d;
+    d.templates.forEach(t => { if (t && t.amPm == null) t.amPm = 'auto'; });
+    return d;
+  }
+
   function lessonsIn(a, b, opt = {}) {
     return data.lessons.filter(l => l.date >= a && l.date <= b && (opt.withCancelled || l.status !== 'cancelled'));
   }
@@ -666,6 +673,7 @@ const DB = (() => {
     migrateLessonTeacher(d);
     migrateRecurrence(d);
     migrateMT(d);
+    migrateTemplateAmPm(d);
     return d;
   }
 

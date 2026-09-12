@@ -447,7 +447,7 @@ const Dashboard = (() => {
             if (tpl.repeat && tpl.repeat !== 'never') return;   // 重复模板由待办页自动生成，主页不重复导入
             const instId = 'tpli_' + tpl.id + '_' + t;            // 确定性 id，与待办页导入共用 → 不重复
             if (DB.data.todos.some(x => x.id === instId || (x.tplId === tpl.id && x.date === t))) return;
-            const slot = (tpl.time && String(tpl.time) >= '12:00') ? 'pm' : 'am';   // 模板按中午 12 点自动归栏
+            const slot = Todo.slotOfTemplate(tpl);   // 统一归栏：amPm 强制 / 不选按 12:00 分界
             Todo.add({ id: instId, title: tpl.title, priority: tpl.priority, tag: tpl.tag, tplId: tpl.id, date: t, time: tpl.time || '', slot: slot }); n++;
           });
           DB.save(); render(); App.refreshBadge();

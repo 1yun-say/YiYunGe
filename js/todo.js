@@ -164,20 +164,55 @@ const Todo = (() => {
     if (!tm) return 'am';
     return tm < SPLIT_AT ? 'am' : 'pm';
   }
-  // 模板库导入：按中午 12 点自动归栏（模板没设时间则默认上午）
+  // 模板库导入归栏：
+  //   amPm='am' → 强制上午；amPm='pm' → 强制下午；
+  //   amPm='auto'（或没设）→ 按模板时间以 12:00 为界（没时间默认上午）。
+  // 注意：amPm 只决定「归到哪一栏」，绝不改动事项原本的时间。
   function slotOfTemplate(tpl) {
+    if (!tpl) return 'am';
+    if (tpl.amPm === 'am') return 'am';
+    if (tpl.amPm === 'pm') return 'pm';
     const tm = String((tpl && tpl.time) || '');
     return (tm && tm >= SPLIT_AT) ? 'pm' : 'am';
   }
-  // 把当天混排按上午 / 下午拆成两个列表；data-day / data-slot 供跨天、跨栏拖动识别落点
-  function splitDayHTML(d, mixed) {
+  // 是否过中午 12 点（本地时间）
+  function pastNoon() { return new Date().getHours() >= 12; }
+
+  /* 过午搬迁（需求3）：仅「今天」、已过 12:00、且当天开了上下午分栏时生效。
+   * 把上午栏里「未完成」的待办 slot 改为 'pm' 并排到下午最前面，持久化（刷新/跨端都生效）；
+   * 已完成的随上午栏一起隐藏。幂等：上午栏已无未完成项时自然不再改动。 */
+  function autoRollAmToPm(d) {
+    if (d !== U.today()) return;            // 只对今天
+    if (!pastNoon()) return;                // 必须过 12:00
+    if (!daySplitOn(d)) return;             // 当天没开分栏则不动
+    const list = ofDate(d);
+    const moved = list.filter(t => t.status !== 'done' && slotOf(t) === 'am');
+    if (!moved.length) return;
+    const now = Date.now();
+    const pmMin = (function () {
+      const pm = list.filter(t => slotOf(t) === 'pm');
+      return pm.length ? Math.min.apply(null, pm.map(t => t.order || 0)) : 0;
+    })();
+    moved.sort((a, b) => (a.order || 0) - (b.order || 0));   // 彼此保持原序
+    moved.forEach((t, i) => {
+      t.slot = 'pm'; t._mt = now;
+      t.order = pmMin - (moved.length - i) * 1000;            // 排到下午最前面
+    });
+    DB.save();
+  }
+
+  // 把当天混排按上午 / 下午拆成两个列表；data-day / data-slot 供跨天、跨栏拖动识别落点；
+  // hideAm=true 时只渲染下午栏（过午搬迁后上午栏整块隐藏）
+  function splitDayHTML(d, mixed, hideAm) {
     const one = (slot, label, arr) => `<div class="slot-h">${label}${arr.length ? `（${arr.length}）` : ''}</div>
       <div class="todo-list" data-day="${d}" data-slot="${slot}">
         ${arr.length ? arr.map(it => it.kind === 'event' ? eventRowHTML(it.ref, d) : rowHTML(it.ref, d)).join('')
           : `<p class="muted" style="font-size:12px;padding:6px 2px">暂无</p>`}
       </div>`;
-    return one('am', '上午', mixed.filter(it => slotOf(it.ref) === 'am'))
-      + one('pm', '下午', mixed.filter(it => slotOf(it.ref) === 'pm'));
+    let html = '';
+    if (!hideAm) html += one('am', '上午', mixed.filter(it => slotOf(it.ref) === 'am'));
+    html += one('pm', '下午', mixed.filter(it => slotOf(it.ref) === 'pm'));
+    return html;
   }
 
   /* 清理「已标记跳过某天」的模板实例。
@@ -329,6 +364,7 @@ const Todo = (() => {
     if (U.isMobile()) { renderMobile(); return; }
     const root = U.$('#view');
     if (!root || App.route !== 'todo') return;
+    autoRollAmToPm(curDate);   // 过午搬迁：今天过 12:00 且开了分栏时，上午未完成项沉到下午最前
     const list = ofDate(curDate);
     const sortFn = (a, b) => (b.flag ? 1 : 0) - (a.flag ? 1 : 0)   // 旗标置顶
       || (a.order || 0) - (b.order || 0)                           // 手动排序
@@ -379,7 +415,7 @@ const Todo = (() => {
           </div>`}
 
           ${daySplitOn(curDate)
-            ? splitDayHTML(curDate, dayMix)
+            ? splitDayHTML(curDate, dayMix, curDate === U.today() && pastNoon())
             : `<div class="todo-list" data-day="${curDate}" data-slot="all">
             ${dayMix.length ? dayMix.map(it => it.kind === 'event' ? eventRowHTML(it.ref, curDate) : rowHTML(it.ref)).join('')
         : `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-flower"/></svg>
@@ -518,6 +554,7 @@ const Todo = (() => {
     const isToday = curDate === today;
     const days = Array.from({ length: 7 }, (_, i) => U.addDays(curDate, i));
     ensureTemplateInstances(days);                 // 把可见 7 天里符合规则的模板自动展开成待办
+    autoRollAmToPm(today);                         // 过午搬迁：仅今天，上午未完成项沉到下午最前
     const overdue = isToday ? computeOverdue() : [];
 
     const groupsHTML = days.map(d => {
@@ -532,7 +569,7 @@ const Todo = (() => {
       const mixed = dayItems(d);                       // 当天日程 + 未完成待办（混排，日程默认在上）
       const splitOn = daySplitOn(d);                   // 该天是否按上午 / 下午分栏（默认分，可逐天关）
       const itemsHTML = splitOn
-        ? splitDayHTML(d, mixed)
+        ? splitDayHTML(d, mixed, d === today && pastNoon())
         : `<div class="todo-list" data-day="${d}" data-slot="all">${mixed.map(it => it.kind === 'event' ? eventRowHTML(it.ref, d) : rowHTML(it.ref, d, false)).join('')}</div>`;
       // 与桌面端一致：已完成的收进当天「已完成(n)」折叠区，默认收起，点标题行才展开
       const doneHTML = done.length
@@ -903,9 +940,17 @@ const Todo = (() => {
     ).map(el => { const r = el.getBoundingClientRect(); return { el: el, top: r.top, bottom: r.bottom }; });
   }
   function dropZoneAt(y) {
-    if (!_drag.zones) measureDropZones();
+    if (!_drag.zones || !_drag.zones.length) return null;
+    // 命中某个列表本身（含原本 8px 容差）直接返回，避免贴边抖动
     for (const z of _drag.zones) if (y >= z.top - 8 && y <= z.bottom + 8) return z.el;
-    return null;
+    // 落点正好在两栏之间的缝隙：取中线最近的列表，杜绝「返回 null → 留在旧栏 → 跳回页面顶端」
+    let best = _drag.zones[0], bestD = Infinity;
+    for (const z of _drag.zones) {
+      const mid = (z.top + z.bottom) / 2;
+      const d = Math.abs(y - mid);
+      if (d < bestD) { bestD = d; best = z; }
+    }
+    return best.el;
   }
   // 缓存列表内各行的中线位置（拖拽期间复用，避免每帧读取布局）
   function measureDragRects() {
@@ -1080,6 +1125,7 @@ const Todo = (() => {
   function editTpl(tpl, after) {
     const isNew = !tpl;
     tpl = tpl || { title: '', priority: 1, tag: '' };
+    const amPm = tpl.amPm || 'auto';
     const mm = U.modal({
       title: isNew ? '新增每日模板' : '编辑模板',
       body: `<div class="field"><label>模板内容</label>
@@ -1089,6 +1135,14 @@ const Todo = (() => {
             ${P.map(p => `<option value="${p.v}" ${p.v === tpl.priority ? 'selected' : ''}>${p.name}</option>`).join('')}</select></div>
           <div class="field"><label>标签</label><input class="input" id="f_g" value="${U.esc(tpl.tag)}" placeholder="日常 / 家长沟通 / 财务"></div>
         </div>
+        <div class="row">
+          <div class="field"><label>归属（上午 / 下午 / 不选）</label><select class="input" id="f_amPm">
+            <option value="auto" ${amPm === 'auto' ? 'selected' : ''}>不选（按时间自动）</option>
+            <option value="am" ${amPm === 'am' ? 'selected' : ''}>上午</option>
+            <option value="pm" ${amPm === 'pm' ? 'selected' : ''}>下午</option>
+          </select></div>
+          <div class="field"><label>时间（可选）</label><input type="time" class="input" id="f_time" value="${tpl.time || ''}"></div>
+        </div>
         ${U.buildRepeatControl(tpl.repeat && typeof tpl.repeat === 'string' ? tpl.repeat : (tpl.repeat && tpl.repeat.type === 'custom' ? 'custom' : (tpl.repeat && tpl.repeat.type) || 'never'))}
         <div class="field"><label>开始日期（可选，留空＝从今天起生效）</label><input type="date" class="input" id="f_from" value="${tpl.startDate || ''}"></div>
         <p class="muted" style="font-size:11.5px">设了重复规则（每天 / 区间 / 周几）的模板会在匹配的日子自动出现待办，无需手动导入；没设规则的模板仍用「一键导入全部」手动添加。</p>`,
@@ -1097,7 +1151,9 @@ const Todo = (() => {
         if (!title) { U.toast('请填写模板内容', 'warn'); return false; }
         const o = {
           title, priority: +U.$('#f_p', b).value, tag: U.$('#f_g', b).value.trim(),
-          repeat: U.readRepeatControl(b), startDate: U.$('#f_from', b).value || ''
+          repeat: U.readRepeatControl(b), startDate: U.$('#f_from', b).value || '',
+          amPm: U.$('#f_amPm', b).value || 'auto',
+          time: U.$('#f_time', b).value || ''
         };
         if (isNew) {
           const maxOrder = (DB.data.templates || []).reduce((m, x) => Math.max(m, x.order || 0), -1);
@@ -1117,5 +1173,5 @@ const Todo = (() => {
     render(root) { curDate = U.today(); render(); }
   };
 
-  return { checkAuto, pendingCount, P, pInfo, STATUS, sInfo, cycle, add, addNew, ofDate, render, editTodo, importTemplates, editTpl, cleanupInstances: cleanupSkippedInstances };
+  return { checkAuto, pendingCount, P, pInfo, STATUS, sInfo, cycle, add, addNew, ofDate, render, editTodo, importTemplates, editTpl, slotOfTemplate, cleanupInstances: cleanupSkippedInstances };
 })();
