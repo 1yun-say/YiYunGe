@@ -551,6 +551,10 @@ const Calendar = (() => {
       + 'T' + p(d.getUTCHours()) + p(d.getUTCMinutes()) + p(d.getUTCSeconds()) + 'Z';
   }
   function veventLines(e, sd, ed) {
+    // 兜底：老数据 / 导入备份 / 同步合并可能缺 endDate，或 endDate 早于本次发生日（历史脏数据）。
+    // 缺了会让 DTEND 取到 undefined、直接抛 TypeError 炸掉整个导出（连正常日程一起导不出）；
+    // ed 早于 sd 则会生成 DTEND<DTSTART 的非法 VEVENT，手机日历会拒收该条。统一回退并夹紧。
+    const ED = (ed && ed >= sd) ? ed : sd;
     const col = eventColor(e.calendar);
     const L = ['BEGIN:VEVENT'];
     L.push('UID:' + (e.id + '-' + sd));
@@ -562,15 +566,16 @@ const Calendar = (() => {
     L.push('X-APPLE-CALENDAR-COLOR:' + col);
     L.push('TRANSP:OPAQUE');
     if (e.allDay) {
-      // 全天事件：DTEND 取排他结束日（endDate + 1）
+      // 全天事件：DTEND 取排他结束日（结束日 + 1）
       L.push('DTSTART;VALUE=DATE:' + sd.replace(/-/g, ''));
-      L.push('DTEND;VALUE=DATE:' + U.addDays(ed, 1).replace(/-/g, ''));
+      L.push('DTEND;VALUE=DATE:' + U.addDays(ED, 1).replace(/-/g, ''));
     } else {
       // 带时间的事件：本地浮动时间（无时区，设备按本地解释）
       const st = (e.startTime || '00:00').replace(':', '');
-      const et = (e.endTime || '00:00').replace(':', '');
+      let et = (e.endTime || '00:00').replace(':', '');
+      if (et < st) et = st;   // 脏数据：结束时间早于开始时间时回退，避免 DTEND<DTSTART 被拒收
       L.push('DTSTART:' + sd.replace(/-/g, '') + 'T' + st + '00');
-      L.push('DTEND:' + ed.replace(/-/g, '') + 'T' + et + '00');
+      L.push('DTEND:' + ED.replace(/-/g, '') + 'T' + et + '00');
     }
     if (e.note) L.push('DESCRIPTION:' + escICS(e.note));
     const trig = alertTrigger(e.alert);
@@ -584,16 +589,42 @@ const Calendar = (() => {
     L.push('END:VEVENT');
     return L.map(foldICS).join('\r\n');
   }
+  // 提醒事项 → VEVENT：有 time 的按当天时刻生成（瞬时事件，DTEND=DTSTART），
+  // 没 time 的按全天事件；待办没有「提醒(alert)」设置，故不生成 VALARM。
+  // 完成态过滤（整条 done / 重复任务当天已勾掉）由调用方负责。
+  function todoVeventLines(t, d) {
+    const L = ['BEGIN:VEVENT'];
+    L.push('UID:todo-' + (t.id + '-' + d));
+    L.push('DTSTAMP:' + icsUTCNow());
+    L.push('SUMMARY:' + escICS(t.title || '(无标题)'));
+    if (t.tag) L.push('CATEGORIES:' + escICS(t.tag));
+    L.push('TRANSP:OPAQUE');
+    const tm = (t.time && /^\d{1,2}:\d{2}$/.test(t.time)) ? t.time.replace(':', '') : '';
+    if (tm) {
+      L.push('DTSTART:' + d.replace(/-/g, '') + 'T' + tm + '00');
+      L.push('DTEND:' + d.replace(/-/g, '') + 'T' + tm + '00');
+    } else {
+      L.push('DTSTART;VALUE=DATE:' + d.replace(/-/g, ''));
+      L.push('DTEND;VALUE=DATE:' + U.addDays(d, 1).replace(/-/g, ''));
+    }
+    const desc = ['来自逸云阁 · 提醒事项' + (t.tag ? '（' + t.tag + '）' : '')];
+    if (t.note) desc.push(escICS(t.note));
+    L.push('DESCRIPTION:' + desc.join('\n'));
+    L.push('END:VEVENT');
+    return L.map(foldICS).join('\r\n');
+  }
+  // ids 为弹窗勾选的条目 id（日程 'e:'+id / 提醒事项 't:'+id，两类 id 命名空间可能相同故加前缀区分）
   function exportEventsICS(ids) {
     const evs = DB.data.events || [];
-    if (!evs.length) { U.toast('还没有任何日程可以导出', 'warn'); return; }
+    const tds = DB.data.todos || [];
+    if (!evs.length && !tds.length) { U.toast('还没有任何日程可以导出', 'warn'); return; }
     const idSet = (ids && ids.size) ? ids : null;
     const t0 = U.today();
     const horizon = U.addDays(t0, 365); // 仅导出今天起未来 365 天内的发生
     const blocks = [];
     let count = 0;
     for (const e of evs) {
-      if (idSet && !idSet.has(e.id)) continue;
+      if (idSet && !idSet.has('e:' + e.id)) continue;
       const rule = U.recurRuleOf(e.repeat, e.startDate);
       for (let d = t0; d <= horizon; d = U.addDays(d, 1)) {
         if (!U.recurOccursOn(d, rule)) continue;
@@ -604,12 +635,26 @@ const Calendar = (() => {
         count++;
       }
     }
-    if (!count) { U.toast('所选日程在未来 365 天内没有可导出项', 'warn'); return; }
+    for (const t of tds) {
+      if (idSet && !idSet.has('t:' + t.id)) continue;
+      if (t.status === 'done') continue;      // 整条已完成的不导
+      const rule = U.recurRuleOf(t.repeat, t.date);
+      for (let d = t0; d <= horizon; d = U.addDays(d, 1)) {
+        if (!U.recurOccursOn(d, rule)) continue;
+        // 重复待办：当天已单独勾掉完成的不导
+        if (Array.isArray(t.completedDates) && t.completedDates.indexOf(d) >= 0) continue;
+        blocks.push(todoVeventLines(t, d));
+        count++;
+      }
+    }
+    if (!count) { U.toast('所选内容在未来 365 天内没有可导出项', 'warn'); return; }
+    // 注意：blocks 里每个 VEVENT 已在 todoVeventLines/veventLines 内按 73 字节折好行，
+    // 顶层不能再 map(foldICS)（会把多行块在任意字符中间二次折断，虽 RFC 客户端能拼回，但属无谓兼容性风险）
     const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0',
       'PRODID:-//YiYunGe//Calendar Export//CN',
       'CALSCALE:GREGORIAN', 'METHOD:PUBLISH']
       .concat(blocks).concat(['END:VCALENDAR'])
-      .map(foldICS).join('\r\n') + '\r\n';
+      .join('\r\n') + '\r\n';
     const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -619,8 +664,9 @@ const Calendar = (() => {
     U.toast(`已导出 ${count} 条日程到「逸云阁日程.ics」，导入手机日历即可提醒`, 'ok');
   }
 
-  // 列出未来 365 天内每个日程的「首次发生日 + 发生次数」，用于勾选导出
-  function buildExportList() {
+  // 列出未来 365 天内每个日程 / 提醒事项的「首次发生日 + 发生次数」，用于勾选导出。
+  // includeTodos=true 时把提醒事项并进清单：未完成的默认勾选；已完成的也列出但默认不勾，由用户逐条决定。
+  function buildExportList(includeTodos) {
     const evs = DB.data.events || [];
     const t0 = U.today(), horizon = U.addDays(t0, 365);
     const list = [];
@@ -632,68 +678,103 @@ const Calendar = (() => {
         if (!first) first = d;
         n++;
       }
-      if (first) list.push({ e, first, count: n });
+      if (first) list.push({ kind: 'event', ref: e, first, count: n, done: false });
+    }
+    if (includeTodos) {
+      for (const t of (DB.data.todos || [])) {
+        const rule = U.recurRuleOf(t.repeat, t.date);
+        let first = null, n = 0;
+        for (let d = t0; d <= horizon; d = U.addDays(d, 1)) {
+          if (!U.recurOccursOn(d, rule)) continue;
+          if (!first) first = d;
+          n++;
+        }
+        if (first) list.push({ kind: 'todo', ref: t, first, count: n, done: t.status === 'done' });
+      }
     }
     list.sort((a, b) => (a.first < b.first ? -1 : a.first > b.first ? 1 : 0));
     return list;
   }
 
-  // 勾选导出弹窗：默认全选，可逐条取消，支持按分类/标题过滤 + 全选/全不选/反选
+  // 勾选导出弹窗：默认全选，可逐条取消，支持按分类/标题过滤 + 全选/全不选/反选；
+  // 「包含提醒事项」开关（默认不勾）——勾上后把待办也并进清单，逐条可勾（已完成的待办列出但默认不选）
   function openExportDialog() {
-    const list = buildExportList();
-    if (!list.length) { U.toast('未来 365 天内没有可导出的日程', 'warn'); return; }
-    const cats = [...new Set(list.map(x => x.e.calendar))];
-    const rows = list.map(({ e, first, count }) => {
-      const col = eventColor(e.calendar);
-      const sub = U.esc(e.calendar) + ' · 下次 ' + first + (count > 1 ? ' · 共 ' + count + ' 次' : '');
-      return `<label class="exp-row" data-id="${e.id}" data-cat="${U.esc(e.calendar)}" data-title="${U.esc((e.title || '').toLowerCase())}">
-        <input type="checkbox" class="exp-chk" checked>
-        <span class="dot" style="background:${col}"></span>
-        <span class="exp-main"><span class="exp-title">${U.esc(e.title || '(无标题)')}</span>
-        <span class="exp-sub">${sub}</span></span></label>`;
-    }).join('');
-    const catOpts = '<option value="">全部分类</option>' + cats.map(c => `<option value="${U.esc(c)}">${U.esc(c)}</option>`).join('');
-    const body = `<div class="exp-toolbar">
-        <input class="input exp-search" placeholder="搜索标题…">
-        <select class="input exp-cat">${catOpts}</select></div>
-      <div class="exp-acts">
-        <button class="btn btn-ghost btn-sm" data-exp="all">全选</button>
-        <button class="btn btn-ghost btn-sm" data-exp="none">全不选</button>
-        <button class="btn btn-ghost btn-sm" data-exp="inv">反选</button>
-        <span class="exp-count muted" style="margin-left:auto"></span></div>
-      <div class="exp-list">${rows}</div>`;
+    const todoCount = (DB.data.todos || []).length;
+    let list = buildExportList(false);
+    if (!list.length && !todoCount) { U.toast('未来 365 天内没有可导出的日程', 'warn'); return; }
     const mm = U.modal({
-      title: '选择要导出的日程', okText: '导出选中', body,
+      title: '选择要导出的内容', okText: '导出选中',
+      body: `<div class="exp-toolbar">
+          <input class="input exp-search" placeholder="搜索标题…">
+          <select class="input exp-cat"></select></div>
+        <div class="exp-acts">
+          <button class="btn btn-ghost btn-sm" data-exp="all">全选</button>
+          <button class="btn btn-ghost btn-sm" data-exp="none">全不选</button>
+          <button class="btn btn-ghost btn-sm" data-exp="inv">反选</button>
+          ${todoCount ? '<label class="exp-inc" title="把「提醒事项」也加进下面的清单，逐条勾选"><input type="checkbox" class="exp-inc-chk"> 包含提醒事项</label>' : ''}
+          <span class="exp-count muted" style="margin-left:auto"></span></div>
+        <div class="exp-list"></div>`,
       onOk: (bd) => {
         const ids = new Set([...bd.querySelectorAll('.exp-chk:checked')]
           .map(c => c.closest('.exp-row').dataset.id));
-        if (!ids.size) { U.toast('请至少选择一条日程', 'warn'); return false; }
+        if (!ids.size) { U.toast('请至少选择一条内容', 'warn'); return false; }
         exportEventsICS(ids);
       }
     });
+    const bd = mm.body;
+    const listEl = bd.querySelector('.exp-list');
+    const catEl = bd.querySelector('.exp-cat');
     const refreshCount = () => {
-      const n = mm.body.querySelectorAll('.exp-chk:checked').length;
-      mm.body.querySelector('.exp-count').textContent = `已选 ${n} / ${list.length}`;
+      const n = bd.querySelectorAll('.exp-chk:checked').length;
+      bd.querySelector('.exp-count').textContent = `已选 ${n} / ${list.length}`;
     };
     const applyFilter = () => {
-      const kw = mm.body.querySelector('.exp-search').value.trim().toLowerCase();
-      const cat = mm.body.querySelector('.exp-cat').value;
-      mm.body.querySelectorAll('.exp-row').forEach(r => {
+      const kw = bd.querySelector('.exp-search').value.trim().toLowerCase();
+      const cat = catEl.value;
+      bd.querySelectorAll('.exp-row').forEach(r => {
         const ok = (!cat || r.dataset.cat === cat) && (!kw || r.dataset.title.includes(kw));
         r.classList.toggle('hidden', !ok);
       });
     };
-    mm.body.addEventListener('click', e => {
+    const renderList = () => {
+      const cats = [...new Set(list.map(x => x.kind === 'todo' ? (x.ref.tag || '提醒事项') : x.ref.calendar))];
+      const curCat = catEl.value;
+      catEl.innerHTML = '<option value="">全部分类</option>' + cats.map(c => `<option value="${U.esc(c)}">${U.esc(c)}</option>`).join('');
+      catEl.value = cats.indexOf(curCat) >= 0 ? curCat : '';
+      listEl.innerHTML = list.map(x => {
+        const isT = x.kind === 'todo';
+        const col = isT ? '#a89cc4' : eventColor(x.ref.calendar);
+        const cat = isT ? (x.ref.tag || '提醒事项') : x.ref.calendar;
+        const sub = U.esc(cat) + ' · 下次 ' + x.first + (x.count > 1 ? ' · 共 ' + x.count + ' 次' : '') + (x.done ? ' · 已完成（默认不选）' : '');
+        return `<label class="exp-row" data-id="${isT ? 't:' : 'e:'}${x.ref.id}" data-cat="${U.esc(cat)}" data-title="${U.esc((x.ref.title || '').toLowerCase())}">
+          <input type="checkbox" class="exp-chk" ${x.done ? '' : 'checked'}>
+          <span class="dot" style="background:${col}"></span>
+          <span class="exp-main"><span class="exp-title">${isT ? '<i class="exp-todo-flag">待办</i>' : ''}${U.esc(x.ref.title || '(无标题)')}</span>
+          <span class="exp-sub">${sub}</span></span></label>`;
+      }).join('');
+      applyFilter(); refreshCount();
+    };
+    bd.addEventListener('click', e => {
       const b = e.target.closest('[data-exp]'); if (!b) return;
-      const chk = [...mm.body.querySelectorAll('.exp-chk')];
+      const chk = [...bd.querySelectorAll('.exp-chk')];
       if (b.dataset.exp === 'all') chk.forEach(c => c.checked = true);
       else if (b.dataset.exp === 'none') chk.forEach(c => c.checked = false);
       else chk.forEach(c => c.checked = !c.checked);
       refreshCount();
     });
-    mm.body.addEventListener('input', applyFilter);
-    mm.body.addEventListener('change', applyFilter);
-    refreshCount();
+    bd.addEventListener('input', applyFilter);
+    bd.addEventListener('change', e => {
+      if (e.target.classList && e.target.classList.contains('exp-inc-chk')) {
+        list = buildExportList(!!e.target.checked);   // 勾选后把待办并进清单
+        renderList();
+        return;
+      }
+      applyFilter();
+    });
+    if (!list.length) {
+      U.toast(todoCount ? '未来 365 天内没有可导出的日程，可勾选「包含提醒事项」再试' : '未来 365 天内没有可导出的日程', 'warn');
+    }
+    renderList();
   }
 
   /* ---------- 启动 ---------- */
