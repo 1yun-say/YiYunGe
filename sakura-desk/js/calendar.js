@@ -637,7 +637,8 @@ const Calendar = (() => {
     }
     for (const t of tds) {
       if (idSet && !idSet.has('t:' + t.id)) continue;
-      if (t.status === 'done') continue;      // 整条已完成的不导
+      // 注意：done 的待办也能出现在清单里（重复任务的未来发生），用户显式勾了就该导，
+      // 不再按 status 跳过——否则「勾了却不导」会表现为选了多条只导入一个。
       const rule = U.recurRuleOf(t.repeat, t.date);
       for (let d = t0; d <= horizon; d = U.addDays(d, 1)) {
         if (!U.recurOccursOn(d, rule)) continue;
@@ -661,7 +662,7 @@ const Calendar = (() => {
     a.href = url; a.download = '逸云阁日程.ics';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1500);
-    U.toast(`已导出 ${count} 条日程到「逸云阁日程.ics」，导入手机日历即可提醒`, 'ok');
+    U.toast(`已导出 ${count} 条到「逸云阁日程.ics」，导入手机日历即可提醒`, 'ok');
   }
 
   // 列出未来 365 天内每个日程 / 提醒事项的「首次发生日 + 发生次数」，用于勾选导出。
