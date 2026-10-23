@@ -202,16 +202,20 @@ const Todo = (() => {
   }
 
   // 把当天混排按上午 / 下午拆成两个列表；data-day / data-slot 供跨天、跨栏拖动识别落点；
-  // hideAm=true 时只渲染下午栏（过午搬迁后上午栏整块隐藏）
+  // hideAm=true（过午搬迁后）：上午栏只保留「日程」——上午的待办已由 autoRollAmToPm 搬到下午，
+  // 而上午的日程（如上午的课）不过午消失，仍留在当天列表里可回看；上午只剩待办时该栏为空、不渲染。
+  // 某一栏为空时该栏整体不渲染（不显示「上午（暂无）」这种空壳）；
+  // 当天完全无事项时由调用方走「不分栏的空列表」分支，不会进来这里。
   function splitDayHTML(d, mixed, hideAm) {
-    const one = (slot, label, arr) => `<div class="slot-h">${label}${arr.length ? `（${arr.length}）` : ''}</div>
+    const am = mixed.filter(it => slotOf(it.ref) === 'am' && (!hideAm || it.kind === 'event'));
+    const pm = mixed.filter(it => slotOf(it.ref) === 'pm');
+    const one = (slot, label, arr) => `<div class="slot-h">${label}（${arr.length}）</div>
       <div class="todo-list" data-day="${d}" data-slot="${slot}">
-        ${arr.length ? arr.map(it => it.kind === 'event' ? eventRowHTML(it.ref, d) : rowHTML(it.ref, d)).join('')
-          : `<p class="muted" style="font-size:12px;padding:6px 2px">暂无</p>`}
+        ${arr.map(it => it.kind === 'event' ? eventRowHTML(it.ref, d) : rowHTML(it.ref, d)).join('')}
       </div>`;
     let html = '';
-    if (!hideAm) html += one('am', '上午', mixed.filter(it => slotOf(it.ref) === 'am'));
-    html += one('pm', '下午', mixed.filter(it => slotOf(it.ref) === 'pm'));
+    if (am.length) html += one('am', '上午', am);
+    if (pm.length) html += one('pm', '下午', pm);
     return html;
   }
 
@@ -401,7 +405,7 @@ const Todo = (() => {
               <button class="btn btn-icon" data-act="prevDay" title="前一天">&#8249;</button>
               <input type="date" class="input" style="width:150px;padding:5px 8px" id="tdDate" value="${curDate}">
               <button class="btn btn-icon" data-act="nextDay" title="后一天">&#8250;</button>
-              <label class="split-sw" title="按上午 / 下午分开显示"><input type="checkbox" data-act="toggleSplit" data-day="${curDate}" ${daySplitOn(curDate) ? 'checked' : ''}> 上下午分栏</label>
+              ${dayMix.length ? `<label class="split-sw" title="按上午 / 下午分开显示"><input type="checkbox" data-act="toggleSplit" data-day="${curDate}" ${daySplitOn(curDate) ? 'checked' : ''}> 上下午分栏</label>` : ''}
             </div>
           </div>
 
@@ -414,7 +418,7 @@ const Todo = (() => {
             <button class="btn btn-primary" data-act="quickAdd">添加</button>
           </div>`}
 
-          ${daySplitOn(curDate)
+          ${(daySplitOn(curDate) && dayMix.length)
             ? splitDayHTML(curDate, dayMix, curDate === U.today() && pastNoon())
             : `<div class="todo-list" data-day="${curDate}" data-slot="all">
             ${dayMix.length ? dayMix.map(it => it.kind === 'event' ? eventRowHTML(it.ref, curDate) : rowHTML(it.ref)).join('')
@@ -567,7 +571,7 @@ const Todo = (() => {
       });
       const done = dayTodos.filter(t => isDoneOnDay(t, d)).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
       const mixed = dayItems(d);                       // 当天日程 + 未完成待办（混排，日程默认在上）
-      const splitOn = daySplitOn(d);                   // 该天是否按上午 / 下午分栏（默认分，可逐天关）
+      const splitOn = daySplitOn(d) && mixed.length > 0;   // 该天按上午 / 下午分栏（默认分、可逐天关）；当天无事项时不走分栏
       const itemsHTML = splitOn
         ? splitDayHTML(d, mixed, d === today && pastNoon())
         : `<div class="todo-list" data-day="${d}" data-slot="all">${mixed.map(it => it.kind === 'event' ? eventRowHTML(it.ref, d) : rowHTML(it.ref, d, false)).join('')}</div>`;
@@ -579,7 +583,7 @@ const Todo = (() => {
         : '';
       const header = `${U.cnDate(d)} <span class="wd">${U.wdName(d)}</span>${isDayToday ? '<span class="tag today-pill">今天</span>' : ''}`;
       return `<section class="day-group${isDayToday ? ' today' : ''}">
-        <div class="day-h">${header}<label class="split-sw" title="按上午 / 下午分开显示"><input type="checkbox" data-act="toggleSplit" data-day="${d}" ${splitOn ? 'checked' : ''}> 上下午分栏</label></div>
+        <div class="day-h">${header}${mixed.length ? `<label class="split-sw" title="按上午 / 下午分开显示"><input type="checkbox" data-act="toggleSplit" data-day="${d}" ${splitOn ? 'checked' : ''}> 上下午分栏</label>` : ''}</div>
         ${itemsHTML}
         ${doneHTML}
         <input class="input day-quick" data-date="${d}" placeholder="添加事项，回车确认（标题｜备注）">
