@@ -407,8 +407,10 @@ window.Sync = (() => {
       }
       s.baseSavedAt = merged.__savedAt;
       s.lastSync = Date.now();
-      // 落盘合并结果（保留 __savedAt，静默不触发上传），使本机与云端完全一致
-      DB.data = merged;
+      // 落盘合并结果（保留 __savedAt，静默不触发上传），使本机与云端完全一致。
+      // 合并后必须过一遍 adoptData：云端可能是旧结构数据（如旧的优先级四象限字段），
+      // 不过迁移会绕过归一化，把旧字段带回来（v2.13.0 修「同步后彩色分类复活」）。
+      DB.data = DB.adoptData(merged);
       DB.save({ preserveSavedAt: true, silent: true });
       status('已加密上传 · ' + U.fmtTime(s.lastSync));
       if (s.auto !== false) startAutoPull();
@@ -425,9 +427,10 @@ window.Sync = (() => {
       const fc = await fetchCloud();
       if (!fc.present) throw new Error('云端暂无数据');
       if (!fc.remote) throw new Error('解密失败：密钥不匹配，请用原 Token / 同步密钥，或本地重新连接');
-      // 合并云端与本机（取并集），本机独有记录不会被云端覆盖丢失
+      // 合并云端与本机（取并集），本机独有记录不会被云端覆盖丢失。
+      // 合并结果同样过 adoptData 归一化（云端旧结构数据不得绕过迁移，v2.13.0）。
       const merged = mergeDocs(DB.data, fc.remote, 'pull');
-      DB.data = merged;
+      DB.data = DB.adoptData(merged);
       DB.save({ preserveSavedAt: true, silent: true });
       const s2 = cfg();
       s2.baseSavedAt = fc.remote.__savedAt || 0;

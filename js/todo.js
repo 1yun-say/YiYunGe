@@ -2,13 +2,16 @@
 window.Views = window.Views || {};
 
 const Todo = (() => {
+  // 优先级（原四象限「重要紧急」分类）自 v2.13.0 起改为纯可选：记录里没有该字段即「不选」，
+  // 各处色值统一回退为中性灰，不再有四色条 / 彩色小点。
   const P = [
     { v: 0, name: '紧急重要', short: '立刻做', color: '#ef6f6f' },
     { v: 1, name: '重要不紧急', short: '计划做', color: '#f2b544' },
     { v: 2, name: '紧急不重要', short: '快速做', color: '#8fb8f0' },
     { v: 3, name: '不紧急不重要', short: '有空做', color: '#a8899a' }
   ];
-  const pInfo = v => P[v] || P[3];
+  // 无效值（undefined/null/越界）→ 中性灰 + 空名，UI 上等同于「不选」
+  const pInfo = v => (v === 0 || v === 1 || v === 2 || v === 3) ? P[v] : { v: null, name: '', short: '', color: 'var(--ink-3)' };
   const STATUS = {
     pending: { name: '未完成', color: 'var(--pink-500)', next: 'done' },
     done:    { name: '已完成', color: 'var(--leaf)',      next: 'blocked' },
@@ -86,7 +89,7 @@ const Todo = (() => {
       DB.data.todos.push({
         id: U.uid('td'), title: `回访${s.parentName}试课体验（${s.grade}${s.subject}）`,
         note: '确认孩子和老师是否匹配、是否愿意转正式课；不合适则立即换老师。',
-        priority: 0, tag: '试课跟进', date: due > t ? due : t, status: 'pending', doneAt: null,
+        tag: '试课跟进', date: due > t ? due : t, status: 'pending', doneAt: null,
         autoKey: key, studentId: s.id, createdAt: Date.now()
       });
       added++;
@@ -110,7 +113,7 @@ const Todo = (() => {
 
   function add(t) {
     DB.data.todos.push(Object.assign({
-      id: U.uid('td'), title: '', note: '', priority: 1, tag: '', date: curDate,
+      id: U.uid('td'), title: '', note: '', tag: '', date: curDate,
       time: '', status: 'pending', doneAt: null, createdAt: Date.now(), order: Date.now()
     }, t));
     DB.save();
@@ -126,7 +129,7 @@ const Todo = (() => {
       // 双重去重：按 id 或按 tplId+date，兼容旧版随机 id 的遗留数据。
       const instId = 'tpli_' + tpl.id + '_' + curDate;
       if (DB.data.todos.some(t => t.id === instId || (t.tplId === tpl.id && t.date === curDate))) return;
-      add({ id: instId, title: tpl.title, priority: tpl.priority, tag: tpl.tag, tplId: tpl.id, date: curDate, time: tpl.time || '', slot: slotOfTemplate(tpl), order: base + i });
+      add({ id: instId, title: tpl.title, tag: tpl.tag, tplId: tpl.id, date: curDate, time: tpl.time || '', slot: slotOfTemplate(tpl), order: base + i });
       n++;
     });
     U.toast(n ? `已导入 ${n} 条模板任务` : '今天已经导入过了', n ? 'ok' : 'warn');
@@ -252,7 +255,7 @@ const Todo = (() => {
         if (DB.data.skippedTemplateDays && DB.data.skippedTemplateDays.some(s => s.tplId === tpl.id && s.date === d)) return; // 用户删除过的某天不再生成
         if (DB.data.todos.some(t => t.tplId === tpl.id && t.date === d)) return;
         DB.data.todos.push({
-          id: 'tpli_' + tpl.id + '_' + d, title: tpl.title, note: '', priority: (tpl.priority == null ? 1 : tpl.priority),
+          id: 'tpli_' + tpl.id + '_' + d, title: tpl.title, note: '',
           tag: tpl.tag || '', date: d, time: tpl.time || '', status: 'pending', doneAt: null,
           slot: slotOfTemplate(tpl), tplId: tpl.id, createdAt: Date.now(), order: Date.now()
         });
@@ -266,7 +269,7 @@ const Todo = (() => {
   function quickAddDay(d, value) {
     const { title, note } = splitTitleNote(value);
     if (!title) return;
-    add({ title, note, priority: 1, date: d, status: 'pending' });
+    add({ title, note, date: d, status: 'pending' });
     render(); App.refreshBadge();
   }
 
@@ -282,7 +285,7 @@ const Todo = (() => {
   }
   /* 每日模板库：单条模板 chip（支持批量删除选择模式） */
   function tplChipHTML(tpl, selMode, selected) {
-    const color = pInfo(tpl.priority).color;
+    const color = 'var(--ink-3)';   // 优先级分类已改为可选：模板卡圆点统一中性灰
     if (selMode) {
       return `<div class="tpl-chip sel" data-tpl="${tpl.id}" data-act="tplToggle" role="button" tabindex="0">
         <span class="tpl-check ${selected ? 'on' : ''}">${selected ? '✓' : ''}</span>
@@ -412,9 +415,6 @@ const Todo = (() => {
           ${isM ? '' : `<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
             <input class="input" id="quickTitle" style="flex:1;min-width:140px" placeholder="输入任务后回车，例如：给王妈妈发本周课表（标题｜备注 可带备注）">
             <input type="time" class="input" id="quickTime" style="width:120px" title="可选的具体时间，如 19:00">
-            <select class="input" id="quickP" style="width:132px">
-              ${P.map(p => `<option value="${p.v}" ${p.v === 1 ? 'selected' : ''}>${p.name}</option>`).join('')}
-            </select>
             <button class="btn btn-primary" data-act="quickAdd">添加</button>
           </div>`}
 
@@ -472,7 +472,7 @@ const Todo = (() => {
       (() => { const r = U.recurRuleOf(t.repeat, t.date); const d = U.recurDescribe(r); return (d && d !== '不重复') ? `<span class="tag" style="background:#e8f1ff;color:#3a6ea5">🔁 ${U.esc(d)}</span>` : ''; })(),
       (showDate ? `<span class="tag alert">${U.cnDate(t.date)}</span>` : '')
     ].join('');
-    return `<div class="todo-item ${doneOnCur ? 'done' : ''} ${blockedOnCur ? 'blocked' : ''}" data-p="${t.priority}" data-id="${t.id}" data-view="${viewDate}">
+    return `<div class="todo-item ${doneOnCur ? 'done' : ''} ${blockedOnCur ? 'blocked' : ''}" data-id="${t.id}" data-view="${viewDate}">
       <div class="chk chk-${chkCls}" data-act="toggle" title="${doneOnCur ? '已完成' : (blockedOnCur ? '今日无法完成' : '未完成')}" style="color:#fff;border-color:${chkColor};${doneOnCur || blockedOnCur ? 'background:' + chkColor : ''}">${chkIcon}</div>
       <div class="t-body">
         <div class="t-title">
@@ -909,8 +909,11 @@ const Todo = (() => {
     if (!_drag || !p) return;
     const dx = p.x - _drag.startX, dy = p.y - _drag.startY;
     if (!_drag.moved) {
-      if (dx * dx + dy * dy < 36) return;                                 // 移动阈值 ~6px，避免误触
+      if (dx * dx + dy * dy < 16) return;                                 // 移动阈值 ~4px（原 6px），更跟手
       _drag.moved = true;
+      // 首帧位移就已超过 20px：用户一上来就是大幅度拖拽，直接允许跨栏 / 跨天；
+      // 首帧小位移（贴边微移）则先在本栏内跟手，等确认真拖拽（后续超过 20px）才允许跨。
+      _drag.crossOk = dx * dx + dy * dy > 400;
       const g = _drag.item.cloneNode(true);
       g.classList.add('drag-ghost');
       g.style.width = _drag.w + 'px';
@@ -918,23 +921,51 @@ const Todo = (() => {
       document.body.appendChild(g);
       _drag.ghost = g;
       _drag.item.classList.add('dragging');
+      measureDropZones();                                              // 启动即量好落点区，首帧大位移也能直接判跨栏 / 跨天
       measureDragRects();
+    } else if (!_drag.crossOk && dx * dx + dy * dy > 400) {
+      _drag.crossOk = true;                                               // 位移超 20px：确认是「真拖拽」，解除贴边误触保护
     }
     // ghost 用 transform 移动：只走合成层，不触发重排（原来每帧改 left/top 都会重排整页）
     _drag.ghost.style.transform = 'translate3d(' + (p.x - _drag.offX) + 'px,' + (p.y - _drag.offY) + 'px,0)';
-    // 跨天 / 跨栏：先判断落点属于哪个列表（日程没有「归属日」可改，只允许在本天内调顺序）
-    const z = dropZoneAt(p.y);
-    if (z && z !== _drag.list && !(_drag.isEvent && z.dataset.day !== _drag.homeDay)) {
-      z.appendChild(_drag.item);
-      _drag.list = z;
-      _drag.item.dataset.view = z.dataset.day || _drag.item.dataset.view;
-      measureDropZones(); measureDragRects();
+    autoScrollOnDrag(p.y);                                                // 拖到视口边缘时自动滚页（跨天拖得更顺）
+    // 跨天 / 跨栏：先判断落点属于哪个列表（日程没有「归属日」可改，只允许在本天内调顺序）。
+    // crossOk 保护是关键：启动瞬间指针若贴在栏边界，±8px 容差会误判跨栏、item 瞬移到他栏，
+    // 表现为「一开始拖动先跑到上面，然后才被拖动」——启动后先在本栏内跟手，确认真拖拽才允许跨。
+    if (_drag.crossOk) {
+      const z = dropZoneAt(p.y);
+      if (z && z !== _drag.list && !(_drag.isEvent && z.dataset.day !== _drag.homeDay)) {
+        z.appendChild(_drag.item);
+        _drag.list = z;
+        _drag.item.dataset.view = z.dataset.day || _drag.item.dataset.view;
+        measureDropZones(); measureDragRects();
+      }
     }
     const target = cachedInsertTarget(p.y);
+    // 已在期望位置（自己 / 自己的下一个兄弟）则不动，避免无谓跳动。
+    // 注意：target 为 null（插末尾）时不可与 nextElementSibling 比较——
+    // item 在末尾时 nextElementSibling 也是 null，会误判「已在位」而提前 return，
+    // 跳过本帧末尾的 measureDropZones，导致 zones 永远是 null、跨栏 / 跨天全部失效。
     if (target === _drag.item) return;
+    if (target && target === _drag.item.nextElementSibling) return;
     if (target) _drag.list.insertBefore(_drag.item, target);
-    else _drag.list.appendChild(_drag.item);
+    else if (_drag.list.lastElementChild !== _drag.item) _drag.list.appendChild(_drag.item);
     measureDropZones(); measureDragRects();                               // 顺序变了才重新量
+  }
+  // 拖拽边缘自动滚动：指针距视口上 / 下边缘 60px 内时，按接近程度比例滚动
+  let _dragScrollRaf = 0;
+  function autoScrollOnDrag(y) {
+    if (_dragScrollRaf || !_drag) return;
+    const M = 60, vh = window.innerHeight || 800;
+    const up = y < M ? (M - y) / M : 0;
+    const down = y > vh - M ? (y - (vh - M)) / M : 0;
+    if (!up && !down) return;
+    _dragScrollRaf = requestAnimationFrame(() => {
+      _dragScrollRaf = 0;
+      if (!_drag) return;
+      window.scrollBy(0, Math.round((down - up) * 14));
+      measureDropZones(); measureDragRects();                             // 滚动后行位置变了，重新量
+    });
   }
   // 所有可放置的列表（每天 / 每栏一个）：拖拽期间缓存上下边界，用于跨天跨栏判断落点
   function measureDropZones() {
@@ -971,6 +1002,7 @@ const Todo = (() => {
   function onDragPointerEnd() {
     if (!_drag) return;
     if (_dragRaf) { cancelAnimationFrame(_dragRaf); _dragRaf = 0; applyDragMove(); }  // 补上最后一帧，避免落点差一帧
+    if (_dragScrollRaf) { cancelAnimationFrame(_dragScrollRaf); _dragScrollRaf = 0; } // 停掉边缘自动滚动
     window.removeEventListener('pointermove', onDragPointerMove);
     window.removeEventListener('pointerup', onDragPointerEnd);
     window.removeEventListener('pointercancel', onDragPointerEnd);
@@ -1027,7 +1059,7 @@ const Todo = (() => {
     if (!title) return;
     const tIn = U.$('#quickTime', root);
     const time = tIn ? (tIn.value || '') : '';
-    add({ title, note, priority: +U.$('#quickP', root).value, date: curDate, time });
+    add({ title, note, date: curDate, time });
     i.value = ''; if (tIn) tIn.value = ''; render(); App.refreshBadge();
     setTimeout(() => { const el = U.$('#quickTitle'); if (el) el.focus(); }, 30);
   }
@@ -1044,7 +1076,8 @@ const Todo = (() => {
             <option value="pending" ${t.status === 'pending' ? 'selected' : ''}>未完成</option>
             <option value="done" ${t.status === 'done' ? 'selected' : ''}>已完成</option>
             <option value="blocked" ${t.status === 'blocked' ? 'selected' : ''}>今日无法完成</option></select></div>
-          <div class="field"><label>优先级</label><select class="input" id="f_p">
+          <div class="field"><label>优先级（可选）</label><select class="input" id="f_p">
+            <option value="" ${t.priority == null ? 'selected' : ''}>不选</option>
             ${P.map(p => `<option value="${p.v}" ${p.v === t.priority ? 'selected' : ''}>${p.name}</option>`).join('')}</select></div>
           <div class="field"><label>时间（可选）</label><input type="time" class="input" id="f_m" value="${t.time || ''}"></div>
           <div class="field"><label>标签</label><input class="input" id="f_g" value="${U.esc(t.tag || '')}" placeholder="如 家长沟通"></div>
@@ -1064,7 +1097,8 @@ const Todo = (() => {
         t.note = U.$('#f_n', b).value.trim();
         t.status = U.$('#f_s', b).value;
         t.doneAt = t.status === 'done' ? (t.doneAt || Date.now()) : (t.status === 'pending' ? null : t.doneAt);
-        t.priority = +U.$('#f_p', b).value;
+        const pv = U.$('#f_p', b).value;
+        t.priority = pv === '' ? null : +pv;
         t.time = U.$('#f_m', b).value || '';
         t.tag = U.$('#f_g', b).value.trim();
         t.repeat = U.readRepeatControl(b);
@@ -1099,8 +1133,9 @@ const Todo = (() => {
       body: `<div class="field"><label>任务内容</label><input class="input" id="f_t" placeholder="例如：给王妈妈发本周课表" autofocus></div>
         <div class="row">
           <div class="field"><label>时间（可选）</label><input type="time" class="input" id="f_m"></div>
-          <div class="field"><label>优先级</label><select class="input" id="f_p">
-            ${P.map(p => `<option value="${p.v}" ${p.v === 1 ? 'selected' : ''}>${p.name}</option>`).join('')}</select></div>
+          <div class="field"><label>优先级（可选）</label><select class="input" id="f_p">
+            <option value="" selected>不选</option>
+            ${P.map(p => `<option value="${p.v}">${p.name}</option>`).join('')}</select></div>
         </div>
         ${U.buildRepeatControl('never')}
         <div class="field" style="display:flex;align-items:center;justify-content:space-between">
@@ -1113,7 +1148,8 @@ const Todo = (() => {
         if (!title) { U.toast('请填写内容', 'warn'); return false; }
         add({
           title, time: U.$('#f_m', b).value || '', date: curDate, status: 'pending',
-          priority: +U.$('#f_p', b).value, repeat: U.readRepeatControl(b), flag: U.$('#f_flag', b).checked
+          priority: (() => { const pv = U.$('#f_p', b).value; return pv === '' ? null : +pv; })(),
+          repeat: U.readRepeatControl(b), flag: U.$('#f_flag', b).checked
         });
         render(); App.refreshBadge();
       }
@@ -1128,14 +1164,15 @@ const Todo = (() => {
 
   function editTpl(tpl, after) {
     const isNew = !tpl;
-    tpl = tpl || { title: '', priority: 1, tag: '' };
+    tpl = tpl || { title: '', tag: '' };
     const amPm = tpl.amPm || 'auto';
     const mm = U.modal({
       title: isNew ? '新增每日模板' : '编辑模板',
       body: `<div class="field"><label>模板内容</label>
           <input class="input" id="f_t" value="${U.esc(tpl.title)}" placeholder="例如：给今天上课的家长发提醒"></div>
         <div class="row">
-          <div class="field"><label>默认优先级</label><select class="input" id="f_p">
+          <div class="field"><label>默认优先级（可选）</label><select class="input" id="f_p">
+            <option value="" ${tpl.priority == null ? 'selected' : ''}>不选</option>
             ${P.map(p => `<option value="${p.v}" ${p.v === tpl.priority ? 'selected' : ''}>${p.name}</option>`).join('')}</select></div>
           <div class="field"><label>标签</label><input class="input" id="f_g" value="${U.esc(tpl.tag)}" placeholder="日常 / 家长沟通 / 财务"></div>
         </div>
@@ -1154,7 +1191,7 @@ const Todo = (() => {
         const title = U.$('#f_t', b).value.trim();
         if (!title) { U.toast('请填写模板内容', 'warn'); return false; }
         const o = {
-          title, priority: +U.$('#f_p', b).value, tag: U.$('#f_g', b).value.trim(),
+          title, priority: (() => { const pv = U.$('#f_p', b).value; return pv === '' ? null : +pv; })(), tag: U.$('#f_g', b).value.trim(),
           repeat: U.readRepeatControl(b), startDate: U.$('#f_from', b).value || '',
           amPm: U.$('#f_amPm', b).value || 'auto',
           time: U.$('#f_time', b).value || ''

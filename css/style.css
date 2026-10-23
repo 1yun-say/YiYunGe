@@ -236,10 +236,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
    手机端在下方媒体查询里另有覆盖（padding 8px 10px），保留更大的触控区。 */
 .todo-item{display:flex;align-items:flex-start;gap:10px;padding:4px 12px;border:1px solid var(--line);border-radius:var(--r-s);background:#fff;transition:.18s;position:relative;overflow:hidden}
 .todo-item::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--pink-300)}
-.todo-item[data-p="0"]::before{background:var(--alert)}
-.todo-item[data-p="1"]::before{background:var(--gold)}
-.todo-item[data-p="2"]::before{background:var(--sky)}
-.todo-item[data-p="3"]::before{background:var(--ink-3)}
+/* 优先级四象限分类（v2.13.0 起改为可选）的彩色条已移除：原 [data-p="0..3"]::before 四条规则删除 */
 .todo-item:hover{border-color:var(--pink-300);box-shadow:var(--shadow-s)}
 .todo-item.done{opacity:.55}
 .todo-item.blocked{opacity:.72;background:#faf7f8}
@@ -247,10 +244,13 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .todo-item.plain::before{display:none}
 .todo-item.done .t-title{text-decoration:line-through}
 /* 拖拽排序手柄（⠿）：置于行尾最右的独立胶囊，仅手柄响应指针拖拽，不影响勾选/按钮/页面滚动 */
-.drag-handle{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:24px;height:30px;margin:-4px -6px -4px -8px;padding:0 2px;border-radius:9px;color:var(--muted);cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none;opacity:.5;transition:background .15s,color .15s,opacity .15s}
+.drag-handle{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:34px;height:30px;margin:-4px -6px -4px -8px;padding:0 2px;border-radius:9px;color:var(--muted);cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none;opacity:.75;transition:background .15s,color .15s,opacity .15s}
 .drag-handle:hover{color:var(--pink-600);opacity:1;background:var(--pink-50,#fff0f4)}
 .drag-handle:active{cursor:grabbing;color:var(--pink-600);background:var(--pink-100,#ffe3ec)}
 .drag-handle .grip{width:18px;height:18px;fill:currentColor}
+/* 低调删除键（日程弹窗等）：平时灰色小图标，悬停才显红，不再用通栏大红按钮 */
+.btn-del-soft{color:var(--muted);background:transparent;border-color:transparent;transition:.15s}
+.btn-del-soft:hover{color:var(--alert,#e05252);background:#fdeeee}
 .todo-item.dragging{opacity:.4;outline:1px dashed var(--pink-300);background:var(--pink-50,#fff0f4)}
 .drag-ghost{position:fixed;z-index:9999;pointer-events:none;left:0;top:0;will-change:transform;box-shadow:0 10px 26px rgba(0,0,0,.22);opacity:.96;background:var(--card);border:1px solid var(--pink-300);border-radius:var(--r-s)}
 .chk{width:20px;height:20px;flex:none;border:2px solid var(--pink-300);border-radius:6px;cursor:pointer;display:grid;place-items:center;margin-top:1px;transition:.18s;background:#fff}

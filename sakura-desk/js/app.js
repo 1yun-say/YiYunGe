@@ -68,12 +68,14 @@ const App = (() => {
           U.modal({
             title: '新建提醒事项',
             body: `<div class="field"><label>任务内容</label><input class="input" id="q_t" placeholder="例如：给李妈妈发本周课表"></div>
-              <div class="row"><div class="field"><label>优先级</label><select class="input" id="q_p">
-                ${Todo.P.map(p => `<option value="${p.v}" ${p.v === 1 ? 'selected' : ''}>${p.name}</option>`).join('')}</select></div>
+              <div class="row"><div class="field"><label>优先级（可选）</label><select class="input" id="q_p">
+                <option value="" selected>不选</option>
+                ${Todo.P.map(p => `<option value="${p.v}">${p.name}</option>`).join('')}</select></div>
               <div class="field"><label>日期</label><input type="date" class="input" id="q_d" value="${U.today()}"></div></div>`,
             onOk: bd => {
               const t = U.$('#q_t', bd).value.trim(); if (!t) { U.toast('请填写内容', 'warn'); return false; }
-              Todo.add({ title: t, priority: +U.$('#q_p', bd).value, date: U.$('#q_d', bd).value, status: 'pending' });
+              const pv = U.$('#q_p', bd).value;
+              Todo.add({ title: t, priority: pv === '' ? null : +pv, date: U.$('#q_d', bd).value, status: 'pending' });
               refreshBadge(); go(route); U.toast('已添加');
             }
           });

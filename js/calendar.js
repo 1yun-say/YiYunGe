@@ -55,13 +55,12 @@ const Calendar = (() => {
       if (!U.recurOccursOn(dt, rule)) continue;
       out.push(x);
     }
-    // 排序口径与「提醒事项」页面保持一致（🚩置顶 → 手动 order → 时间 → 优先级 → 创建时间），
-    // 这样在提醒事项页手动调过的顺序，日历里完全一样；已完成仍统一排在后面。
+    // 排序口径与「提醒事项」页面保持一致（🚩置顶 → 手动 order → 时间 → 创建时间）；
+    // 「优先级」一键已随四象限分类取消而移除（v2.13.0，旧字段为 null 时不会再参与排序）
     out.sort((a, b) => (a.status === 'done') - (b.status === 'done')
       || ((b.flag ? 1 : 0) - (a.flag ? 1 : 0))
       || (a.order || 0) - (b.order || 0)
       || (a.time || '99:59').localeCompare(b.time || '99:59')
-      || a.priority - b.priority
       || a.createdAt - b.createdAt);
     return out;
   }
@@ -109,7 +108,7 @@ const Calendar = (() => {
           ${x.time ? `<span class="cal-ev-time">${U.esc(x.time)}</span>` : ''}
           <span class="cal-ev-title">${U.esc(x.title)}</span>
         </div>
-        <div class="cal-ev-meta">${(doneOnDay ? '已完成' : st.name)}${x.status === 'pending' && !doneOnDay ? ' · ' + p.name : ''}${x.tag ? ' · ' + U.esc(x.tag) : ''}${x.autoKey ? ' · 自动生成' : ''}</div>
+        <div class="cal-ev-meta">${(doneOnDay ? '已完成' : st.name)}${(x.status === 'pending' && !doneOnDay && p.name) ? ' · ' + p.name : ''}${x.tag ? ' · ' + U.esc(x.tag) : ''}${x.autoKey ? ' · 自动生成' : ''}</div>
       </div>
     </div>`;
   }
@@ -147,7 +146,7 @@ const Calendar = (() => {
       e.target.closest('.mask').remove();
       if (b.dataset.type === 'event') editEvent({ startDate: dt, endDate: dt }, render);
       else {
-        const nt = { id: U.uid('td'), title: '', note: '', priority: 1, tag: '', date: dt, status: 'pending', doneAt: null, createdAt: Date.now() };
+        const nt = { id: U.uid('td'), title: '', note: '', tag: '', date: dt, status: 'pending', doneAt: null, createdAt: Date.now() };
         DB.data.todos.push(nt); DB.save(); Todo.editTodo(nt, render); App.refreshBadge();
       }
     });
@@ -192,8 +191,8 @@ const Calendar = (() => {
           <div class="field"><label>日历</label><select class="input" id="ev_cal">${calOpts}</select></div>
         </div>
         <div class="field"><label>备注</label><textarea class="input" id="ev_note" rows="2">${U.esc(ev.note)}</textarea></div>
-        ${isNew ? '' : `<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
-          <button class="btn btn-danger btn-sm" id="ev_del" style="width:100%;justify-content:center">删除这条日程</button>
+        ${isNew ? '' : `<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line);display:flex;justify-content:flex-end">
+          <button class="btn btn-icon btn-del-soft" id="ev_del" title="删除这条日程"><svg class="ico"><use href="#i-trash"/></svg></button>
         </div>`}`,
       onOk: b => {
         ev.title = U.$('#ev_title', b).value.trim();
@@ -649,12 +648,22 @@ const Calendar = (() => {
       }
     }
     if (!count) { U.toast('所选内容在未来 365 天内没有可导出项', 'warn'); return; }
+    // UID 唯一化：脏数据（两条记录同 id）会产生重复 UID，而手机日历按 UID 去重只显示一条，
+    // 表现为「勾了好几个只导入一个」。重复的追加 -2/-3 后缀，保证每条都能进日历。
+    const seenUid = new Map();
+    const uniqBlocks = blocks.map(b => {
+      const m = b.match(/^UID:([^\r\n]+)/m);
+      if (!m) return b;
+      const uid = m[1], n = seenUid.get(uid) || 0;
+      seenUid.set(uid, n + 1);
+      return n ? b.replace(/^UID:[^\r\n]+/m, 'UID:' + uid + '-' + (n + 1)) : b;
+    });
     // 注意：blocks 里每个 VEVENT 已在 todoVeventLines/veventLines 内按 73 字节折好行，
     // 顶层不能再 map(foldICS)（会把多行块在任意字符中间二次折断，虽 RFC 客户端能拼回，但属无谓兼容性风险）
     const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0',
       'PRODID:-//YiYunGe//Calendar Export//CN',
       'CALSCALE:GREGORIAN', 'METHOD:PUBLISH']
-      .concat(blocks).concat(['END:VCALENDAR'])
+      .concat(uniqBlocks).concat(['END:VCALENDAR'])
       .join('\r\n') + '\r\n';
     const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -662,7 +671,9 @@ const Calendar = (() => {
     a.href = url; a.download = '逸云阁日程.ics';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1500);
-    U.toast(`已导出 ${count} 条到「逸云阁日程.ics」，导入手机日历即可提醒`, 'ok');
+    // 同时报「清单勾选数」与「实际导出数」：两者不一致时（有条目未产生事件）一眼可辨，便于定位
+    const picked = idSet ? idSet.size : (evs.length + tds.length);
+    U.toast(`已导出 ${uniqBlocks.length} 条到「逸云阁日程.ics」（清单勾选 ${picked} 条），导入手机日历即可提醒`, 'ok');
   }
 
   // 列出未来 365 天内每个日程 / 提醒事项的「首次发生日 + 发生次数」，用于勾选导出。

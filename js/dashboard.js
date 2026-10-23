@@ -136,7 +136,7 @@ const Dashboard = (() => {
         : x.status === 'blocked'
           ? '<svg viewBox="0 0 24 24" class="ico"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>'
           : '';
-      return `<div class="todo-item ${x.status==='done'?'done':''} ${x.status==='blocked'?'blocked':''}" data-p="${x.priority}" data-tid="${x.id}">
+      return `<div class="todo-item ${x.status==='done'?'done':''} ${x.status==='blocked'?'blocked':''}" data-tid="${x.id}">
                 <div class="chk chk-${x.status}" data-act="toggleTodo" title="${st.name}" style="color:#fff;border-color:${st.color};${x.status !== 'pending' ? 'background:' + st.color : ''}">${chkIcon}</div>
                 <div class="t-body"><div class="t-title">${U.esc(x.title)}</div>
                   <div class="t-meta"><span class="tag" style="background:${p.color}1f;color:${p.color}">${p.name}</span>
@@ -207,7 +207,7 @@ const Dashboard = (() => {
       <div style="display:flex;flex-direction:column;gap:7px">
         ${DB.data.templates.length ? DB.data.templates.map(tpl => `
           <div class="tpl-chip" data-tpl="${tpl.id}">
-            <span class="pdot" style="background:${Todo.pInfo(tpl.priority).color}"></span>
+            <span class="pdot" style="background:var(--ink-3)"></span>
             <div style="flex:1;min-width:0">
               <div style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(tpl.title)}</div>
               ${tpl.tag ? `<span class="tag gray" style="margin-top:3px">${U.esc(tpl.tag)}</span>` : ''}
@@ -448,7 +448,7 @@ const Dashboard = (() => {
             const instId = 'tpli_' + tpl.id + '_' + t;            // 确定性 id，与待办页导入共用 → 不重复
             if (DB.data.todos.some(x => x.id === instId || (x.tplId === tpl.id && x.date === t))) return;
             const slot = Todo.slotOfTemplate(tpl);   // 统一归栏：amPm 强制 / 不选按 12:00 分界
-            Todo.add({ id: instId, title: tpl.title, priority: tpl.priority, tag: tpl.tag, tplId: tpl.id, date: t, time: tpl.time || '', slot: slot }); n++;
+            Todo.add({ id: instId, title: tpl.title, tag: tpl.tag, tplId: tpl.id, date: t, time: tpl.time || '', slot: slot }); n++;
           });
           DB.save(); render(); App.refreshBadge();
           U.toast(n ? `已导入 ${n} 条模板任务` : '今天已经导入过了', n ? 'ok' : 'warn');
@@ -542,7 +542,7 @@ const Dashboard = (() => {
       .sort((a, b) => U.safeT2m(a) - U.safeT2m(b));
     const todosAll = Todo.ofDate(t);
     const undone = todosAll.filter(x => x.status !== 'done')
-      .sort((a, b) => (a.order || 0) - (b.order || 0) || a.priority - b.priority);
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
     // 遗留未完成：真正「过期」的任务——基准日早于今天，且今天不再发生（重复任务若今天仍要发生，
     // 已计入今日 undone，不能再算遗留）。重复任务今天已勾掉（completedDates 含今天）也不算遗留。
     const overdue = DB.data.todos.filter(x => {

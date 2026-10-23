@@ -96,13 +96,13 @@ const DB = (() => {
   /* ---------- 默认数据 ---------- */
   function defaultTemplates() {
     return [
-      { id: U.uid('tpl'), title: '早间：查看今日课表 & 确认无冲突', priority: 1, tag: '日常' },
-      { id: U.uid('tpl'), title: '晨报：给今天上课的家长发上课提醒', priority: 0, tag: '家长沟通' },
-      { id: U.uid('tpl'), title: '课后：收集老师的课堂反馈并转述家长', priority: 0, tag: '家长沟通' },
-      { id: U.uid('tpl'), title: '核对昨日课时费到账情况', priority: 1, tag: '财务' },
-      { id: U.uid('tpl'), title: '跟进意向家长（未成单名单）', priority: 2, tag: '拓客' },
-      { id: U.uid('tpl'), title: '朋友圈 / 社群发一条招生内容', priority: 3, tag: '拓客' },
-      { id: U.uid('tpl'), title: '整理今日流水，记录抽成', priority: 1, tag: '财务' }
+      { id: U.uid('tpl'), title: '早间：查看今日课表 & 确认无冲突', tag: '日常' },
+      { id: U.uid('tpl'), title: '晨报：给今天上课的家长发上课提醒', tag: '家长沟通' },
+      { id: U.uid('tpl'), title: '课后：收集老师的课堂反馈并转述家长', tag: '家长沟通' },
+      { id: U.uid('tpl'), title: '核对昨日课时费到账情况', tag: '财务' },
+      { id: U.uid('tpl'), title: '跟进意向家长（未成单名单）', tag: '拓客' },
+      { id: U.uid('tpl'), title: '朋友圈 / 社群发一条招生内容', tag: '拓客' },
+      { id: U.uid('tpl'), title: '整理今日流水，记录抽成', tag: '财务' }
     ];
   }
 
@@ -271,6 +271,7 @@ const DB = (() => {
         migrateLessonTeacher(d);
         migrateRecurrence(d);
         migrateMT(d);
+        migrateDropPriority(d);
         return d;
       }
     } catch (e) {
@@ -509,6 +510,17 @@ const DB = (() => {
     return d;
   }
 
+  // v2.13.0：「重要紧急」优先级分类取消（从必选改为可选）。旧数据统一置 null——
+  // pInfo(null) 回退中性灰，UI 等同于「不选」；用户想用仍可在编辑弹窗手动选。
+  function migrateDropPriority(d) {
+    if (!d || typeof d !== 'object') return d;
+    ['todos', 'templates'].forEach(col => {
+      if (!Array.isArray(d[col])) return;
+      d[col].forEach(it => { if (it && it.priority != null) it.priority = null; });
+    });
+    return d;
+  }
+
   function lessonsIn(a, b, opt = {}) {
     return data.lessons.filter(l => l.date >= a && l.date <= b && (opt.withCancelled || l.status !== 'cancelled'));
   }
@@ -674,6 +686,7 @@ const DB = (() => {
     migrateRecurrence(d);
     migrateMT(d);
     migrateTemplateAmPm(d);
+    migrateDropPriority(d);
     return d;
   }
 
@@ -739,7 +752,7 @@ const DB = (() => {
     // 允许外部整体替换数据（云同步合并后回写）；与 importJSON 内部 data= 行为一致
     set data(v) { data = v; },
     save, reset, exportJSON, importJSON, parseBackup, preImportInfo, restorePreImport, buildSnapshot,
-    touch, setRemoteHandler,
+    touch, setRemoteHandler, adoptData,
     markDeleted, isDeleted, unmarkDeleted, removeRecord, blankDeleted, wipeSynced,
     GRADES, SUBJECTS, normDate, defaultFinanceSections,
     student, teacher, teacherName, studentLabel, lessonsIn, statIn, lessonBreakdown, defaultTemplates, defaultPhrases,
