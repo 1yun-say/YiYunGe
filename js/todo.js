@@ -930,6 +930,7 @@ const Todo = (() => {
       document.body.appendChild(g);
       _drag.ghost = g;
       _drag.item.classList.add('dragging');
+      revealEmptySplitZones();                                        // 拖拽开始补全缺失的空分栏（如下午栏），让它成为可放置落点
       measureDropZones();                                              // 启动即量好落点区，首帧大位移也能直接判跨栏 / 跨天
       measureDragRects();
     } else if (!_drag.crossOk && dx * dx + dy * dy > 400) {
@@ -975,6 +976,43 @@ const Todo = (() => {
       window.scrollBy(0, Math.round((down - up) * 14));
       measureDropZones(); measureDragRects();                             // 滚动后行位置变了，重新量
     });
+  }
+  /* 拖拽开始时补全缺失的空分栏：例如当天只有上午事项、下午栏因「空栏不显示」而未渲染，
+   * 此时 afternoon 的 .todo-list[data-slot="pm"] 根本不存在，measureDropZones 收集不到它，
+   * 结果事项永远拖不到下午。这里在拖拽启动、measureDropZones 之前，把缺失的那一栏
+   * （含 slot-h 标题 + 一个带最小高度的空 .todo-list）临时插进 DOM 作为落点；
+   * 拖完 persistDayOrder → render 会重新生成，空栏按正常逻辑不渲染，恢复「空栏不显示」的整洁。 */
+  function revealEmptySplitZones() {
+    if (!_drag) return;
+    const d = _drag.homeDay;                       // 拖拽项所属日期
+    if (!d || !daySplitOn(d)) return;              // 当天没开分栏就不补（无上下午概念）
+    const root = U.$('#view'); if (!root) return;
+    const lists = Array.prototype.filter.call(
+      root.querySelectorAll('.todo-list[data-day="' + d + '"]'),
+      el => el.id !== 'archBox' && el.dataset.slot && el.dataset.slot !== 'all'
+    );
+    const hasAm = lists.some(l => l.dataset.slot === 'am');
+    const hasPm = lists.some(l => l.dataset.slot === 'pm');
+    if (hasAm && hasPm) return;                    // 两栏都在，无需补
+    // 处于分栏模式（已有 am 或已有 pm）但缺另一栏 → 补全缺失那栏
+    const wantSlot = hasAm ? 'pm' : 'am';
+    const wantLabel = hasAm ? '下午' : '上午';
+    const head = document.createElement('div');
+    head.className = 'slot-h';
+    head.textContent = wantLabel + '（0）';
+    const box = document.createElement('div');
+    box.className = 'todo-list drag-empty-slot';
+    box.dataset.day = d;
+    box.dataset.slot = wantSlot;
+    const frag = document.createDocumentFragment();
+    frag.appendChild(head); frag.appendChild(box);
+    if (hasAm) {
+      const amList = lists.find(l => l.dataset.slot === 'am');
+      amList.parentNode.insertBefore(frag, amList.nextSibling);
+    } else {
+      const pmList = lists.find(l => l.dataset.slot === 'pm');
+      pmList.parentNode.insertBefore(frag, pmList);
+    }
   }
   // 所有可放置的列表（每天 / 每栏一个）：拖拽期间缓存上下边界，用于跨天跨栏判断落点
   function measureDropZones() {

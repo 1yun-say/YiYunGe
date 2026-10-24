@@ -232,6 +232,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 
 /* ---------- 待办 ---------- */
 .todo-list{display:flex;flex-direction:column;gap:6px}
+.drag-empty-slot{min-height:46px;margin:2px 0;padding:6px 10px;border:1px dashed var(--pink-300,#ffb3c8);border-radius:var(--r-s,10px);background:var(--pink-50,#fff0f4)}
 /* 平板/桌面端：整行约 28px（勾选框 20px + 上下各 4px），比勾选框略高一点即可。
    手机端在下方媒体查询里另有覆盖（padding 8px 10px），保留更大的触控区。 */
 .todo-item{display:flex;align-items:flex-start;gap:10px;padding:4px 12px;border:1px solid var(--line);border-radius:var(--r-s);background:#fff;transition:.18s;position:relative;overflow:hidden}
