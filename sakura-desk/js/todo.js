@@ -913,6 +913,11 @@ const Todo = (() => {
     g.classList.add('drag-ghost');
     g.style.width = _drag.w + 'px';
     g.style.left = '0px'; g.style.top = '0px';
+    // 关键：抬起瞬间就把影子摆到「事项原位置」。影子的定位基准是 (startX-offX, startY-offY)，
+    // 恰好事项的 left/top。若少了这一句，影子会以 left/top=0 一直挂在屏幕左上角，
+    // 直到第一次 pointermove 才归位——长按起拖时「按住还没挪」的这几百毫秒里，
+    // 用户看到的就是「我按住的那条一下子跑到最上面了」（v2.14.2 修复）。
+    g.style.transform = 'translate3d(' + (_drag.startX - _drag.offX) + 'px,' + (_drag.startY - _drag.offY) + 'px,0)';
     document.body.appendChild(g);
     _drag.ghost = g;
     _drag.item.classList.add('dragging');
