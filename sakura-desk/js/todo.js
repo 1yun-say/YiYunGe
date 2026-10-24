@@ -180,10 +180,9 @@ const Todo = (() => {
   }
   // 是否过中午 12 点（本地时间）
   function pastNoon() { return new Date().getHours() >= 12; }
-  // 新建事项的默认归属：按当前时刻——12:00 后归下午；**凌晨 0-6 点也算下午**
-  // （深夜 / 凌晨做的事属于当晚剩余时段，归上午会「落到已过去的时段」，还得手动拖）。
+  // 新建事项的默认归属：按当前时刻——12:00 及以后归下午，其余（含凌晨 0-6 点）归上午。
   // 只在「没显式选归属」时把 slot 一次性定下来并存库，不会随渲染时刻变化。
-  function defaultSlot() { const h = new Date().getHours(); return (h >= 12 || h < 6) ? 'pm' : 'am'; }
+  function defaultSlot() { const h = new Date().getHours(); return h >= 12 ? 'pm' : 'am'; }
 
   /* 过午搬迁（需求3）：仅「今天」、已过 12:00、且当天开了上下午分栏时生效。
    * 把上午栏里「未完成」的待办 slot 改为 'pm' 并排到下午最前面，持久化（刷新/跨端都生效）；
