@@ -668,6 +668,7 @@ const Todo = (() => {
       // 点行任意处即可打勾：编辑 / 删除 / 拖拽手柄都有自己的 data-act，不会被这里截获；
       // 日程行（data-eid）没有完成态，保持「点行=编辑日程」。
       if (!btn0) {
+        if (_suppressClickUntil > Date.now()) return;   // 刚拖拽完：屏蔽这次 click，避免误触打勾 / 编辑
         const rowEl = e.target.closest('.todo-item');
         if (rowEl && rowEl.dataset.id && !rowEl.dataset.eid) {
           const rowTodo = DB.data.todos.find(x => x.id === rowEl.dataset.id);
@@ -875,7 +876,7 @@ const Todo = (() => {
         if (el.querySelector(':scope > .drag-handle')) return;
         const h = document.createElement('span');
         h.className = 'drag-handle';
-        h.title = '拖动排序';
+        h.title = '拖动排序（也可长按本条拖动）';
         h.setAttribute('aria-label', '拖动排序');
         h.innerHTML = '<svg viewBox="0 0 24 24" class="grip"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg>';
         h.addEventListener('click', e => e.stopPropagation());             // 防止误触冒泡到 rebind 的 click 委托
@@ -885,25 +886,92 @@ const Todo = (() => {
   }
 
   let _drag = null, _dragRaf = 0, _dragPt = null;
-  function onDragPointerDown(e) {
-    const h = e.target.closest('.drag-handle');
-    if (!h) return;
-    const item = h.closest('.todo-item');
-    const list = item && item.closest('.todo-list');
+  let _suppressClickUntil = 0;                 // 拖拽结束后一小段时间内屏蔽 click（防止松手误触打勾 / 编辑）
+  const LONGPRESS_MS = 220;                    // 长按起拖的按住时长
+  let _lpTimer = 0, _lpItem = null, _lpStart = null;
+
+  /* 起拖前的公共准备：记录起始状态 + 抢占指针 + 挂 move/up 监听 */
+  function beginDragSetup(item, e) {
+    const list = item.closest('.todo-list');
     if (!list || list.id === 'archBox' || list.style.display === 'none') return;
     if (!item.hasAttribute('data-view')) return;
-    e.preventDefault();
     const rect = item.getBoundingClientRect();
     _drag = { item, list, pid: e.pointerId,
       startX: e.clientX, startY: e.clientY,
       offX: e.clientX - rect.left, offY: e.clientY - rect.top,
-      moved: false, ghost: null, rects: null, zones: null, w: rect.width,
-      homeDay: item.dataset.view || '', isEvent: !!item.dataset.eid };
+      moved: false, crossOk: false, ghost: null, rects: null, zones: null, w: rect.width,
+      homeDay: item.dataset.view || '', isEvent: !!item.dataset.eid, dirty: false };
     try { item.setPointerCapture(e.pointerId); } catch (_) {}
     window.addEventListener('pointermove', onDragPointerMove);
     window.addEventListener('pointerup', onDragPointerEnd);
     window.addEventListener('pointercancel', onDragPointerEnd);
   }
+  /* 正式「抬起」进入拖拽态：生成跟随指针的影子，并量一次布局（读一次，下面只写不读） */
+  function liftGhost() {
+    if (!_drag || _drag.moved) return;
+    _drag.moved = true;
+    const g = _drag.item.cloneNode(true);
+    g.classList.add('drag-ghost');
+    g.style.width = _drag.w + 'px';
+    g.style.left = '0px'; g.style.top = '0px';
+    document.body.appendChild(g);
+    _drag.ghost = g;
+    _drag.item.classList.add('dragging');
+    revealEmptySplitZones();
+    measureDropZones(); measureDragRects();
+    _drag.dirty = false;
+  }
+  function onDragPointerDown(e) {
+    if (_drag) return;                                   // 已在拖拽中，忽略新手势
+    if (e.button !== undefined && e.button !== 0) return; // 仅主键
+    // ① 抓住行尾手柄：立即进入待拖（位移过 4px 即抬起）
+    const handle = e.target.closest('.drag-handle');
+    if (handle) {
+      const item = handle.closest('.todo-item');
+      if (item && item.hasAttribute('data-view')) { e.preventDefault(); beginDragSetup(item, e); }
+      return;
+    }
+    // ② 长按事项行任意处起拖（避开勾选框 / 编辑 / 删除 / 有 data-act 的区域 / 日程行）——
+    //    符合「按住这条直接挪」的直觉，不必非得瞄准行尾小图标。未触发长按则仍是普通点击（打勾）。
+    const item = e.target.closest('.todo-item');
+    if (!item || !item.hasAttribute('data-view') || item.dataset.eid) return;
+    if (e.target.closest('.chk, .btn, [data-act]')) return;
+    if (e.pointerType === 'mouse') e.preventDefault();   // 桌面：避免长按选中文字；触屏不拦，保留滚动
+    // 不 preventDefault（触屏）：长按未触发时仍可正常滚动页面
+    _lpItem = item;
+    _lpStart = { x: e.clientX, y: e.clientY, pid: e.pointerId };
+    clearTimeout(_lpTimer);
+    _lpTimer = setTimeout(onLongPressFire, LONGPRESS_MS);
+    window.addEventListener('pointermove', onLongPressMove);
+    window.addEventListener('pointerup', onLongPressUp);
+    window.addEventListener('pointercancel', onLongPressUp);
+  }
+  function removeLongPressListeners() {
+    window.removeEventListener('pointermove', onLongPressMove);
+    window.removeEventListener('pointerup', onLongPressUp);
+    window.removeEventListener('pointercancel', onLongPressUp);
+  }
+  function cancelLongPress() {
+    clearTimeout(_lpTimer); _lpTimer = 0;
+    removeLongPressListeners();
+    _lpItem = null; _lpStart = null;
+  }
+  // 长按监听期间手指挪动超过 ~10px：判定为用户想滚动 / 只是点一下，取消长按
+  function onLongPressMove(e) {
+    if (!_lpItem || !_lpStart) return;
+    const dx = e.clientX - _lpStart.x, dy = e.clientY - _lpStart.y;
+    if (dx * dx + dy * dy > 100) cancelLongPress();
+  }
+  // 长按计时到点：正式起拖（无需再等位移，长按本身即是「确认」）
+  function onLongPressFire() {
+    if (!_lpItem) return;
+    const item = _lpItem, st = _lpStart;
+    cancelLongPress();
+    try { item.style.touchAction = 'none'; } catch (_) {}   // 起拖后禁止触摸滚动抢走手势
+    beginDragSetup(item, { clientX: st.x, clientY: st.y, pointerId: st.pid });
+    liftGhost();
+  }
+  function onLongPressUp() { cancelLongPress(); }           // 抬手早于长按 → 当作普通点击，交给 click 打勾
   /* 性能优化：pointermove 在手机上可高达 100+ 次/秒，若每次都读 getBoundingClientRect
      会反复强制同步布局（layout thrashing）造成卡顿。这里每帧只处理一次（rAF 节流），
      并且把各行位置缓存起来——只有真正发生插入、DOM 顺序变了才重新量一次。 */
@@ -918,49 +986,45 @@ const Todo = (() => {
     if (!_drag || !p) return;
     const dx = p.x - _drag.startX, dy = p.y - _drag.startY;
     if (!_drag.moved) {
-      if (dx * dx + dy * dy < 16) return;                                 // 移动阈值 ~4px（原 6px），更跟手
-      _drag.moved = true;
+      if (dx * dx + dy * dy < 16) return;                                 // 启动阈值 ~4px，跟手
       // 首帧位移就已超过 20px：用户一上来就是大幅度拖拽，直接允许跨栏 / 跨天；
       // 首帧小位移（贴边微移）则先在本栏内跟手，等确认真拖拽（后续超过 20px）才允许跨。
       _drag.crossOk = dx * dx + dy * dy > 400;
-      const g = _drag.item.cloneNode(true);
-      g.classList.add('drag-ghost');
-      g.style.width = _drag.w + 'px';
-      g.style.left = '0px'; g.style.top = '0px';
-      document.body.appendChild(g);
-      _drag.ghost = g;
-      _drag.item.classList.add('dragging');
-      revealEmptySplitZones();                                        // 拖拽开始补全缺失的空分栏（如下午栏），让它成为可放置落点
-      measureDropZones();                                              // 启动即量好落点区，首帧大位移也能直接判跨栏 / 跨天
-      measureDragRects();
+      liftGhost();                                                        // 抬起：建影子 + 量一次布局
     } else if (!_drag.crossOk && dx * dx + dy * dy > 400) {
-      _drag.crossOk = true;                                               // 位移超 20px：确认是「真拖拽」，解除贴边误触保护
+      _drag.crossOk = true;                                               // 位移超 20px：确认真拖拽，解除贴边误触保护
     }
-    // ghost 用 transform 移动：只走合成层，不触发重排（原来每帧改 left/top 都会重排整页）
+    // ghost 用 transform 移动：只走合成层，不触发重排
     _drag.ghost.style.transform = 'translate3d(' + (p.x - _drag.offX) + 'px,' + (p.y - _drag.offY) + 'px,0)';
     autoScrollOnDrag(p.y);                                                // 拖到视口边缘时自动滚页（跨天拖得更顺）
+    // 读-写分离：上一帧若改过 DOM（换栏 / 调序），先集中读一次布局；下面只写、不读，
+    // 杜绝「写→读→写→读」反复强制同步重排（layout thrashing，手感卡的元凶）。
+    if (_drag.dirty) { measureDropZones(); measureDragRects(); _drag.dirty = false; }
     // 跨天 / 跨栏：先判断落点属于哪个列表（日程没有「归属日」可改，只允许在本天内调顺序）。
     // crossOk 保护是关键：启动瞬间指针若贴在栏边界，±8px 容差会误判跨栏、item 瞬移到他栏，
     // 表现为「一开始拖动先跑到上面，然后才被拖动」——启动后先在本栏内跟手，确认真拖拽才允许跨。
+    let changedList = false;
     if (_drag.crossOk) {
       const z = dropZoneAt(p.y);
       if (z && z !== _drag.list && !(_drag.isEvent && z.dataset.day !== _drag.homeDay)) {
-        z.appendChild(_drag.item);
-        _drag.list = z;
         _drag.item.dataset.view = z.dataset.day || _drag.item.dataset.view;
-        measureDropZones(); measureDragRects();
+        _drag.list = z;
+        z.appendChild(_drag.item);
+        changedList = true;
+        _drag.dirty = true;          // 换了列表：本帧不再精排（rects 还是旧列表的），下帧读新布局再精排
       }
     }
-    const target = cachedInsertTarget(p.y);
-    // 已在期望位置（自己 / 自己的下一个兄弟）则不动，避免无谓跳动。
-    // 注意：target 为 null（插末尾）时不可与 nextElementSibling 比较——
-    // item 在末尾时 nextElementSibling 也是 null，会误判「已在位」而提前 return，
-    // 跳过本帧末尾的 measureDropZones，导致 zones 永远是 null、跨栏 / 跨天全部失效。
-    if (target === _drag.item) return;
-    if (target && target === _drag.item.nextElementSibling) return;
-    if (target) _drag.list.insertBefore(_drag.item, target);
-    else if (_drag.list.lastElementChild !== _drag.item) _drag.list.appendChild(_drag.item);
-    measureDropZones(); measureDragRects();                               // 顺序变了才重新量
+    if (!changedList) {
+      const target = cachedInsertTarget(p.y);
+      // 已在期望位置（自己 / 自己的下一个兄弟）则不动，避免无谓跳动。
+      // 注意：target 为 null（插末尾）时不可与 nextElementSibling 比较——
+      // item 在末尾时 nextElementSibling 也是 null，会误判「已在位」，导致 zones 不更新、跨栏 / 跨天失效。
+      if (target !== _drag.item && !(target && target === _drag.item.nextElementSibling)) {
+        if (target) _drag.list.insertBefore(_drag.item, target);
+        else if (_drag.list.lastElementChild !== _drag.item) _drag.list.appendChild(_drag.item);
+        _drag.dirty = true;          // 顺序变了：下帧重新量
+      }
+    }
   }
   // 拖拽边缘自动滚动：指针距视口上 / 下边缘 60px 内时，按接近程度比例滚动
   let _dragScrollRaf = 0;
@@ -974,7 +1038,7 @@ const Todo = (() => {
       _dragScrollRaf = 0;
       if (!_drag) return;
       window.scrollBy(0, Math.round((down - up) * 14));
-      measureDropZones(); measureDragRects();                             // 滚动后行位置变了，重新量
+      _drag.dirty = true;               // 视口滚了，行位置变，交给主循环下帧重新量（不在此处读，避免额外重排）
     });
   }
   /* 拖拽开始时补全缺失的空分栏：例如当天只有上午事项、下午栏因「空栏不显示」而未渲染，
@@ -1008,9 +1072,11 @@ const Todo = (() => {
     frag.appendChild(head); frag.appendChild(box);
     if (hasAm) {
       const amList = lists.find(l => l.dataset.slot === 'am');
+      if (!amList) return;                       // 防御：理论上不可达，避免 undefined 崩溃
       amList.parentNode.insertBefore(frag, amList.nextSibling);
     } else {
       const pmList = lists.find(l => l.dataset.slot === 'pm');
+      if (!pmList) return;                       // 防御：分栏开但当天只有空列表时不会走到这，兜底
       pmList.parentNode.insertBefore(frag, pmList);
     }
   }
@@ -1055,7 +1121,8 @@ const Todo = (() => {
     window.removeEventListener('pointercancel', onDragPointerEnd);
     if (_drag.ghost) _drag.ghost.remove();
     _drag.item.classList.remove('dragging');
-    if (_drag.moved) persistDayOrder();                                   // 写回 order / date / slot + _mt 并刷新
+    if (_drag.moved) { persistDayOrder(); _suppressClickUntil = Date.now() + 400; }   // 拖过：写回并屏蔽随后的 click，防止松手误触打勾
+    cancelLongPress();                                                // 清掉可能残留的长按计时 / 监听
     _drag = null; _dragPt = null;
   }
   /* 落下后统一写回：按每个列表的最终顺序重写 order，并把跨天 / 跨栏的结果落到记录上。
