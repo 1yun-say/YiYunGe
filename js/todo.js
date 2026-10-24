@@ -180,6 +180,10 @@ const Todo = (() => {
   }
   // 是否过中午 12 点（本地时间）
   function pastNoon() { return new Date().getHours() >= 12; }
+  // 新建事项的默认归属：按当前时刻——12:00 后归下午；**凌晨 0-6 点也算下午**
+  // （深夜 / 凌晨做的事属于当晚剩余时段，归上午会「落到已过去的时段」，还得手动拖）。
+  // 只在「没显式选归属」时把 slot 一次性定下来并存库，不会随渲染时刻变化。
+  function defaultSlot() { const h = new Date().getHours(); return (h >= 12 || h < 6) ? 'pm' : 'am'; }
 
   /* 过午搬迁（需求3）：仅「今天」、已过 12:00、且当天开了上下午分栏时生效。
    * 把上午栏里「未完成」的待办 slot 改为 'pm' 并排到下午最前面，持久化（刷新/跨端都生效）；
@@ -269,7 +273,7 @@ const Todo = (() => {
   function quickAddDay(d, value) {
     const { title, note } = splitTitleNote(value);
     if (!title) return;
-    add({ title, note, date: d, status: 'pending' });
+    add({ title, note, date: d, status: 'pending', slot: defaultSlot() });
     render(); App.refreshBadge();
   }
 
@@ -415,6 +419,11 @@ const Todo = (() => {
           ${isM ? '' : `<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
             <input class="input" id="quickTitle" style="flex:1;min-width:140px" placeholder="输入任务后回车，例如：给王妈妈发本周课表（标题｜备注 可带备注）">
             <input type="time" class="input" id="quickTime" style="width:120px" title="可选的具体时间，如 19:00">
+            <select class="input" id="quickSlot" style="width:124px" title="归属上午 / 下午；不选则按当前时间（12 点后归下午）">
+              <option value="">不选（按时间）</option>
+              <option value="am">上午</option>
+              <option value="pm">下午</option>
+            </select>
             <button class="btn btn-primary" data-act="quickAdd">添加</button>
           </div>`}
 
@@ -1059,8 +1068,10 @@ const Todo = (() => {
     if (!title) return;
     const tIn = U.$('#quickTime', root);
     const time = tIn ? (tIn.value || '') : '';
-    add({ title, note, date: curDate, time });
-    i.value = ''; if (tIn) tIn.value = ''; render(); App.refreshBadge();
+    const sIn = U.$('#quickSlot', root);
+    const slot = sIn ? sIn.value : '';                      // 归属：空=按当前时间，am/pm=强制
+    add({ title, note, date: curDate, time, slot: slot || defaultSlot() });
+    i.value = ''; if (tIn) tIn.value = ''; if (sIn) sIn.value = ''; render(); App.refreshBadge();
     setTimeout(() => { const el = U.$('#quickTitle'); if (el) el.focus(); }, 30);
   }
 
@@ -1080,6 +1091,10 @@ const Todo = (() => {
             <option value="" ${t.priority == null ? 'selected' : ''}>不选</option>
             ${P.map(p => `<option value="${p.v}" ${p.v === t.priority ? 'selected' : ''}>${p.name}</option>`).join('')}</select></div>
           <div class="field"><label>时间（可选）</label><input type="time" class="input" id="f_m" value="${t.time || ''}"></div>
+          <div class="field"><label>归属</label><select class="input" id="f_slot">
+            <option value="">不选（保持原样）</option>
+            <option value="am" ${t.slot === 'am' ? 'selected' : ''}>上午</option>
+            <option value="pm" ${t.slot === 'pm' ? 'selected' : ''}>下午</option></select></div>
           <div class="field"><label>标签</label><input class="input" id="f_g" value="${U.esc(t.tag || '')}" placeholder="如 家长沟通"></div>
         </div>
         ${U.buildRepeatControl(t.repeat && typeof t.repeat === 'string' ? t.repeat : (t.repeat && t.repeat.type === 'custom' ? 'custom' : (t.repeat && t.repeat.type) || 'never'))}
@@ -1099,6 +1114,10 @@ const Todo = (() => {
         t.doneAt = t.status === 'done' ? (t.doneAt || Date.now()) : (t.status === 'pending' ? null : t.doneAt);
         const pv = U.$('#f_p', b).value;
         t.priority = pv === '' ? null : +pv;
+        // 归属：选了就改；「不选」时新件（原来没有 slot）按当前时刻定档，老件保持原样
+        const sv = U.$('#f_slot', b).value;
+        if (sv) t.slot = sv;
+        else if (!t.slot) t.slot = defaultSlot();
         t.time = U.$('#f_m', b).value || '';
         t.tag = U.$('#f_g', b).value.trim();
         t.repeat = U.readRepeatControl(b);
@@ -1133,6 +1152,10 @@ const Todo = (() => {
       body: `<div class="field"><label>任务内容</label><input class="input" id="f_t" placeholder="例如：给王妈妈发本周课表" autofocus></div>
         <div class="row">
           <div class="field"><label>时间（可选）</label><input type="time" class="input" id="f_m"></div>
+          <div class="field"><label>归属</label><select class="input" id="f_slot">
+            <option value="">不选（按时间）</option>
+            <option value="am">上午</option>
+            <option value="pm">下午</option></select></div>
           <div class="field"><label>优先级（可选）</label><select class="input" id="f_p">
             <option value="" selected>不选</option>
             ${P.map(p => `<option value="${p.v}">${p.name}</option>`).join('')}</select></div>
@@ -1146,8 +1169,10 @@ const Todo = (() => {
       onOk: b => {
         const title = U.$('#f_t', b).value.trim();
         if (!title) { U.toast('请填写内容', 'warn'); return false; }
+        const sv = U.$('#f_slot', b).value;
         add({
           title, time: U.$('#f_m', b).value || '', date: curDate, status: 'pending',
+          slot: sv || defaultSlot(),
           priority: (() => { const pv = U.$('#f_p', b).value; return pv === '' ? null : +pv; })(),
           repeat: U.readRepeatControl(b), flag: U.$('#f_flag', b).checked
         });
@@ -1214,5 +1239,5 @@ const Todo = (() => {
     render(root) { curDate = U.today(); render(); }
   };
 
-  return { checkAuto, pendingCount, P, pInfo, STATUS, sInfo, cycle, add, addNew, ofDate, render, editTodo, importTemplates, editTpl, slotOfTemplate, cleanupInstances: cleanupSkippedInstances };
+  return { checkAuto, pendingCount, P, pInfo, STATUS, sInfo, cycle, add, addNew, ofDate, render, editTodo, importTemplates, editTpl, slotOfTemplate, defaultSlot, cleanupInstances: cleanupSkippedInstances };
 })();
