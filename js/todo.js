@@ -645,11 +645,14 @@ const Todo = (() => {
     // 非重复任务(never)必须改 status，否则在到期日当天点击时只写 completedDates、
     // 而渲染/未读数都按 status 判定，导致对勾不显示、未读数不减。
     if (rule.type !== 'never' && U.recurOccursOn(vd, rule)) {
-      // 重复任务：按当前展示日单独勾选完成
+      // 重复任务：按「被点击的那一天」单独勾选完成。
+      // 注意必须用 vd（该行所属日期）而不是 curDate：手机端 7 日视图一次显示 7 天，
+      // 点明天分组里的那条若记成今天完成，今天分组里那条就会凭空消失（v2.14.3 修复）。
+      // 电脑端只显示一天，vd 恒等于 curDate，行为不变。
       t.completedDates = Array.isArray(t.completedDates) ? t.completedDates : [];
-      const i = t.completedDates.indexOf(curDate);
+      const i = t.completedDates.indexOf(vd);
       if (i >= 0) { t.completedDates.splice(i, 1); t.doneAt = null; U.toast('已恢复为未完成'); }
-      else { t.completedDates.push(curDate); t.doneAt = Date.now(); U.toast('完成一件，很好'); }
+      else { t.completedDates.push(vd); t.doneAt = Date.now(); U.toast('完成一件，很好'); }
     } else {
       t.status = cycle(t.status);
       t.doneAt = t.status === 'done' ? Date.now() : (t.status === 'pending' ? null : t.doneAt);
@@ -740,6 +743,11 @@ const Todo = (() => {
             doneAt: null,
             completedDates: []
           });
+          // 关键：克隆体是「今天的一次性任务」，不能再带模板实例标记 tplId。
+          // 否则当这条模板「今天那一档」早先被删过/拖走过（skippedTemplateDays 里留着
+          // {tplId, 今天}），克隆体会被 cleanupSkippedInstances 判定为「该跳过的模板实例」
+          // 直接删掉——表现为「点了拉到今天，这条却不见了」（v2.14.3 修复）。
+          delete clone.tplId;
           t.status = 'blocked';                         // 原任务保留在原日期，标记为已处理
           DB.data.todos.push(clone);
           DB.save(); render(); App.refreshBadge(); U.toast('已拉到今天');
@@ -758,7 +766,7 @@ const Todo = (() => {
             const r = U.recurRuleOf(x.repeat, x.date);
             if (r && r.type !== 'never') return;
             if (x.date >= today) return;
-            DB.data.todos.push(Object.assign({}, x, {
+            const clone = Object.assign({}, x, {
               id: U.uid('td'),
               date: today,
               status: 'pending',
@@ -766,7 +774,10 @@ const Todo = (() => {
               createdAt: Date.now(),
               doneAt: null,
               completedDates: []
-            }));
+            });
+            // 同 pullOne：克隆体不能再带 tplId，否则会被当成「该跳过的模板实例」清掉
+            delete clone.tplId;
+            DB.data.todos.push(clone);
             x.status = 'blocked';
             n++;
           });
