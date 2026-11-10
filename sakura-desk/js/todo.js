@@ -640,7 +640,7 @@ const Todo = (() => {
       inp.addEventListener('keydown', e => {
         if (e.key !== 'Enter') return;
         const d = inp.dataset.date, val = inp.value;
-        if (!val.trim()) return;
+        if (!val.trim()) { U.toast('还没输入内容，输入后再按回车', 'warn'); return; }
         inp.value = '';                       // 先清掉输入框，避免重建前残留
         draftSet('day:' + d, '');
         quickAddDay(d, val);                  // 内部已立即把焦点交还新输入框
@@ -1207,7 +1207,9 @@ const Todo = (() => {
     const i = U.$('#quickTitle', root);
     if (!i) return;
     const { title, note } = splitTitleNote(i.value);
-    if (!title) return;
+    // 空回车必须给反馈：连续快速输入时若焦点短暂丢失，字没进输入框、回车提交的是空内容，
+    // 旧版静默 return，用户以为「我明明回车了」却什么都没加上，还以为事项凭空消失。
+    if (!title) { U.toast('还没输入内容，输入后再按回车', 'warn'); return; }
     const tIn = U.$('#quickTime', root);
     const time = tIn ? (tIn.value || '') : '';
     const sIn = U.$('#quickSlot', root);

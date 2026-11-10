@@ -1,6 +1,9 @@
-/* 逸云阁工作台 Service Worker — app-shell 缓存优先（cache-first），离线可用、重复打开秒开 */
-const CACHE_NAME = 'yiyunge-v2.14.4';
-const VERSION = '2.13.1';
+/* 逸云阁工作台 Service Worker — 页面 network-first、静态资源 cache-first，离线可用、重复打开秒开 */
+const CACHE_NAME = 'yiyunge-v2.14.5';
+/* VERSION 必须跟 index.html 里所有 ?v= 保持一致：
+ * 此前硬编码成 2.13.1，导致 PRECACHE 缓存的是 ?v=2.13.1 这套 key，而页面请求 ?v=2.14.x，
+ * 一是 PRECACHE 整套白缓存，二是离线首次打开资源全部 miss（会拿到 index.html 当 JS 用而白屏）。 */
+const VERSION = '2.14.5';
 /* 预缓存应用骨架。注意：html2canvas.min.js / xlsx.full.min.js 不再预缓存——
  * 这两个大库改为「按需懒加载」（方法一），仅首次用到时由 fetch 处理缓存，避免冷启动白下载约 1MB。 */
 const PRECACHE = [
@@ -52,6 +55,27 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   const cacheKey = req.url;
+
+  /* 页面 HTML 走 network-first：否则即使线上已发布新版本，刷新时也会优先拿到缓存里的旧
+   * index.html（它引用旧 ?v= 的脚本），用户会一直跑在旧代码上，表现为「修了却没生效」。
+   * 断网时回退缓存的 index.html，离线仍可用。 */
+  const isPage = req.mode === 'navigate' ||
+    (req.headers.get('accept') || '').includes('text/html') ||
+    /\/(index\.html)?$/.test(url.pathname);
+  if (isPage) {
+    e.respondWith(
+      fetch(req).then(res => {
+        if (res && res.status === 200 && res.type === 'basic') {
+          caches.open(CACHE_NAME).then(cache => cache.put(cacheKey, res.clone()));
+        }
+        return res;
+      }).catch(() => caches.match(cacheKey)
+        .then(h => h || caches.match('./index.html'))
+        .then(h => h || caches.match('./')))
+    );
+    return;
+  }
+
   e.respondWith(
     caches.match(cacheKey).then(hit => {
       if (hit) {
