@@ -27,6 +27,13 @@ const Todo = (() => {
     return { title: m[0].trim(), note: m.length > 1 ? m.slice(1).join('|').trim() : '' };
   }
   let curDate = U.today();
+  /* 输入草稿：输入框在每次 render() 时会被整体重建，切页（go()）又会直接清空 #view。
+     只打了字、还没回车提交的内容若不单独留一份，就会「明明输入了，切个页面就没了」。
+     key：桌面快速添加栏 'quick'；移动端每天行内框 'day:YYYY-MM-DD'。
+     只留在内存里（刷新页面才清空），不写进业务数据——绝不擅自替用户新增待办。 */
+  const inputDrafts = new Map();
+  const draftSet = (k, v) => { if (v) inputDrafts.set(k, v); else inputDrafts.delete(k); };
+  const draftGet = k => inputDrafts.get(k) || '';
   let lastUndone = [];             // 当前渲染的未完成列表，用于上下排序
   let lastTemplates = [];          // 当前渲染的模板顺序，用于模板上下排序
   let tplSelMode = false;          // 每日模板库「批量删除」选择模式
@@ -273,7 +280,11 @@ const Todo = (() => {
     const { title, note } = splitTitleNote(value);
     if (!title) return;
     add({ title, note, date: d, status: 'pending', slot: defaultSlot() });
+    draftSet('day:' + d, '');     // 已提交：清掉这一天的草稿，别在重建后回填成重复内容
     render(); App.refreshBadge();
+    // 立即把焦点交还给新输入框：原先延时 30ms，连续快速输入时这几个字会打在已被销毁的旧框上而丢失
+    const n = U.$('.day-quick[data-date="' + d + '"]');
+    if (n) n.focus();
   }
 
   /* --- 渲染 --- */
@@ -416,7 +427,7 @@ const Todo = (() => {
           </div>
 
           ${isM ? '' : `<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-            <input class="input" id="quickTitle" style="flex:1;min-width:140px" placeholder="输入任务后回车，例如：给王妈妈发本周课表（标题｜备注 可带备注）">
+            <input class="input" id="quickTitle" style="flex:1;min-width:140px" value="${U.esc(draftGet('quick'))}" placeholder="输入任务后回车，例如：给王妈妈发本周课表（标题｜备注 可带备注）">
             <input type="time" class="input" id="quickTime" style="width:120px" title="可选的具体时间，如 19:00">
             <select class="input" id="quickSlot" style="width:124px" title="归属上午 / 下午；不选则按当前时间（12 点后归下午）">
               <option value="">不选（按时间）</option>
@@ -594,7 +605,7 @@ const Todo = (() => {
         <div class="day-h">${header}${mixed.length ? `<label class="split-sw" title="按上午 / 下午分开显示"><input type="checkbox" data-act="toggleSplit" data-day="${d}" ${splitOn ? 'checked' : ''}> 上下午分栏</label>` : ''}</div>
         ${itemsHTML}
         ${doneHTML}
-        <input class="input day-quick" data-date="${d}" placeholder="添加事项，回车确认（标题｜备注）">
+        <input class="input day-quick" data-date="${d}" value="${U.esc(draftGet('day:' + d))}" placeholder="添加事项，回车确认（标题｜备注）">
       </section>`;
     }).join('');
 
@@ -630,8 +641,9 @@ const Todo = (() => {
         if (e.key !== 'Enter') return;
         const d = inp.dataset.date, val = inp.value;
         if (!val.trim()) return;
-        quickAddDay(d, val);
-        setTimeout(() => { const n = U.$('.day-quick[data-date="' + d + '"]', root); if (n) n.focus(); }, 30);
+        inp.value = '';                       // 先清掉输入框，避免重建前残留
+        draftSet('day:' + d, '');
+        quickAddDay(d, val);                  // 内部已立即把焦点交还新输入框
       });
     });
   }
@@ -662,7 +674,17 @@ const Todo = (() => {
     DB.save(); render(); App.refreshBadge();
   }
 
+  /* 输入草稿委托：输入框每次 render 都会重建，用冒泡的 input 事件在根节点上统一记录。
+     root(#view) 本身不变，必须先 remove 再 add，避免多次 render 累积监听。 */
+  function onInputDraft(e) {
+    const el = e.target;
+    if (!el || !el.classList) return;
+    if (el.id === 'quickTitle') draftSet('quick', el.value);
+    else if (el.classList.contains('day-quick') && el.dataset.date) draftSet('day:' + el.dataset.date, el.value);
+  }
   function bind(root) {
+    root.removeEventListener('input', onInputDraft);
+    root.addEventListener('input', onInputDraft);
     U.$('#tdDate', root).onchange = e => { curDate = e.target.value; render(); };
 
     U.rebind(root, 'todo', e => {
@@ -1191,8 +1213,10 @@ const Todo = (() => {
     const sIn = U.$('#quickSlot', root);
     const slot = sIn ? sIn.value : '';                      // 归属：空=按当前时间，am/pm=强制
     add({ title, note, date: curDate, time, slot: slot || defaultSlot() });
-    i.value = ''; if (tIn) tIn.value = ''; if (sIn) sIn.value = ''; render(); App.refreshBadge();
-    setTimeout(() => { const el = U.$('#quickTitle'); if (el) el.focus(); }, 30);
+    i.value = ''; if (tIn) tIn.value = ''; if (sIn) sIn.value = '';
+    draftSet('quick', '');                    // 已提交：清掉草稿，别在重建后回填成重复内容
+    render(); App.refreshBadge();
+    const el = U.$('#quickTitle'); if (el) el.focus();   // 立即聚焦，连续输入不丢字
   }
 
   function editTodo(t, after) {
@@ -1356,7 +1380,14 @@ const Todo = (() => {
   Views.todo = {
     title: '提醒事项',
     sub: '模板化管理每日重复提醒，别再手打第二遍',
-    render(root) { curDate = U.today(); render(); }
+    // 不再无条件把 curDate 重置为今天：从「我的」等页面返回时若强行跳回今天，
+    // 刚刚在别的日期添加的事项就不在当前视图里，看着像「凭空消失」。
+    // curDate 初始即为今天（模块加载时求值），冷启动/刷新自然回到今天；
+    // 用户可用「回到今天」按钮或日期选择器主动跳。仅做异常值兜底。
+    render(root) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(curDate)) curDate = U.today();
+      render();
+    }
   };
 
   return { checkAuto, pendingCount, P, pInfo, STATUS, sInfo, cycle, add, addNew, ofDate, render, editTodo, importTemplates, editTpl, slotOfTemplate, defaultSlot, cleanupInstances: cleanupSkippedInstances };
